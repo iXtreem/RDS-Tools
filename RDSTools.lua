@@ -49,7 +49,7 @@ local cfg = inicfg.load({
 }, directIni)
 inicfg.save(cfg,directIni)
 
-local version = cfg.script.version -- ВЕРСИЯ СКРИПТА
+local version = 0.2-- ВЕРСИЯ СКРИПТА
 
 local fa_glyph_ranges = imgui.ImGlyphRanges({ fa.min_range, fa.max_range })
 local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
@@ -79,7 +79,7 @@ function main()
                 update_state = true
 				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  '{FFFFFF}загружен, активация: {808080}F3', -1)
 			else
-				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[' .. version .. ']' ..  '{FFFFFF}загружен, активация: {808080}F3', -1)
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools ' .. '[' .. version .. ']' ..  ' {FFFFFF}загружен, активация: {808080}F3', -1)
 			end
             os.remove(update_path)
         end
