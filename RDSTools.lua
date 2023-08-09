@@ -115,7 +115,7 @@ function main()
         if update_state then
             downloadUrlToFile(script_url, script_path, function(id, status)
                 if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                    sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. version .. '\n{FFFFFF}Скрипт был успешно обновлен.', "Спасибо", "", 0)
+                    sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. RDSTools.script.version .. '\n{FFFFFF}Скрипт был успешно обновлен.', "Спасибо", "", 0)
                     thisScript():reload()
                 end
             end)
