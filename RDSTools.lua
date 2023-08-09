@@ -44,12 +44,12 @@ local cfg = inicfg.load({
 		spisok = 1
 	},
 	script = {
-		version = 0.2
+		version = 0.3
 	}
 }, directIni)
 inicfg.save(cfg,directIni)
 
-local version = 0.2-- бепяхъ яйпхорю
+local version = 0.3-- бепяхъ яйпхорю
 
 
 local checked_test = imgui.ImBool(cfg.settings.check_weapon_hack)
