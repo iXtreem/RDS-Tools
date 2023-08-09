@@ -1,6 +1,6 @@
 require 'lib.moonloader'
 script_name('RDS Tools')
-local version = 0.1
+local version = 0.2
 local imgui = require 'imgui' 
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
@@ -39,7 +39,7 @@ local cfg = inicfg.load({
 		spisok = 1
 	},
 	script = {
-		version = 0.1
+		version = 0.2
 	}
 }, directIni)
 inicfg.save(cfg,directIni)
@@ -64,9 +64,6 @@ function main()
 	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
 
-
-	sampRegisterChatCommand("update", cmd_update)
-
 	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	nick = sampGetPlayerNickname(id)
 
@@ -74,8 +71,8 @@ function main()
         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
-                sampAddChatMessage("Найдена новая версия {FF0000}RDS Tools{FFFFFF}, произвожу автообновление.", -1)
                 update_state = true
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  '{FFFFFF}загружен, активация: {808080}F3'
 			else
 				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[' .. version .. ']' ..  '{FFFFFF}загружен, активация: {808080}F3 ' .. version, -1)
 			end
