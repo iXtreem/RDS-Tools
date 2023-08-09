@@ -15,7 +15,7 @@ local rkeys = require "rkeys"
 local fa = require 'faIcons'
 
 
----==== дава дадафцалцфтаидтыьвю фыобнова
+---==== ФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФ
 local cfg = inicfg.load({
 	settings = {
 		automute = false,
@@ -74,10 +74,10 @@ function main()
         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
-                sampShowDialog(1000, "Автообновление: ", "{FFFFFF}Найдена новая версия {FF0000}RDS Tools " .. RDSTools.script.version .. \n 'Начинаю процесс установки ...', "Закрыть", "", 0)
+                sampAddChatMessage("Найдена новая версия {FF0000}RDS Tools{FFFFFF}, произвожу автообновление.", -1)
                 update_state = true
 			else
-				sampAddChatMessage('У вас установлена актуальная версия ' .. version, -1)
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[' .. version .. ']' ..  '{FFFFFF}загружен, активация: {808080}F3 ' .. version, -1)
 			end
             os.remove(update_path)
         end
@@ -87,7 +87,7 @@ function main()
         if update_state then
             downloadUrlToFile(script_url, script_path, function(id, status)
                 if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                    sampAddChatMessage("Скрипт успешно обновлен!", -1)
+                    sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. version .. '\n{FFFFFF}Скрипт был успешно обновлен.', "Спасибо", "", 0)
                     thisScript():reload()
                 end
             end)
@@ -114,8 +114,6 @@ function main()
     --func7:run()
 	-- ============================================= СОЗДАНИЕ ПОТОКОВ =================================================
 	imgui.Process = false
-	sampAddChatMessage("Скрипт {FF0000}RDS Tools {FFFFFF}загружен, активация: {808080}F3", -1)
-	sampAddChatMessage(nick .. '[' .. id .. ']', -1)
 	while true do
 		wait(0)
 		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then -- Кнопка открытия 1 диалога
