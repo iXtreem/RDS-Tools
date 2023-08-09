@@ -1,7 +1,6 @@
 require 'lib.moonloader'
 require 'lib.sampfuncs'
 script_name('RDS Tools')
-local version = 0.2
 local imgui = require 'imgui' 
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
@@ -15,7 +14,13 @@ local rkeys = require "rkeys"
 local fa = require 'faIcons'
 
 
----==== ФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФФ
+
+require('samp.events').onShowDialog = function(dialogId, style, title, button1, button2, text)
+    text = ('ID: %d | %s'):format(dialogId, text)
+    return {dialogId, style, title, button1, button2, text}
+end
+
+
 local cfg = inicfg.load({
 	settings = {
 		automute = false,
@@ -44,6 +49,8 @@ local cfg = inicfg.load({
 }, directIni)
 inicfg.save(cfg,directIni)
 
+local version = cfg.script.version -- ВЕРСИЯ СКРИПТА
+
 local fa_glyph_ranges = imgui.ImGlyphRanges({ fa.min_range, fa.max_range })
 local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
 imgui.GetIO().Fonts:Clear() 
@@ -57,7 +64,7 @@ function main()
 	local dlstatus = require('moonloader').download_status
 
 	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
-	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут свою ссылку
+	local update_path = getWorkingDirectory() .. "/config/RDSTools.ini" -- и тут свою ссылку
 
 	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
@@ -70,9 +77,9 @@ function main()
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
                 update_state = true
-				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  '{FFFFFF}загружен, активация: {808080}F3')
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  '{FFFFFF}загружен, активация: {808080}F3', -1)
 			else
-				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[' .. version .. ']' ..  '{FFFFFF}загружен, активация: {808080}F3')
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[' .. version .. ']' ..  '{FFFFFF}загружен, активация: {808080}F3', -1)
 			end
             os.remove(update_path)
         end
@@ -89,8 +96,6 @@ function main()
             break
         end
 	end
-
-
 	func = lua_thread.create_suspended(weaponfunc)
     func:run()
 	func2 = lua_thread.create_suspended(helloadm)
@@ -314,11 +319,6 @@ function imgui.ButtonClickable(clickable, ...)
 end
 --------- Неактив кнопка
 
-
-require('samp.events').onShowDialog = function(dialogId, style, title, button1, button2, text)
-    text = ('ID: %d | %s'):format(dialogId, text)
-    return {dialogId, style, title, button1, button2, text}
-end
 
 
 
