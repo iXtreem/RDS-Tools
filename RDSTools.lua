@@ -51,228 +51,6 @@ inicfg.save(cfg,directIni)
 
 local version = 0.2-- ВЕРСИЯ СКРИПТА
 
-local fa_glyph_ranges = imgui.ImGlyphRanges({ fa.min_range, fa.max_range })
-local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
-imgui.GetIO().Fonts:Clear() 
-imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\FRAMDIT.ttf', 17, nil, glyph_ranges)
-main_color_text = 0xFFFFFF
-
-function main()
-	while not isSampAvailable() do wait(0) end
-
-	update_state = false
-	local dlstatus = require('moonloader').download_status
-
-	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
-	local update_path = getWorkingDirectory() .. "/config/RDSTools.ini" -- и тут свою ссылку
-
-	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
-	local script_path = thisScript().path
-
-	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	nick = sampGetPlayerNickname(id)
-
-    downloadUrlToFile(update_url, update_path, function(id, status)
-        if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-            RDSTools = inicfg.load(nil, update_path)
-            if tonumber(RDSTools.script.version) > version then
-                update_state = true
-				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  '{FFFFFF}загружен, активация: {808080}F3', -1)
-			else
-				sampAddChatMessage('Скрипт {FF0000}RDS Tools ' .. '[' .. version .. ']' ..  ' {FFFFFF}загружен, активация: {808080}F3', -1)
-			end
-            os.remove(update_path)
-        end
-    end)
-	while true do
-        wait(0)
-        if update_state then
-            downloadUrlToFile(script_url, script_path, function(id, status)
-                if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-                    sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. version .. '\n{FFFFFF}Скрипт был успешно обновлен.', "Спасибо", "", 0)
-                    thisScript():reload()
-                end
-            end)
-            break
-        end
-	end
-	func = lua_thread.create_suspended(weaponfunc)
-    func:run()
-	func2 = lua_thread.create_suspended(helloadm)
-    func2:run()
---	func4 = lua_thread.create_suspended(flood)
-  --  func4:run()
-	func5 = lua_thread.create_suspended(autoal)
-    func5:run()
-	func6 = lua_thread.create_suspended(autoform)
-   	func6:run()
-	--func7 = lua_thread.create_suspended(cw)
-    --func7:run()
-	imgui.Process = false
-	while true do
-		wait(0)
-		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then 
-			main_window_state.v = not main_window_state.v
-			imgui.Process = main_window_state.v
-		end
-		if isKeyJustPressed(VK_F2) then 
-			secondary_window_state.v = not secondary_window_state.v
-			imgui.Process = secondary_window_state.v
-		end
-	end
-end
-
-function weaponfunc()
-    while true do
-		if cfg.settings.check_weapon_hack then
-			local t_tag = "{00FF42} [WarningsCheck] {FFFFFF}"
-		    function string.split(inputstr, sep)
-				if sep == nil then
-					sep = "%s"
-				end
-				local t={} ; i=1
-				for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-					t[i] = str
-					i = i + 1
-				end
-				return t
-			end
-
-			function sampev.onServerMessage(color, text)
-				local str = {}
-				str = string.split(text, " ")
-				if str[1] == "<AC-WARNING>" then  
-					str[7] = str[7]:gsub("{......}", "")
-					str[8] = str[8]:gsub("{......}", "")
-					if string.find(str[7], "Weapon") and string.find(str[8], "hack") then 
-						str[2] = str[2]:gsub("{......}", "")
-						local nick, id = string.match(str[2], "(.+)%[(.+)%]")
-						sampSendChat("/iwep " .. id)
-						sampAddChatMessage(t_tag .. "Пробиваю: " .. nick .. " [" .. id .. "]", -1)
-					end
-				end 
-			end 
-		end
-		wait(0)
-	end
-end
-
-function helloadm()
-	while true do
-		if cfg.settings.helloadmin then
-			color_text = 0xFFFF00
-			local sampev = require 'samp.events'
-			function main() 
-				while not isSampAvailable() do wait(0) end
-				sampAddChatMessage('{5A90CE}Скрипт успешно загружен {FF0000}Hello Admin {FFFFFF}приятной игры', color_text)
-				local _, id = sampGetPlayerIdByCharHandle(playerPed)
-				nickname = sampGetPlayerNickname(id)
-			end
-			function sampev.onServerMessage(color, text)
-				local _, id = sampGetPlayerIdByCharHandle(playerPed)
-				nickname = sampGetPlayerNickname(id)
-				if not isGamePaused() and not isPauseMenuActive() and isGameWindowForeground() then 
-					if text:find("Администратор ") and text:find('авторизовался в админ') then
-						if text:find("Администратор " .. nickname) and text:find("авторизовался в админ") then
-							sampAddChatMessage('Приветствую господин', color_text)
-						else
-							local id = text:match('%[(%d+)%]')
-							if id then
-								lua_thread.create(function()
-								wait(200)
-								name = sampGetPlayerNickname(tostring(id))
-								sampSendChat('/a Здравствуйте, ' .. name .. ', как ваши дела?))')
-								end)
-							end
-						end
-					end
-				end
-			end
-		end
-		wait(0)
-	end
-end
-
-function autoal()
-	while true do
-		if cfg.settings.autoalogin then
-			function sampev.onServerMessage(color, text)
-				if text:find('не авторизовался как администратор уже') then
-					local id = text:match('%[(%d+)%]')
-					if id then
-						wait(0)
-						name = sampGetPlayerNickname(tostring(id))
-						sampSendChat('/ans ' .. id .. 'Здравствуйте, ' .. name .. ', вы забыли ввести /alogin')
-					end
-				end
-			end
-		end
-		wait(0)
-	end
-end
-
-function autoform()
-	while true do
-		if cfg.settings.form then
-			sett = false
-			rev = ''
-			don = ''
-			forma = ''
-			function main()
-				while not isSampAvailable() do wait(0) end
-				sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}Скрипт успешно загружен, активация: {808080}Автоматическая', -1)
-				_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-				nick = sampGetPlayerNickname(id)
-				while sett do
-					wait(0)
-					printStyledString(cyrillic('Принять Форму?'), 10, 2)
-					if isKeyJustPressed(VK_U) and not sampIsChatInputActive() and not sampIsDialogActive() then
-						sampSendChat('/a +')
-						sampSendChat(forma)
-						sett = false
-					end
-					if isKeyJustPressed(VK_M) and not sampIsChatInputActive() and not sampIsDialogActive() then
-						sett = false
-						sampSendChat('/a Пример формы: /iban id 7 cheat // tvoi nick')	
-					end
-					if isKeyDown(VK_J) and not sampIsChatInputActive() and not sampIsDialogActive() then
-						sett = false
-						sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}форма пропущена.')
-					end
-				end
-			end
-
-			function sampev.onServerMessage(color, text)
-				if text:match('[A-%d%d]') and text:match('.Администратор{FFFFFF}.') and not text:match('Пример формы') and not text:match('/ans') then
-					d = string.len(text)
-					while d ~= 0 do
-						text = string.sub(text, 2)
-						rev = string.reverse(text)
-						don = string.sub(rev, -1)
-						d = d - 1
-						if don == '/' then
-							d = 0
-							sett = true
-							forma = text
-							sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}(U - Да), (M - Нет), (J - Пропустить)')
-						end
-					end
-				end
-			end
-			function cyrillic(text)
-				local convtbl = {[230]=155,[231]=159,[247]=164,[234]=107,[250]=144,[251]=168,[254]=171,[253]=170,[255]=172,[224]=97,[240]=112,[241]=99,[226]=162,[228]=154,[225]=151,[227]=153,[248]=165,[243]=121,[184]=101,[235]=158,[238]=111,[245]=120,[233]=157,[242]=166,[239]=163,[244]=63,[237]=174,[229]=101,[246]=36,[236]=175,[232]=156,[249]=161,[252]=169,[215]=141,[202]=75,[204]=77,[220]=146,[221]=147,[222]=148,[192]=65,[193]=128,[209]=67,[194]=139,[195]=130,[197]=69,[206]=79,[213]=88,[168]=69,[223]=149,[207]=140,[203]=135,[201]=133,[199]=136,[196]=131,[208]=80,[200]=133,[198]=132,[210]=143,[211]=89,[216]=142,[212]=129,[214]=137,[205]=72,[217]=138,[218]=167,[219]=145}
-				local result = {}
-				for i = 1, #text do
-					local c = text:byte(i)
-					result[i] = string.char(convtbl[c] or c)
-				end
-				return table.concat(result)
-			end
-		end
-		wait(0)
-	end
-end
-
 
 local checked_test = imgui.ImBool(cfg.settings.check_weapon_hack)
 local checked_test2 = imgui.ImBool(false)
@@ -296,6 +74,68 @@ local secondary_window_state = imgui.ImBool(false)
 
 local text_buffer_age = imgui.ImBuffer(256)
 local text_buffer_name = imgui.ImBuffer(256)
+
+
+
+
+local fa_glyph_ranges = imgui.ImGlyphRanges({ fa.min_range, fa.max_range })
+local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
+imgui.GetIO().Fonts:Clear() 
+imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\FRAMDIT.ttf', 17, nil, glyph_ranges)
+main_color_text = 0xFFFFFF
+
+function main()
+	while not isSampAvailable() do wait(0) end
+
+	update_state = false
+	local dlstatus = require('moonloader').download_status
+
+	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
+	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут свою ссылку
+
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
+	local script_path = thisScript().path
+
+	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+	nick = sampGetPlayerNickname(id)
+
+    downloadUrlToFile(update_url, update_path, function(id, status)
+        if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+            RDSTools = inicfg.load(nil, update_path)
+            if tonumber(RDSTools.script.version) > version then
+                update_state = true
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools ' .. '{C0C0C0}[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  ' {FFFFFF}загружен, активация: {808080}F3', -1)
+			else
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools ' .. '{C0C0C0}[' .. version .. ']' ..  ' {FFFFFF}загружен, активация: {808080}F3', -1)
+			end
+            os.remove(update_path)
+        end
+    end)
+	while true do
+        wait(0)
+        if update_state then
+            downloadUrlToFile(script_url, script_path, function(id, status)
+                if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+                    sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. version .. '\n{FFFFFF}Скрипт был успешно обновлен.', "Спасибо", "", 0)
+                    thisScript():reload()
+                end
+            end)
+            break
+        end
+		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then 
+			main_window_state.v = not main_window_state.v
+			imgui.Process = main_window_state.v
+		end
+		if isKeyJustPressed(VK_F2) then 
+			secondary_window_state.v = not secondary_window_state.v
+			imgui.Process = secondary_window_state.v
+		end
+	end
+	imgui.Process = false
+end
+
+
+
 
 
 
