@@ -104,7 +104,6 @@ function main()
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
                 update_state = true
-				sampAddChatMessage('Скрипт {FF0000}RDS Tools ' .. '{C0C0C0}[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  ' {FFFFFF}загружен, активация: {808080}F3', -1)
 			else
 				sampAddChatMessage('Скрипт {FF0000}RDS Tools ' .. '{C0C0C0}[' .. version .. ']' ..  ' {FFFFFF}загружен, активация: {808080}F3', -1)
 			end
@@ -120,6 +119,7 @@ function main()
                     thisScript():reload()
                 end
             end)
+			RDSTools.script.version = version
             break
         end
 		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then 
