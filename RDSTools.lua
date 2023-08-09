@@ -119,7 +119,6 @@ function main()
                     thisScript():reload()
                 end
             end)
-			RDSTools.script.version = version
             break
         end
 		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then 
