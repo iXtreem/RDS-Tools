@@ -1,6 +1,6 @@
 require 'lib.moonloader'
 script_name('RDS Tools')
-local version = 2
+local version = 0.1
 local imgui = require 'imgui' 
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
@@ -14,8 +14,8 @@ local key = require 'vkeys'
 local rkeys = require "rkeys"
 local fa = require 'faIcons'
 
----=============== обновлённая версия xD
 
+---==== дава дадафцалцфтаидтыьвю фыобнова
 local cfg = inicfg.load({
 	settings = {
 		automute = false,
@@ -39,71 +39,17 @@ local cfg = inicfg.load({
 		spisok = 1
 	},
 	script = {
-		version = 2.0
+		version = 0.1
 	}
 }, directIni)
 inicfg.save(cfg,directIni)
 
---------- Неактив кнопка
-
-function imgui.ButtonClickable(clickable, ...)
-    if clickable then
-        return imgui.Button(...)
-    else
-        local r, g, b, a = imgui.ImColor(imgui.GetStyle().Colors[imgui.Col.Button]):GetFloat4()
-        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(r, g, b, a/2) )
-        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(r, g, b, a/2))
-        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(r, g, b, a/2))
-        imgui.PushStyleColor(imgui.Col.Text, imgui.GetStyle().Colors[imgui.Col.TextDisabled])
-            imgui.Button(...)
-        imgui.PopStyleColor()
-        imgui.PopStyleColor()
-        imgui.PopStyleColor()
-        imgui.PopStyleColor()
-    end
-end
---------- Неактив кнопка
-
-
-
-require('samp.events').onShowDialog = function(dialogId, style, title, button1, button2, text)
-    text = ('ID: %d | %s'):format(dialogId, text)
-    return {dialogId, style, title, button1, button2, text}
-end
-
-
 local fa_glyph_ranges = imgui.ImGlyphRanges({ fa.min_range, fa.max_range })
-
-
-function imgui.NewInputText(lable, val, width, hint, hintpos) -- Поле ввода с подсказкой
-    local hint = hint and hint or ''
-    local hintpos = tonumber(hintpos) and tonumber(hintpos) or 1
-    local cPos = imgui.GetCursorPos()
-    imgui.PushItemWidth(width)
-    local result = imgui.InputText(lable, val)
-    if #val.v == 0 then
-        local hintSize = imgui.CalcTextSize(hint)
-        if hintpos == 2 then imgui.SameLine(cPos.x + (width - hintSize.x) / 2)
-        elseif hintpos == 3 then imgui.SameLine(cPos.x + (width - hintSize.x - 5))
-        else imgui.SameLine(cPos.x + 5) end
-        imgui.TextColored(imgui.ImVec4(1.00, 1.00, 1.00, 0.40), tostring(hint))
-    end
-    imgui.PopItemWidth()
-    return result
-end
-
 local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
 imgui.GetIO().Fonts:Clear() 
 imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\FRAMDIT.ttf', 17, nil, glyph_ranges)
 main_color_text = 0xFFFFFF
 
-local sw, sh = getScreenResolution()
-local text_buffer = imgui.ImBuffer(256)
-local main_window_state = imgui.ImBool(false)
-local secondary_window_state = imgui.ImBool(false)
-
-local text_buffer_age = imgui.ImBuffer(256)
-local text_buffer_name = imgui.ImBuffer(256)
 
 ----===============================================================================================================
 function main()
@@ -112,17 +58,12 @@ function main()
 	update_state = false
 	local dlstatus = require('moonloader').download_status
 
-	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- тут тоже свою ссылку
+	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
 	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут свою ссылку
 
-	local script_url = "https://github.com/thechampguess/scripts/blob/master/autoupdate_lesson_16.luac?raw=true" -- тут свою ссылку
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
 
-
-
-	function cmd_update(arg)
-		sampShowDialog(1000, "Автообновление v2.0", "{FFFFFF}Это урок по обновлению\n{FFF000}Новая версия", "Закрыть", "", 0)
-	end
 
 	sampRegisterChatCommand("update", cmd_update)
 
@@ -133,7 +74,7 @@ function main()
         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
-                sampAddChatMessage("Есть обновление! Версия: " .. RDSTools.script.version, -1)
+                sampShowDialog(1000, "Автообновление: ", "{FFFFFF}Найдена новая версия {FF0000}RDS Tools " .. RDSTools.script.version .. \n 'Начинаю процесс установки ...', "Закрыть", "", 0)
                 update_state = true
 			else
 				sampAddChatMessage('У вас установлена актуальная версия ' .. version, -1)
@@ -357,7 +298,60 @@ local checked_test12 = imgui.ImBool(cfg.settings.form)
 local checked_test13 = imgui.ImBool(false)
 local checked_test14 = imgui.ImBool(false)
 local combo_select = imgui.ImInt(cfg.settings.spisok)
+local sw, sh = getScreenResolution()
+local text_buffer = imgui.ImBuffer(256)
+local main_window_state = imgui.ImBool(false)
+local secondary_window_state = imgui.ImBool(false)
 
+local text_buffer_age = imgui.ImBuffer(256)
+local text_buffer_name = imgui.ImBuffer(256)
+
+
+
+--------- Неактив кнопка
+
+function imgui.ButtonClickable(clickable, ...)
+    if clickable then
+        return imgui.Button(...)
+    else
+        local r, g, b, a = imgui.ImColor(imgui.GetStyle().Colors[imgui.Col.Button]):GetFloat4()
+        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(r, g, b, a/2) )
+        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(r, g, b, a/2))
+        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(r, g, b, a/2))
+        imgui.PushStyleColor(imgui.Col.Text, imgui.GetStyle().Colors[imgui.Col.TextDisabled])
+            imgui.Button(...)
+        imgui.PopStyleColor()
+        imgui.PopStyleColor()
+        imgui.PopStyleColor()
+        imgui.PopStyleColor()
+    end
+end
+--------- Неактив кнопка
+
+
+require('samp.events').onShowDialog = function(dialogId, style, title, button1, button2, text)
+    text = ('ID: %d | %s'):format(dialogId, text)
+    return {dialogId, style, title, button1, button2, text}
+end
+
+
+
+function imgui.NewInputText(lable, val, width, hint, hintpos) -- Поле ввода с подсказкой
+    local hint = hint and hint or ''
+    local hintpos = tonumber(hintpos) and tonumber(hintpos) or 1
+    local cPos = imgui.GetCursorPos()
+    imgui.PushItemWidth(width)
+    local result = imgui.InputText(lable, val)
+    if #val.v == 0 then
+        local hintSize = imgui.CalcTextSize(hint)
+        if hintpos == 2 then imgui.SameLine(cPos.x + (width - hintSize.x) / 2)
+        elseif hintpos == 3 then imgui.SameLine(cPos.x + (width - hintSize.x - 5))
+        else imgui.SameLine(cPos.x + 5) end
+        imgui.TextColored(imgui.ImVec4(1.00, 1.00, 1.00, 0.40), tostring(hint))
+    end
+    imgui.PopItemWidth()
+    return result
+end
 
 
 
