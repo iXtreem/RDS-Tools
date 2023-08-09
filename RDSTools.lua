@@ -1,4 +1,5 @@
 require 'lib.moonloader'
+require 'lib.sampfuncs'
 script_name('RDS Tools')
 local version = 0.2
 local imgui = require 'imgui' 
@@ -9,7 +10,6 @@ local inicfg = require 'inicfg'
 local directIni = 'RDSTools.ini'
 encoding.default = 'CP1251' 
 u8 = encoding.UTF8 
-require 'lib.sampfuncs'
 local key = require 'vkeys'
 local rkeys = require "rkeys"
 local fa = require 'faIcons'
@@ -50,8 +50,6 @@ imgui.GetIO().Fonts:Clear()
 imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\FRAMDIT.ttf', 17, nil, glyph_ranges)
 main_color_text = 0xFFFFFF
 
-
-----===============================================================================================================
 function main()
 	while not isSampAvailable() do wait(0) end
 
@@ -72,9 +70,9 @@ function main()
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
                 update_state = true
-				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  '{FFFFFF}загружен, активация: {808080}F3'
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[НАЙДЕНО ОБНОВЛЕНИЕ]' ..  '{FFFFFF}загружен, активация: {808080}F3')
 			else
-				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[' .. version .. ']' ..  '{FFFFFF}загружен, активация: {808080}F3 ' .. version, -1)
+				sampAddChatMessage('Скрипт {FF0000}RDS Tools' .. '[' .. version .. ']' ..  '{FFFFFF}загружен, активация: {808080}F3')
 			end
             os.remove(update_path)
         end
@@ -90,14 +88,10 @@ function main()
             end)
             break
         end
-
 	end
 
 
-----===============================================================================================================
-
 	func = lua_thread.create_suspended(weaponfunc)
-	-- ============================================= СОЗДАНИЕ ПОТОКОВ =================================================
     func:run()
 	func2 = lua_thread.create_suspended(helloadm)
     func2:run()
@@ -109,22 +103,20 @@ function main()
    	func6:run()
 	--func7 = lua_thread.create_suspended(cw)
     --func7:run()
-	-- ============================================= СОЗДАНИЕ ПОТОКОВ =================================================
 	imgui.Process = false
 	while true do
 		wait(0)
-		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then -- Кнопка открытия 1 диалога
+		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then 
 			main_window_state.v = not main_window_state.v
 			imgui.Process = main_window_state.v
 		end
-		if isKeyJustPressed(VK_F2) then -- Кнопка открытия 2 диалога
+		if isKeyJustPressed(VK_F2) then 
 			secondary_window_state.v = not secondary_window_state.v
 			imgui.Process = secondary_window_state.v
 		end
 	end
 end
 
---=============================================== САМИ ПОТОКИ =============================================
 function weaponfunc()
     while true do
 		if cfg.settings.check_weapon_hack then
@@ -276,7 +268,6 @@ function autoform()
 	end
 end
 
---=============================================== САМИ ПОТОКИ =============================================
 
 local checked_test = imgui.ImBool(cfg.settings.check_weapon_hack)
 local checked_test2 = imgui.ImBool(false)
