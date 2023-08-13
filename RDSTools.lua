@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 require 'lib.sampfuncs'
 script_name('RDS Tools')
-local version = 0.2 -- ВЕРСИЯ СКРИПТА обнова
+local version = 0.2
 local imgui = require 'imgui' 
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
@@ -54,11 +54,11 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		texts = '+',
 		prefixnick = 'Главный-Администратор',
 		stylecolor = '{FFFFFF}',
-		info = '',
-		stylecolorform = '{FF0000}',
+		stylecolorform = '{FF0000}'
 	},
 	script = {
-		version = 0.2
+		version = 0.2,
+		info = 'Изменены текстдравы\nобновлён интерфейс\nДобавлен автомут\nУдачного использования'
 	}
 }, directIni)
 inicfg.save(cfg,directIni)
@@ -141,7 +141,7 @@ function main()
 	update_state = false
 	local dlstatus = require('moonloader').download_status
 	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
-	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут свою ссылку
+	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут ту же самую ссылку
 	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
 	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
@@ -151,6 +151,7 @@ function main()
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
                 update_state = true
+				sampAddChatMessage('RDS Tools: Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
 			else
 				sampAddChatMessage('Скрипт {FF0000}RDS Tools ' .. '{C0C0C0}[' .. version .. ']' ..  ' {FFFFFF}загружен, активация: {808080}F3', -1)
 			end
@@ -166,7 +167,7 @@ function main()
 	if cfg.settings.chatclear then
 		local chatclear = import(path_chatclear) -- подгрузка чистильщика чата
 	end
-	if cfg.settings.fastspawn then
+	if cfg.settings.fastspawn and not update_state then
 		local fastspawn = import(path_fastspawn) -- подгрузка скрипта фастспавн
 	end
 	if cfg.settings.trassera then
@@ -810,6 +811,9 @@ function apply_custom_style()
 end
 apply_custom_style()
 
+sampRegisterChatCommand('check_update', function(param) 
+	sampShowDialog(1000, "В этом обновлении", cfg.settings.info, "Понял", _)
+end)
 
 sampRegisterChatCommand('newprfma', function(param) 
 	cfg.settings.prefixma = param
