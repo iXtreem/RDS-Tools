@@ -1,6 +1,7 @@
 require 'lib.moonloader'
 require 'lib.sampfuncs'
 script_name('RDS Tools')
+script_author('Neon4ik')
 local version = 0.1
 local imgui = require 'imgui' 
 local imadd = require 'imgui_addons'
@@ -16,11 +17,11 @@ local fa = require 'faIcons'
 local ffi = require "ffi"
 local mem = require "memory"
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local path_chatclear = getWorkingDirectory() .. "\\resource\\cleaner.lua" -- ГЇГ®Г¤ГЈГ°ГіГ§ГЄГ  Г±ГЄГ°ГЁГЇГІГ  Г¤Г«Гї Г®Г·ГЁГ±ГІГЄГЁ Г·Г ГІГ  (ГЇГ® Г¦ГҐГ«Г Г­ГЁГѕ)
-local path_fastspawn = getWorkingDirectory() .. "\\resource\\FastSpawn.lua" -- ГЇГ®Г¤ГЈГ°ГіГ§ГЄГ  Г±ГЄГ°ГЁГЇГІГ  Г¤Г«Гї ГЎГ»Г±ГІГ°Г®ГЈГ® Г±ГЇГ ГўГ­Г  (ГЇГ® Г¦ГҐГ«Г Г­ГЁГѕ)
-local path_trassera = getWorkingDirectory() .. "\\resource\\trassera.lua" -- ГЇГ®Г¤ГЈГ°ГіГ§ГЄГ  Г±ГЄГ°ГЁГЇГІГ  Г¤Г«Гї ГІГ°Г Г±Г±ГҐГ°Г®Гў (ГЇГ® Г¦ГҐГ«Г Г­ГЁГѕ)
+local path_chatclear = getWorkingDirectory() .. "\\resource\\cleaner.lua" -- подгрузка скрипта для очистки чата (по желанию)
+local path_fastspawn = getWorkingDirectory() .. "\\resource\\FastSpawn.lua" -- подгрузка скрипта для быстрого спавна (по желанию)
+local path_trassera = getWorkingDirectory() .. "\\resource\\trassera.lua" -- подгрузка скрипта для трассеров (по желанию)
 
-function sampev.onPlayerDeathNotification(killerId, killedId, reason) -------- ГЏГ®Г¤ГЇГЁГ±Гј ID Гў ГЄГЁГ«Г« Г·Г ГІГҐ
+function sampev.onPlayerDeathNotification(killerId, killedId, reason) -------- Подпись ID в килл чате
 	local kill = ffi.cast('struct stKillInfo*', sampGetKillInfoPtr())
 	local _, myid = sampGetPlayerIdByCharHandle(playerPed)
 	
@@ -35,9 +36,15 @@ function sampev.onPlayerDeathNotification(killerId, killedId, reason) -------- Г
 	end)
 end
 
-local cfg = inicfg.load({ -- ГЎГ Г§Г®ГўГ»ГҐ Г­Г Г±ГІГ°Г®Г©ГЄГЁ Г±ГЄГ°ГЁГЇГІГ 
+local string_flood = ""
+local string_number_max = 4 -- anti flood
+local msgs = {chat = {}}
+local string_time = 30
+
+
+local cfg = inicfg.load({ -- базовые настройки скрипта
 	settings = {
-		check_weapon_hack = true,
+		check_weapon_hack = false,
 		helloadmin = false,
 		chatclear = true,
 		FLD = false,
@@ -46,24 +53,25 @@ local cfg = inicfg.load({ -- ГЎГ Г§Г®ГўГ»ГҐ Г­Г Г±ГІГ°Г®Г©ГЄГЁ Г±ГЄГ°ГЁГЇГІГ 
 		trassera = true,
 		autoal = false,
 		wallhack = true,
+		fastspawn = false,
 		autoonline = false,
 		inputhelper = true,
 		prefixma = '2E8B57',
 		prefixa = '87CEEB',
 		prefixsa = 'FF4500',
 		texts = '+',
-		prefixnick = 'ГѓГ«Г ГўГ­Г»Г©-ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°',
+		prefixnick = 'Главный-Администратор',
 		stylecolor = '{FFFFFF}',
 		stylecolorform = '{FF0000}'
 	},
 	script = {
 		version = 0.1,
-		info = 'Г€Г§Г¬ГҐГ­ГҐГ­Г» ГІГҐГЄГ±ГІГ¤Г°Г ГўГ»\nГ®ГЎГ­Г®ГўГ«ВёГ­ ГЁГ­ГІГҐГ°ГґГҐГ©Г±\nГ„Г®ГЎГ ГўГ«ГҐГ­ Г ГўГІГ®Г¬ГіГІ\nГ“Г¤Г Г·Г­Г®ГЈГ® ГЁГ±ГЇГ®Г«ГјГ§Г®ГўГ Г­ГЁГї'
+		info = 'Изменен текст'
 	}
 }, directIni)
 inicfg.save(cfg,directIni)
 
-local font = renderCreateFont('TimesNewRoman', 12, 5) -- ГІГ Г©Г¬ГҐГ° Г¤Г«Гї ГґГ®Г°Г¬
+local font = renderCreateFont('TimesNewRoman', 12, 5) -- таймер для форм
 local st = {
     bool = false,
     timer = -1,
@@ -94,18 +102,18 @@ local BuffSize = 32
 local KeyboardLayoutName = ffi.new("char[?]", BuffSize)
 local LocalInfo = ffi.new("char[?]", BuffSize)
 chars = {
-	["Г©"] = "q", ["Г¶"] = "w", ["Гі"] = "e", ["ГЄ"] = "r", ["ГҐ"] = "t", ["Г­"] = "y", ["ГЈ"] = "u", ["Гё"] = "i", ["Г№"] = "o", ["Г§"] = "p", ["Гµ"] = "[", ["Гє"] = "]", ["Гґ"] = "a",
-	["Г»"] = "s", ["Гў"] = "d", ["Г "] = "f", ["ГЇ"] = "g", ["Г°"] = "h", ["Г®"] = "j", ["Г«"] = "k", ["Г¤"] = "l", ["Г¦"] = ";", ["ГЅ"] = "'", ["Гї"] = "z", ["Г·"] = "x", ["Г±"] = "c", ["Г¬"] = "v",
-	["ГЁ"] = "b", ["ГІ"] = "n", ["Гј"] = "m", ["ГЎ"] = ",", ["Гѕ"] = ".", ["Г‰"] = "Q", ["Г–"] = "W", ["Г“"] = "E", ["ГЉ"] = "R", ["Г…"] = "T", ["ГЌ"] = "Y", ["Гѓ"] = "U", ["Г"] = "I",
-	["Г™"] = "O", ["Г‡"] = "P", ["Г•"] = "{", ["Гљ"] = "}", ["Г”"] = "A", ["Г›"] = "S", ["Г‚"] = "D", ["ГЂ"] = "F", ["ГЏ"] = "G", ["Гђ"] = "H", ["ГЋ"] = "J", ["Г‹"] = "K", ["Г„"] = "L",
-	["Г†"] = ":", ["Гќ"] = "\"", ["Гџ"] = "Z", ["Г—"] = "X", ["Г‘"] = "C", ["ГЊ"] = "V", ["Г€"] = "B", ["Г’"] = "N", ["Гњ"] = "M", ["ГЃ"] = "<", ["Гћ"] = ">"
+	["й"] = "q", ["ц"] = "w", ["у"] = "e", ["к"] = "r", ["е"] = "t", ["н"] = "y", ["г"] = "u", ["ш"] = "i", ["щ"] = "o", ["з"] = "p", ["х"] = "[", ["ъ"] = "]", ["ф"] = "a",
+	["ы"] = "s", ["в"] = "d", ["а"] = "f", ["п"] = "g", ["р"] = "h", ["о"] = "j", ["л"] = "k", ["д"] = "l", ["ж"] = ";", ["э"] = "'", ["я"] = "z", ["ч"] = "x", ["с"] = "c", ["м"] = "v",
+	["и"] = "b", ["т"] = "n", ["ь"] = "m", ["б"] = ",", ["ю"] = ".", ["Й"] = "Q", ["Ц"] = "W", ["У"] = "E", ["К"] = "R", ["Е"] = "T", ["Н"] = "Y", ["Г"] = "U", ["Ш"] = "I",
+	["Щ"] = "O", ["З"] = "P", ["Х"] = "{", ["Ъ"] = "}", ["Ф"] = "A", ["Ы"] = "S", ["В"] = "D", ["А"] = "F", ["П"] = "G", ["Р"] = "H", ["О"] = "J", ["Л"] = "K", ["Д"] = "L",
+	["Ж"] = ":", ["Э"] = "\"", ["Я"] = "Z", ["Ч"] = "X", ["С"] = "C", ["М"] = "V", ["И"] = "B", ["Т"] = "N", ["Ь"] = "M", ["Б"] = "<", ["Ю"] = ">"
 }
 
 
 local fa_glyph_ranges = imgui.ImGlyphRanges({ fa.min_range, fa.max_range })
 local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
 imgui.GetIO().Fonts:Clear() 
-imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\FRAMDIT.ttf', 17, nil, glyph_ranges) -- ГёГ°ГЁГґГІ ГЁГ­ГІГҐГ°ГґГҐГ©Г±Г 
+imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\FRAMDIT.ttf', 17, nil, glyph_ranges) -- шрифт интерфейса
 main_color_text = 0xFFFFFF
 
 
@@ -116,14 +124,13 @@ local checked_test4 = imgui.ImBool(cfg.settings.prfrandom)
 local checked_test5 = imgui.ImBool(cfg.settings.chatclear)
 local checked_test6 = imgui.ImBool(cfg.settings.fastspawn)
 local checked_test7 = imgui.ImBool(cfg.settings.FLD)
-local checked_test8 = imgui.ImBool(cfg.settings.clickwarp)
+local checked_test8 = imgui.ImBool(false)
 local checked_test9 = imgui.ImBool(false)
-local checked_test10 = imgui.ImBool(cfg.settings.autoalogin)
+local checked_test10 = imgui.ImBool(cfg.settings.autoal)
 local checked_test11 = imgui.ImBool(cfg.settings.trassera)
 local checked_test12 = imgui.ImBool(cfg.settings.form)
 local checked_test13 = imgui.ImBool(cfg.settings.inputhelper)
 local checked_test14 = imgui.ImBool(cfg.settings.wallhack)
-local combo_select = imgui.ImInt(cfg.settings.spisok)
 local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
 local main_window_state = imgui.ImBool(false)
@@ -132,7 +139,7 @@ local secondary_window_state = imgui.ImBool(false)
 local text_buffer_age = imgui.ImBuffer(256)
 local text_buffer_name = imgui.ImBuffer(256)
 
-
+local act = false -- защита от работы в афк
 
 function main()
 	while not isSampAvailable() do wait(0) end
@@ -140,9 +147,9 @@ function main()
 	func:run()
 	update_state = false
 	local dlstatus = require('moonloader').download_status
-	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Г‘Г±Г»Г«ГЄГ  Г­Г  ГЄГ®Г­ГґГЁГЈ
-	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- ГЁ ГІГіГІ ГІГі Г¦ГҐ Г±Г Г¬ГіГѕ Г±Г±Г»Г«ГЄГі
-	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Г‘Г±Г»Г«ГЄГ  Г­Г  Г±Г Г¬ ГґГ Г©Г«
+	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
+	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут ту же самую ссылку
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
 	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	nick = sampGetPlayerNickname(id)
@@ -151,9 +158,9 @@ function main()
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
                 update_state = true
-				sampAddChatMessage('RDS Tools: ГЌГ Г©Г¤ГҐГ­Г® Г®ГЎГ­Г®ГўГ«ГҐГ­ГЁГҐ, ГЇГ°Г®ГўГҐГ°ГЁГІГј Г·ГІГ® Г¤Г®ГЎГ ГўГ«ГҐГ­Г® ГЄГ®Г¬Г Г­Г¤Г®Г© /check_update, Г§Г ГЈГ°ГіГ¦Г Гѕ ... ', -1)
-			else
-				sampAddChatMessage('Г‘ГЄГ°ГЁГЇГІ {FF0000}RDS Tools ' .. '{C0C0C0}[' .. version .. ']' ..  ' {FFFFFF}Г§Г ГЈГ°ГіГ¦ГҐГ­, Г ГЄГІГЁГўГ Г¶ГЁГї: {808080}F3', -1)
+				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
+				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
+				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
 			end
             os.remove(update_path)
         end
@@ -161,17 +168,17 @@ function main()
 	imgui.Process = false
 	func = lua_thread.create_suspended(timer)
 	func:run()
-	inputHelpText = renderCreateFont("Arial", 9, FCR_BORDER + FCR_BOLD)
+	inputHelpText = renderCreateFont("Arial", 9, FCR_BORDER + FCR_BOLD) -- шрифт инпут хелпера
 	lua_thread.create(inputChat)
 	lua_thread.create(showInputHelp)
 	if cfg.settings.chatclear then
-		local chatclear = import(path_chatclear) -- ГЇГ®Г¤ГЈГ°ГіГ§ГЄГ  Г·ГЁГ±ГІГЁГ«ГјГ№ГЁГЄГ  Г·Г ГІГ 
+		local chatclear = import(path_chatclear) -- подгрузка чистильщика чата
 	end
 	if cfg.settings.fastspawn and not update_state then
-		local fastspawn = import(path_fastspawn) -- ГЇГ®Г¤ГЈГ°ГіГ§ГЄГ  Г±ГЄГ°ГЁГЇГІГ  ГґГ Г±ГІГ±ГЇГ ГўГ­
+		local fastspawn = import(path_fastspawn) -- подгрузка скрипта фастспавн
 	end
 	if cfg.settings.trassera then
-		local trassera = import(path_trassera) -- ГЇГ®Г¤ГЈГ°ГіГ§ГЄГ  ГІГ°Г Г±Г±ГҐГ°Г®Гў
+		local trassera = import(path_trassera) -- подгрузка трассеров
 	end
 	while not sampIsLocalPlayerSpawned() do wait(100) end
 	if defaultState and not nameTag then nameTagOn() end
@@ -179,16 +186,42 @@ function main()
         wait(0)
         if update_state then
             downloadUrlToFile(script_url, script_path, function(id, status)
-                if status == dlstatus.STATUS_ENDDOWNLOADDATA then   
+                if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+					wait(10000)
+                    sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. RDSTools.script.version .. '\n{FFFFFF}В ней добавлено ' .. RDSTools.script.info, "Спасибо", "", 0)
 					showCursor(false,false)
                     thisScript():reload()
                 end
             end)
             break
         end
-		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then 
+		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then  -- кнопка активации окна RDS Tools
 			main_window_state.v = not main_window_state.v
 			imgui.Process = main_window_state.v
+		end
+		if isKeyJustPressed(VK_F2) then  -- защита от работы в афк
+			if act then
+				cfg.settings.check_weapon_hack = checkweap
+				cfg.settings.FLD = fld
+				cfg.settings.forms = forms
+				cfg.settings.helloadmin = helladm
+				cfg.settings.autoal = pleaseal
+				act = false
+				sampAddChatMessage('{FF0000}RDS Tools: {d5b3f5}Все значения переведены в прежний режим', -1)
+			else
+				checkweap = cfg.settings.check_weapon_hack
+				fld = cfg.settings.FLD
+				forms = cfg.settings.forms
+				helladm = cfg.settings.helloadmin
+				pleaseal = cfg.settings.autoal
+				cfg.settings.check_weapon_hack = false
+				cfg.settings.FLD = false
+				cfg.settings.forms = false
+				cfg.settings.helloadmin = false
+				cfg.settings.autoal = false
+				act = true
+				sampAddChatMessage('{FF0000}RDS Tools: {d5b3f5}Можете выходить в афк, блокирую работу скриптов.', -1)
+			end
 		end
 		if (isKeyDown(VK_T) and wasKeyPressed(VK_T)) then
 			if (not sampIsChatInputActive() and not sampIsDialogActive()) then
@@ -211,7 +244,7 @@ function main()
 			if isKeyDown(VK_J) and not sampIsChatInputActive() and not sampIsDialogActive() then
 				sett = false
 				styleform = false
-				sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}ГґГ®Г°Г¬Г  Г®ГІГЄГ«Г®Г­ГҐГ­Г ', -1)
+				sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}форма отклонена', -1)
 			end
 		end
 		if cfg.settings.wallhack then
@@ -247,6 +280,8 @@ function main()
 				end
 			end
 		end
+		sampTextdrawDelete(437)
+		sampTextdrawDelete(2059)
 	end
 end
 
@@ -307,7 +342,7 @@ function color()
     return mcolor
 end
 
-function ao() -- Г ГўГІГ®Г®Г­Г«Г Г©Г­
+function ao() -- автоонлайн
 	if cfg.settings.autoonline then
 		if not isGamePaused() and not isPauseMenuActive() and not sampIsPlayerPaused(id) then
 			online = true
@@ -342,13 +377,13 @@ function cyrillic(text)
 	return table.concat(result)
 end
 
-local sw, sh = getScreenResolution() -- ГіГ§Г­Г ГҐГ¬ Г°Г Г§Г°ГҐГёГҐГ­ГЁГҐ ГЅГЄГ°Г Г­Г 
-function timer() -- ГІГ Г©Г¬ГҐГ° Г¤Г«Гї Г ГўГІГ®ГґГ®Г°Г¬
+local sw, sh = getScreenResolution() -- узнаем разрешение экрана
+function timer() -- таймер для автоформ
 	while true do
 		wait(0)
 		if st.bool and st.timer ~= -1 and sett then
             timer = os.clock()-st.timer
-            renderFontDrawText(font, cfg.settings.stylecolor .. 'ГЌГ Г¦Г¬ГЁ U Г·ГІГ®ГЎГ» ГЇГ°ГЁГ­ГїГІГј ГЁГ«ГЁ J Г·ГІГ®ГЎГ» Г®ГІГЄГ«Г®Г­ГЁГІГј\nГ”Г®Г°Г¬Г : ' .. cfg.settings.stylecolorform .. forma .. cfg.settings.stylecolor .. '\nГ‚Г°ГҐГ¬ГҐГ­ГЁ Г­Г  Г°Г Г§Г¤ГіГ¬ГјГї 8 Г±ГҐГЄ, ГЇГ°Г®ГёГ«Г®: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+            renderFontDrawText(font, cfg.settings.stylecolor .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. cfg.settings.stylecolorform .. forma .. cfg.settings.stylecolor .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
             if timer>8 then
                 sett = false
 				styleform = false
@@ -360,7 +395,7 @@ function timer() -- ГІГ Г©Г¬ГҐГ° Г¤Г«Гї Г ГўГІГ®ГґГ®Г°Г¬
 end
 function sampev.onServerMessage(color, text)
 	if cfg.settings.form then
-		if text:match('[A-%d%d]') and text:match('.ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°.') then
+		if text:match('[A-%d%d]') and text:match('.Администратор.') then
 			d = string.len(text)
 			for k,v in pairs(spisok) do
 				if text:find(v) then
@@ -382,7 +417,7 @@ function sampev.onServerMessage(color, text)
 								sett = true
 								st.bool = true
 								st.timer = os.clock()
-								sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}(U - Г„Г ), (J - ГЏГ°Г®ГЇГіГ±ГІГЁГІГј)')
+								sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}(U - Да), (J - Пропустить)')
 								if (text.sub(text, 2)):find('/') then
 									styleform = true
 								end
@@ -394,7 +429,7 @@ function sampev.onServerMessage(color, text)
 		end
 	end
 	if cfg.settings.prfrandom then
-		if text:find("ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° " .. nick) and text:find("Г ГўГІГ®Г°ГЁГ§Г®ГўГ Г«Г±Гї Гў Г Г¤Г¬ГЁГ­") then
+		if text:find("Администратор " .. nick) and text:find("авторизовался в админ") then
 			local ip = sampGetCurrentServerAddress()
 			local _, id = sampGetPlayerIdByCharHandle(playerPed)
 			local mcolor = ""
@@ -454,8 +489,8 @@ function sampev.onServerMessage(color, text)
 		end
 	end
 	if cfg.settings.helloadmin then
-		if text:find("ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° ") and text:find('Г ГўГІГ®Г°ГЁГ§Г®ГўГ Г«Г±Гї Гў Г Г¤Г¬ГЁГ­') then
-			if text:find("ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° " .. nick) and text:find("Г ГўГІГ®Г°ГЁГ§Г®ГўГ Г«Г±Гї Гў Г Г¤Г¬ГЁГ­") then
+		if text:find("Администратор ") and text:find('авторизовался в админ') then
+			if text:find("Администратор " .. nick) and text:find("авторизовался в админ") then
 				sampAddChatMessage('', -1)
 			else
 				local id = text:match('%[(%d+)%]')
@@ -463,7 +498,7 @@ function sampev.onServerMessage(color, text)
 					lua_thread.create(function()
 					wait(200)
 					name = sampGetPlayerNickname(tostring(id))
-					sampSendChat('/a Г‡Г¤Г°Г ГўГ±ГІГўГіГ©ГІГҐ, ' .. name .. ', ГЄГ ГЄ ГўГ ГёГЁ Г¤ГҐГ«Г ?))')
+					sampSendChat('/a Здравствуйте, ' .. name .. ', как ваши дела?))')
 					end)
 				end
 			end
@@ -479,24 +514,125 @@ function sampev.onServerMessage(color, text)
 				str[2] = str[2]:gsub("{......}", "")
 				local nick, id = string.match(str[2], "(.+)%[(.+)%]")
 				sampSendChat("/iwep " .. id)
-				sampAddChatMessage("ГЏГ°Г®ГЎГЁГўГ Гѕ: " .. nick .. " [" .. id .. "]", 0xADFF2F)
+				sampAddChatMessage("Пробиваю: " .. nick .. " [" .. id .. "]", 0xADFF2F)
 			end
 		end 
 	end
 	if cfg.settings.autoal then
-		if text:match("Г­ГҐ Г ГўГІГ®Г°ГЁГ§Г®ГўГ Г«Г±Гї ГЄГ ГЄ Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° ГіГ¦ГҐ") then
+		if text:match("не авторизовался как администратор уже") then
 			poiskid = text:match('%(%d+)%')
-			--[A] Lawrence_Herson(29) Г­ГҐ Г ГўГІГ®Г°ГЁГ§Г®ГўГ Г«Г±Гї ГЄГ ГЄ Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° ГіГ¦ГҐ 1 Г¬ГЁГ­ГіГІ(Г»)
+			--[A] Lawrence_Herson(29) не авторизовался как администратор уже 1 минут(ы)
 			if poiskid then
 				lua_thread.create(function()
 				wait(200)
 				nameadm = sampGetPlayerNickname(tostring(poiskid))
-				sampSendChat('/ans ' .. poiskid .. ' Г‡Г¤Г°Г ГўГ±ГІГўГіГ©ГІГҐ, ' .. nameadm .. ', ГўГ» Г§Г ГЎГ»Г«ГЁ ГўГўГҐГ±ГІГЁ /alogin, Г®Г±ГіГ№ГҐГ±ГІГўГЁГІГҐ ГЅГІГ® Г­ГҐГ¬ГҐГ¤Г«ГҐГ­Г­Г®.')
+				sampSendChat('/ans ' .. poiskid .. ' Здравствуйте, ' .. nameadm .. ', вы забыли ввести /alogin, осуществите это немедленно.')
 				end)
 			end
 		end
 	end
+	if cfg.settings.FLD then
+		local _, check_flood_id, _, check_flood = string.match(text, "(.+)%((.+)%): {(.+)}(.+)")
+		local _, check_floodv_id, check_floodv = string.match(text, "[VIP чат] (.+)%[(%d+)%]: (.+)")
+		if check_floodv ~= nil and check_floodv_id ~= nil and not isGamePaused() and not isPauseMenuActive() and isGameWindowForeground() then  
+			string_flood = check_floodv
+			local playername,playerid, msg = text:match("[VIP чат] (.+)%[(%d+)%]: (.+)")
+			if msgs.chat[playername] and msgs.chat[playername][1] then
+				if (#msgs.chat[playername]+1 >= string_number_max) then
+					while (#msgs.chat[playername] > string_number_max) do
+						table.remove(msgs.chat[playername],1)
+					end
+					if msgs.chat[playername][#msgs.chat[playername]].id == playerid and msgs.chat[playername][#msgs.chat[playername]].msg == msg then
+						msgs.chat[playername][#msgs.chat[playername]+1] = {id = playerid,msg = msg,time = os.clock()}
+						if msgs.chat[playername][#msgs.chat[playername]].time and math.ceil(msgs.chat[playername][#msgs.chat[playername]].time - msgs.chat[playername][1].time) < string_time then
+							if not isGamePaused() and not isPauseMenuActive() and isGameWindowForeground() then 
+								detectedFlood(playername,playerid,msg,math.ceil(msgs.chat[playername][#msgs.chat[playername]].time - msgs.chat[playername][1].time),#msgs.chat[playername],n)
+							end
+							for i = 1,string_number_max,1 do
+								table.remove(msgs.chat[playername],1)
+							end
+						end
+					else
+						for i = 1,string_number_max,1 do
+							table.remove(msgs.chat[playername],1)
+						end
+					end
+				else
+					if msgs.chat[playername][#msgs.chat[playername]].id == playerid and msgs.chat[playername][#msgs.chat[playername]].msg == msg then
+						msgs.chat[playername][#msgs.chat[playername]+1] = {id = playerid,msg = msg,time = os.clock()}
+					else
+						for i = 1,string_number_max,1 do
+							table.remove(msgs.chat[playername],1)
+						end
+					end
+				end
+			else
+				msgs.chat[playername] = {}
+				msgs.chat[playername][#msgs.chat[playername]+1] = {id = playerid,msg = msg,time = os.clock()}
+				if string_number_max <= 1 then
+					for i = 1,cfg[n].maxmsg,1 do
+						table.remove(msgs.chat[playername],1)
+					end
+				end
+			end
+		end
+		if check_flood ~= nil and check_flood_id ~= nil and not isGamePaused() and not isPauseMenuActive() and isGameWindowForeground() then  
+			string_flood = check_flood
+			local playername,playerid, _, msg = text:match("(.+)%((.+)%): {(.+)}(.+)")
+			if msgs.chat[playername] and msgs.chat[playername][1] then
+				if (#msgs.chat[playername]+1 >= string_number_max) then
+					while (#msgs.chat[playername] > string_number_max) do
+						table.remove(msgs.chat[playername],1)
+					end
+					if msgs.chat[playername][#msgs.chat[playername]].id == playerid and msgs.chat[playername][#msgs.chat[playername]].msg == msg then
+						msgs.chat[playername][#msgs.chat[playername]+1] = {id = playerid,msg = msg,time = os.clock()}
+						if msgs.chat[playername][#msgs.chat[playername]].time and math.ceil(msgs.chat[playername][#msgs.chat[playername]].time - msgs.chat[playername][1].time) < string_time then
+							if not isGamePaused() and not isPauseMenuActive() and isGameWindowForeground() then 
+								sampAddChatMessage("[FLD] " .. text, -1)
+								detectedFlood(playername,playerid,msg,math.ceil(msgs.chat[playername][#msgs.chat[playername]].time - msgs.chat[playername][1].time),#msgs.chat[playername],n)
+							end
+							for i = 1,string_number_max,1 do
+								table.remove(msgs.chat[playername],1)
+							end
+						end
+					else
+						for i = 1,string_number_max,1 do
+							table.remove(msgs.chat[playername],1)
+						end
+					end
+				else
+					if msgs.chat[playername][#msgs.chat[playername]].id == playerid and msgs.chat[playername][#msgs.chat[playername]].msg == msg then
+						msgs.chat[playername][#msgs.chat[playername]+1] = {id = playerid,msg = msg,time = os.clock()}
+					else
+						for i = 1,string_number_max,1 do
+							table.remove(msgs.chat[playername],1)
+						end
+					end
+				end
+			else
+				msgs.chat[playername] = {}
+				msgs.chat[playername][#msgs.chat[playername]+1] = {id = playerid,msg = msg,time = os.clock()}
+				if string_number_max <= 1 then
+					for i = 1,cfg[n].maxmsg,1 do
+						table.remove(msgs.chat[playername],1)
+					end
+				end
+			end
+		end
+	end
 end
+
+function detectedFlood(name,id,msg,time,count,number)
+	lua_thread.create(function()
+		if not isGamePaused() and not isPauseMenuActive() and isGameWindowForeground() then 
+			sampAddChatMessage("{E9967A}Флуд в чате. Отправлено "..count.." текста, за "..time.." секунд из ".. string_time .. " разрешенных!", -1)
+			sampAddChatMessage("{FA8072}Текст: "..msg.." | Флудил Игрок: "..sampGetPlayerNickname(tonumber(id)).."["..id.."]", -1)
+			wait(100)
+			sampSendChat("/mute " .. id .. " 120 Флуд "..count.." сообщения за "..time.."/".. string_time .. "сек.", -1)
+		end	
+	end)
+end	
+
 function cyrillic(text)
 	local convtbl = {[230]=155,[231]=159,[247]=164,[234]=107,[250]=144,[251]=168,[254]=171,[253]=170,[255]=172,[224]=97,[240]=112,[241]=99,[226]=162,[228]=154,[225]=151,[227]=153,[248]=165,[243]=121,[184]=101,[235]=158,[238]=111,[245]=120,[233]=157,[242]=166,[239]=163,[244]=63,[237]=174,[229]=101,[246]=36,[236]=175,[232]=156,[249]=161,[252]=169,[215]=141,[202]=75,[204]=77,[220]=146,[221]=147,[222]=148,[192]=65,[193]=128,[209]=67,[194]=139,[195]=130,[197]=69,[206]=79,[213]=88,[168]=69,[223]=149,[207]=140,[203]=135,[201]=133,[199]=136,[196]=131,[208]=80,[200]=133,[198]=132,[210]=143,[211]=89,[216]=142,[212]=129,[214]=137,[205]=72,[217]=138,[218]=167,[219]=145}
 	local result = {}
@@ -555,18 +691,21 @@ function imgui.OnDrawFrame()
 	if not main_window_state.v and not secondary_window_state.v then
 		imgui.Process = false
 	end
-	if main_window_state.v then -- ГЉГЌГЋГЏГЉГ€ Г€ГЌГ’Г…ГђГ”Г…Г‰Г‘ГЂ F3
+	if main_window_state.v then -- КНОПКИ ИНТЕРФЕЙСА F3
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin('xX   ' .. " RDS Tools " .. '  Xx', main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
-	-- END Г‚ ГЉГЋГЌГ–Г…Г…Г…Г…Г…
+	-- END В КОНЦЕЕЕЕЕ
+	imgui.SetCursorPosX(60)
+	imgui.Text(u8'Кнопка F1 переводит работу скриптов в афк режим', -1)
+	imgui.Separator()
 	if imgui.Checkbox(u8"Weapon Hack +", checked_test) then
 		cfg.settings.check_weapon_hack = not cfg.settings.check_weapon_hack
 		inicfg.save(cfg,directIni)
 	end
 		imgui.SameLine()
 		imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8'ГЏГ°ГЁГўГҐГІГ±ГІГўГЁГҐ Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°Г®Гў', checked_test2) then
+	if imgui.Checkbox(u8'Приветствие администраторов', checked_test2) then
 		if nick ~= 'N.E.O.N' and nick ~= '.morjik12345' then
 			checked_test2 = imgui.ImBool(false)
 			inicfg.save(cfg,directIni)
@@ -575,13 +714,13 @@ function imgui.OnDrawFrame()
 			inicfg.save(cfg,directIni)
 		end
 	end
-	if imgui.Checkbox(u8"ГђГ Г­Г¤Г®Г¬ ГЇГ°ГҐГґГЁГЄГ±", checked_test4) then
+	if imgui.Checkbox(u8"Рандом префикс", checked_test4) then
 		cfg.settings.prfrandom = not cfg.settings.prfrandom
 		inicfg.save(cfg,directIni)
 	end
 		imgui.SameLine()
 		imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"autoonline +", checked_test3) then
+	if imgui.Checkbox(u8"autoonline", checked_test3) then
 		cfg.settings.autoonline = not cfg.settings.autoonline
 		inicfg.save(cfg, directIni)
 		showCursor(false,false)
@@ -590,7 +729,7 @@ function imgui.OnDrawFrame()
 	if imgui.Checkbox(u8"Chat Cleaner", checked_test5) then
 		cfg.settings.chatclear = not cfg.settings.chatclear
 		inicfg.save(cfg, directIni)
-		sampShowDialog(1000, "Г€Г­ГґГ®Г°Г¬Г Г¶ГЁГї", "Chat Cleaner Г¤Г«Гї ГўГЄГ«/ГўГ»ГЄГ« ГІГ°ГҐГЎГіГҐГІ ГЇГҐГ°ГҐГ§Г ГЈГ°ГіГ§ГЄГі ГЁГЈГ°Г». ГЂГЄГІГЁГўГ Г¶ГЁГї: /cleaner", "ГЏГ®Г­ГїГ«", _)
+		sampShowDialog(1000, "Информация", "Chat Cleaner для выключения требует перезагрузку игры. Активация: /cleaner", "Понял", _)
 		showCursor(false,false)
 		thisScript():reload()
 	end
@@ -599,42 +738,42 @@ function imgui.OnDrawFrame()
 	if imgui.Checkbox(u8"Fast Spawn", checked_test6) then
 		cfg.settings.fastspawn = not cfg.settings.fastspawn
 		inicfg.save(cfg, directIni)
-		sampShowDialog(1000, "Г€Г­ГґГ®Г°Г¬Г Г¶ГЁГї", "Fast spawn Г¤Г«Гї ГўГЄГ«/ГўГ»ГЄГ« ГІГ°ГҐГЎГіГҐГІ ГЇГҐГ°ГҐГ§Г ГЈГ°ГіГ§ГЄГі ГЁГЈГ°Г». ГЂГЄГІГЁГўГ Г¶ГЁГї: /fs", "ГЏГ®Г­ГїГ«", _)
+		sampShowDialog(1000, "Информация", "Fast spawn для выключения требует перезагрузку игры. Активация: /fs", "Понял", _)
 		showCursor(false,false)
 		thisScript():reload()
 	end
-	if imgui.Checkbox(u8"Г‘ГўГ®ГЎГ®Г¤Г­Г®", checked_test7) then
+	if imgui.Checkbox(u8"Flood Detector", checked_test7) then
 		cfg.settings.FLD = not cfg.settings.FLD
 		inicfg.save(cfg, directIni)
 	end
 	imgui.SameLine()
 	imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"Г‘ГўГ®ГЎГ®Г¤Г­Г®", checked_test8) then
+	if imgui.Checkbox(u8"Функция засекречена", checked_test8) then
 		cfg.settings.clickwarp = not cfg.settings.clickwarp
 		inicfg.save(cfg, directIni)
 	end
-	if imgui.Checkbox(u8"Г‘ГўГ®ГЎГ®Г¤Г­Г®", checked_test9) then
+	if imgui.Checkbox(u8"Тут ничего нет.", checked_test9) then
 		autooskrod = not autooskrod
 	end
 	imgui.SameLine()
 	imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"ГЏГ°Г®Г±ГјГЎГ  ГўГ®Г©ГІГЁ Гў /alogin", checked_test10) then
+	if imgui.Checkbox(u8"Просьба войти в /alogin", checked_test10) then
 		cfg.settings.autoal = not cfg.settings.autoal
 		inicfg.save(cfg,directIni)
 	end
-	if imgui.Checkbox(u8"Г’Г°Г Г±Г±ГҐГ°Г ", checked_test11) then
+	if imgui.Checkbox(u8"Трассера", checked_test11) then
 		cfg.settings.trassera = not cfg.settings.trassera
 		inicfg.save(cfg,directIni)
-		sampShowDialog(1000, "Г€Г­ГґГ®Г°Г¬Г Г¶ГЁГї", "Г’Г°Г Г±Г±ГҐГ°Г Г¬ Г¤Г«Гї ГўГЄГ«/ГўГ»ГЄГ« ГІГ°ГҐГЎГіГҐГІГ±Гї ГЇГҐГ°ГҐГ§Г ГЈГ°ГіГ§ГЄГ  ГЁГЈГ°Г». ГЂГЄГІГЁГўГ Г¶ГЁГї: /trassera", "ГЏГ®Г­ГїГ«", _)
+		sampShowDialog(1000, "Информация", "Трассерам для вкл/выкл требуется перезагрузка игры. Активация: /trassera", "Понял", _)
 		showCursor(false,false)
 		thisScript():reload()
 	end
 	imgui.SameLine()
 	imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"Г‘Г«ГҐГ¦ГЄГ  Г§Г  ГґГ®Г°Г¬Г Г¬ГЁ +", checked_test12) then
+	if imgui.Checkbox(u8"Слежка за формами +", checked_test12) then
 		cfg.settings.form = not cfg.settings.form
 		inicfg.save(cfg,directIni)
-		sampAddChatMessage('ГЏГ®Г¬Г®Г№Гј Гў Г°Г ГЎГ®ГІГҐ Г± Г¤Г Г­Г­Г®Г© ГґГіГ­ГЄГ¶ГЁГҐГ© - /infoform', 0xCCCC33)
+		sampAddChatMessage('Помощь в работе с данной функцией - /infoform', 0xCCCC33)
 	end
 	if imgui.Checkbox(u8"input helper", checked_test13) then
 		cfg.settings.inputhelper = not cfg.settings.inputhelper
@@ -656,27 +795,27 @@ function imgui.OnDrawFrame()
 	imgui.Separator()
 	imgui.SameLine()
 	imgui.SetCursorPosX(10)
-	if imgui.Button(u8'Г‚Г»ГЈГ°ГіГ§ГЁГІГј Г±ГЄГ°ГЁГЇГІ') then
-		sampAddChatMessage('Г‚Г»ГЈГ°ГіГ¦Г Гѕ...', 0xFFFFFF)
+	if imgui.Button(u8'Выгрузить скрипт') then
+		sampAddChatMessage('Выгружаю...', 0xFFFFFF)
 		showCursor(false,false)
 		thisScript():unload()
 	end
 	imgui.SameLine()
 	imgui.SetCursorPosX(138)
-	if imgui.Button(u8'Г‘Г®ГЄГ°.ГЂГ¤Г¬ГЁГ­-ГЉГ®Г¬Г Г­Г¤Г»') then
-		sampShowDialog(1000, "ГЉГ®Г¬Г Г­Г¤Г»", '/m - m3 Г¬ГіГІ Г§Г  Г¬Г ГІ\n/ok - /ok3 Г¬ГіГІ Г§Г  Г®Г±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ\n/fd - /fd3 Г¬ГіГІ Г§Г  ГґГ«ГіГ¤\n/po - /po3 Г¬ГіГІ Г§Г  ГЇГ®ГЇГ°Г®ГёГ Г©Г­ГЁГ·ГҐГ±ГІГўГ®\n/zs - Г¬ГіГІ Г§Г  Г§Г«Г®ГіГЇ.Г±ГЁГ¬Гў\n/or - Г¬ГіГІ Г§Г  Г®Г±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ Г°Г®Г¤Г­Г»Гµ\n/oa - Г¬ГіГІ Г§Г  Г®Г±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г Г¶ГЁГЁ\n/kl - ГЄГ«ГҐГўГҐГІГ  Г­Г  Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г Г¶ГЁГѕ\
-/oft - /oft3 Г¬ГіГІ Г°ГҐГЇГ®Г°ГІГ  Г§Г  Г®ГґГґГІГ®ГЇ\n/rpo - Г¬ГіГІ Г°ГҐГЇГ®Г°ГІГ  Г§Г  ГЇГ®ГЇГ°Г®ГёГ Г©Г­ГЁГ·ГҐГ±ГІГўГ®\n/cp - /cp3 Г¬ГіГІ Г°ГҐГЇГ®Г°ГІГ  Г§Г  ГЄГ ГЇГ±\n/roa - Г¬ГіГІ Г°ГҐГЇГ®Г°ГІГ  Г§Г  Г®Г±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г Г¶ГЁГЁ\n/ror - Г¬ГіГІ Г°ГҐГЇГ®Г°ГІГ  Г§Г  Г®Г±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ Г°Г®Г¤Г­ГЁ\n/rrz - Г¬ГіГІ Г°ГҐГЇГ®Г°ГІГ  Г§Г  Г§Г«Г®ГіГЇ.Г±ГЁГ¬Гў\
-/dz - Г¤Г¦Г Г©Г« Г§Г  DM/DB Гў Г§Г§\n/zv - Г¤Г¦Г Г©Г« Г§Г  Г§Г«Г®ГіГЇГ®ГІГ°ГҐГЎГ«ГҐГ­ГЁГҐ VIP\n/sk - Г¤Г¦Г Г©Г« Г§Г  Г‘ГЇГ ГўГ­-ГЉГЁГ«Г«\n/jcb - Г„Г¦Г Г©Г« Г§Г  ГўГ°ГҐГ¤ГЁГІГҐГ«ГјГ±ГЄГЁГҐ Г·ГЁГІГ»\n/jc - Г¤Г¦Г Г©Г« Г§Г  ГЎГҐГ§ГўГ°ГҐГ¤Г­Г»ГҐ Г·ГЁГІГ»\n/baguse - Г¤Г¦Г Г©Г« Г§Г  ГЎГ ГЈГ®ГѕГ§\
-/bosk - ГЎГ Г­ Г§Г  Г®Г±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ ГЇГ°Г®ГҐГЄГІГ \n/rekl - ГЎГ Г­ Г§Г  Г°ГҐГЄГ«Г Г¬Гі\n/ch - ГЎГ Г­ Г§Г  Г·ГЁГІГ»\n/oskhelper - ГЎГ Г­ Г§Г  Г®Г±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ Гў ГµГҐГ«ГЇГҐГ°ГҐ\n/cafk - ГЄГЁГЄ Г§Г  Г ГґГЄ Г­Г  Г Г°ГҐГ­ГҐ\
-/kk1 - /kk3 ГЄГЁГЄ Г§Г  Г­ГЁГЄ\n/prefixma - ГўГ»Г¤Г Г·Г  ГЇГ°ГҐГґГЁГЄГ±Г  ГЊГ«Г Г¤ГёГҐГ¬Гі ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°Гі\n/prefixa - ГўГ»Г¤Г Г·Г  ГЇГ°ГҐГґГЁГЄГ±Г  ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°Гі\n/prefixsa - ГўГ»Г¤Г Г·Г  ГЇГ°ГҐГґГЁГЄГ±Г  Г‘ГІГ Г°ГёГҐГ¬Гі ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°Гі\n/prefixzga - ГўГ»Г¤Г Г·Г  Г°Г Г­Г¤Г®Г¬Г­Г®ГЈГ® ГЇГ°ГҐГґГЁГЄГ±Г  Г‡ГѓГЂ\n/prefixpga - ГўГ»Г¤Г Г·Г  Г°Г Г­Г¤Г®Г¬Г­Г®ГЈГ® ГЇГ°ГҐГґГЁГЄГ±Г  ГЏГѓГЂ\n/prefixGA - ГўГ»Г¤Г Г·Г  Г°Г Г­Г¤Г®Г¬Г­Г®ГЈГ® ГЇГ°ГҐГґГЁГЄГ±Г  ГѓГЂ\
-/newprfma - ГЁГ§Г¬ГҐГ­ГЁГІГј Г¶ГўГҐГІ ГЇГ°ГҐГґГЁГЄГ±Г  ГЊГЂ\n/newprfa - ГЁГ§Г¬ГҐГ­ГЁГІГј Г¶ГўГҐГІ ГЇГ°ГҐГґГЁГЄГ±Г  ГЂ\n/newprfsa - ГЁГ§Г¬ГҐГ­ГЁГІГј Г¶ГўГҐГІ ГЇГ°ГҐГґГЁГЄГ±Г  Г‘ГЂ\n/newprfnick - ГЁГ§Г¬ГҐГ­ГЁГІГј Г¤Г®Г«Г¦Г­Г®Г±ГІГј (Г¤Г«Гї Г°Г Г­Г¤Г®Г¬ ГЇГ°ГҐГґГЁГЄГ±Г )', "Г‘ГЇГ Г±ГЁГЎГ®", "", 0)
+	if imgui.Button(u8'Сокр.Админ-Команды') then
+		sampShowDialog(1000, "Команды", '/m - m3 мут за мат\n/ok - /ok3 мут за оскорбление\n/fd - /fd3 мут за флуд\n/po - /po3 мут за попрошайничество\n/zs - мут за злоуп.симв\n/or - мут за оскорбление родных\n/oa - мут за оскорбление администрации\n/kl - клевета на администрацию\
+/oft - /oft3 мут репорта за оффтоп\n/rpo - мут репорта за попрошайничество\n/cp - /cp3 мут репорта за капс\n/roa - мут репорта за оскорбление администрации\n/ror - мут репорта за оскорбление родни\n/rrz - мут репорта за злоуп.симв\n/rz - мут за розжиг\n/rm - мут за мат в репорт\n/rok - мут за оск в репорт\
+/dz - джайл за DM/DB в зз\n/zv - джайл за злоупотребление VIP\n/sk - джайл за Спавн-Килл\n/jcb - Джайл за вредительские читы\n/jc - джайл за безвредные читы\n/baguse - джайл за багоюз\
+/bosk - бан за оскорбление проекта\n/rekl - бан за рекламу\n/ch - бан за читы\n/oskhelper - бан за оскорбление в хелпере\n/cafk - кик за афк на арене\
+/kk1 - /kk3 кик за ник\n/prefixma - выдача префикса Младшему Администратору\n/prefixa - выдача префикса Администратору\n/prefixsa - выдача префикса Старшему Администратору\n/prefixzga - выдача рандомного префикса ЗГА\n/prefixpga - выдача рандомного префикса ПГА\n/prefixGA - выдача рандомного префикса ГА\
+/newprfma - изменить цвет префикса МА\n/newprfa - изменить цвет префикса А\n/newprfsa - изменить цвет префикса СА\n/newprfnick - изменить должность (для рандом префикса)\n/stw - выдать миниган', "Спасибо", "", 0)
 	end
 	imgui.End()
 	end
-	if secondary_window_state.v then -- ГўГІГ®Г°Г®ГҐ Г®ГЄГ­Г® Г­Г  F2
+	if secondary_window_state.v then -- второе окно на F2
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(" RDS Tools ", main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.ShowBorders)
-		imgui.Text(u8"Г’ГіГІ ГЎГіГ¤ГҐГІ Г°ГҐГЄГ®Г­ Г¬ГҐГ­Гѕ")
+		imgui.Text(u8"Тут будет рекон меню")
 		imgui.End()
 	end
 end
@@ -703,7 +842,7 @@ function showInputHelp()
 				local errorCode = ffi.C.GetLocaleInfoA(tonumber(ffi.string(KeyboardLayoutName), 16), 0x00000002, LocalInfo, BuffSize)
 				local localName = ffi.string(LocalInfo)
 				local text = string.format(
-					"%s :: {%0.6x}%s[%d] {ffffff}:: ГЉГ ГЇГ±: %s {FFFFFF}:: ГџГ§Г»ГЄ: {ffeeaa}%s{ffffff}",
+					"%s :: {%0.6x}%s[%d] {ffffff}:: Капс: %s {FFFFFF}:: Язык: {ffeeaa}%s{ffffff}",
 					os.date("%H:%M:%S"), bit.band(color,0xffffff), name, pID, getStrByState(capsState), string.match(localName, "([^%(]*)")
 				)
 				renderFontDrawText(inputHelpText, text, fib2, fib, 0xD7FFFFFF)
@@ -713,9 +852,9 @@ function showInputHelp()
 end
 function getStrByState(keyState)
 	if keyState == 0 then
-		return "{ffeeaa}Г‚Г»ГЄГ«{ffffff}"
+		return "{ffeeaa}Выкл{ffffff}"
 	end
-	return "{9EC73D}Г‚ГЄГ«{ffffff}"
+	return "{9EC73D}Вкл{ffffff}"
 end
 function translite(text)
 	for k, v in pairs(chars) do
@@ -810,36 +949,35 @@ function apply_custom_style()
 end
 apply_custom_style()
 
-
 sampRegisterChatCommand('check_update', function(param) 
-	sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}ГЃГ»Г«Г  Г­Г Г©Г¤ГҐГ­Г  Г­Г®ГўГ Гї ГўГҐГ°Г±ГЁГї - ' .. RDSTools.script.version .. '\n{FFFFFF}Г‚ Г­ГҐГ© Г¤Г®ГЎГ ГўГ«ГҐГ­Г® ' .. RDSTools.script.info, "Г‘ГЇГ Г±ГЁГЎГ®", "", 0)
+	sampShowDialog(1000, "В этом обновлении", cfg.script.info, "Понял", _)
 end)
 
 sampRegisterChatCommand('newprfma', function(param) 
 	cfg.settings.prefixma = param
-	sampAddChatMessage('ГЌГ®ГўГ»Г© Г¶ГўГҐГІ ГЇГ°ГҐГґГЁГЄГ±Г  Г¤Г«Гї Г¬Г«Г Г¤ГёГЁГµ Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°Г®Гў: ' .. param, 0xCCCC33)
+	sampAddChatMessage('Новый цвет префикса для младших администраторов: ' .. param, 0xCCCC33)
 end)
 sampRegisterChatCommand('newprfa', function(param) 
 	cfg.settings.prefixa = param
-	sampAddChatMessage('ГЌГ®ГўГ»Г© Г¶ГўГҐГІ ГЇГ°ГҐГґГЁГЄГ±Г  Г¤Г«Гї Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°Г®Гў: ' .. param, 0xCCCC33)
+	sampAddChatMessage('Новый цвет префикса для администраторов: ' .. param, 0xCCCC33)
 end)
 sampRegisterChatCommand('newprfsa', function(param) 
 	cfg.settings.prefixsa = param
-	sampAddChatMessage('ГЌГ®ГўГ»Г© Г¶ГўГҐГІ ГЇГ°ГҐГґГЁГЄГ±Г  Г¤Г«Гї Г±ГІГ Г°ГёГЁГµ Г Г¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°Г®Гў: ' .. param, 0xCCCC33)
+	sampAddChatMessage('Новый цвет префикса для старших администраторов: ' .. param, 0xCCCC33)
 end)
 sampRegisterChatCommand('newprfnick', function(param) 
 	cfg.settings.prefixnick = param
-	sampAddChatMessage('Г‚Г ГёГ  Г¤Г®Г«Г¦Г­Г®Г±ГІГј ГЁГ§Г¬ГҐГ­ГҐГ­Г  Г­Г  ' .. param, 0xCCCC33)
+	sampAddChatMessage('Ваша должность изменена на ' .. param, 0xCCCC33)
 end)
 sampRegisterChatCommand('infoform', function() 
-	sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}ГІГҐГЄГ±ГІ ГЇГ°ГЁГ­ГїГІГЁГї ГґГ®Г°Г¬Г» - ' .. cfg.settings.texts, -1)
-	sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}Г­Г Г±ГІГ°Г®Г©ГЄГЁ ГІГҐГЄГ±ГІГ  ГґГ®Г°Г¬Г» - /textform', -1)
-	sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}ГЇГ®Г¬ГҐГ­ГїГІГј Г±ГІГЁГ«Гј Г®ГЇГ®ГўГҐГ№ГҐГ­ГЁГї - /stylecolor, ГЇГ®Г¬ГҐГ­ГїГІГј Г±ГІГЁГ«Гј ГґГ®Г°Г¬Г» ГўГ­ГіГІГ°ГЁ Г®ГЇГ®ГўГҐГ№ГҐГ­ГЁГї - /stylecolorform', -1)
+	sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}текст принятия формы - ' .. cfg.settings.texts, -1)
+	sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}настройки текста формы - /textform', -1)
+	sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}поменять стиль оповещения - /stylecolor, поменять стиль формы внутри оповещения - /stylecolorform', -1)
 end)
 sampRegisterChatCommand('textform', function(param) 
 	cfg.settings.texts = param
 	inicfg.save(cfg,directIni)
-	sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}ГІГҐГЄГ±ГІ ГЇГ°ГЁГ­ГїГІГЁГї ГґГ®Г°Г¬Г» Г®ГЎГ­Г®ГўГ«ГҐГ­', -1)
+	sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}текст принятия формы обновлен', -1)
 end)
 sampRegisterChatCommand('stylecolor', function(param)
 	cfg.settings.stylecolor = ('{' .. param .. '}')
@@ -861,83 +999,88 @@ end)
 
 sampRegisterChatCommand('prefixma', function(param) 
 	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " ГЊГ«.ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° " .. cfg.settings.prefixma)
+		sampSendChat("/prefix " .. param .. " Мл.Администратор " .. cfg.settings.prefixma)
 	end
 end)
 sampRegisterChatCommand('prefixa', function(param) 
 	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° " .. cfg.settings.prefixa)
+		sampSendChat("/prefix " .. param .. " Администратор " .. cfg.settings.prefixa)
 	end
 end)
 sampRegisterChatCommand('prefixsa', function(param) 
 	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Г‘ГІ.ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° " .. cfg.settings.prefixsa)
+		sampSendChat("/prefix " .. param .. " Ст.Администратор " .. cfg.settings.prefixsa)
 	end
 end)
 sampRegisterChatCommand('prefixpga', function(param) 
 	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " ГѓГ«Г ГўГ­Г»Г©-ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° " .. color())
+		sampSendChat("/prefix " .. param .. " Главный-Администратор " .. color())
 	end
 end)
 sampRegisterChatCommand('prefixzga', function(param) 
 	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Г‡Г Г¬.ГѓГ«Г Гў.ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г°Г  " .. color())
+		sampSendChat("/prefix " .. param .. " Зам.Глав.Администратора " .. color())
 	end
 end)
 sampRegisterChatCommand('prefixga', function(param) 
 	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " ГѓГ«Г ГўГ­Г»Г©-ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г ГІГ®Г° " .. color())
+		sampSendChat("/prefix " .. param .. " Главный-Администратор " .. color())
 	end
 end)
-
---- ГЏГ°ГҐГґГЁГЄГ±Г» ---
+sampRegisterChatCommand('stw', function(param) 
+	sampSendChat("/setweap " .. param .. " 38 5000")
+end)
+--- Префиксы ---
 sampRegisterChatCommand('m', function(param) 
-	sampSendChat('/mute ' .. param .. ' 300 Г­ГҐГ¶ГҐГ­Г§ГіГ°Г­Г Гї Г«ГҐГЄГ±ГЁГЄГ ')
+	sampSendChat('/mute ' .. param .. ' 300 нецензурная лексика')
 end)
 sampRegisterChatCommand('m2', function(param) 
-	sampSendChat('/mute ' .. param .. ' 600 Г­ГҐГ¶ГҐГ­Г§ГіГ°Г­Г Гї Г«ГҐГЄГ±ГЁГЄГ  x2')
+	sampSendChat('/mute ' .. param .. ' 600 нецензурная лексика x2')
 end)
 sampRegisterChatCommand('m3', function(param) 
-	sampSendChat('/mute ' .. param .. ' 900 Г­ГҐГ¶ГҐГ­Г§ГіГ°Г­Г Гї Г«ГҐГЄГ±ГЁГЄГ  x3')
+	sampSendChat('/mute ' .. param .. ' 900 нецензурная лексика x3')
 end)
 sampRegisterChatCommand('ok', function(param) 
-	sampSendChat('/mute ' .. param .. ' 400 ГЋГ±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ')
+	sampSendChat('/mute ' .. param .. ' 400 Оскорбление')
 end)
 sampRegisterChatCommand('ok2', function(param) 
-	sampSendChat('/mute ' .. param .. ' 800 ГЋГ±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ x2')
+	sampSendChat('/mute ' .. param .. ' 800 Оскорбление x2')
 end)
 sampRegisterChatCommand('ok3', function(param) 
-	sampSendChat('/mute ' .. param .. ' 1200 ГЋГ±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ x3')
+	sampSendChat('/mute ' .. param .. ' 1200 Оскорбление x3')
 end)
 sampRegisterChatCommand('fd', function(param) 
-	sampSendChat('/mute ' .. param .. ' 120 Г”Г«ГіГ¤')
+	sampSendChat('/mute ' .. param .. ' 120 Флуд')
 end)
 sampRegisterChatCommand('fd2', function(param) 
-	sampSendChat('/mute ' .. param .. ' 240 Г”Г«ГіГ¤ x2')
+	sampSendChat('/mute ' .. param .. ' 240 Флуд x2')
 end)
 sampRegisterChatCommand('fd3', function(param) 
-	sampSendChat('/mute ' .. param .. ' 360 Г”Г«ГіГ¤ x3')
+	sampSendChat('/mute ' .. param .. ' 360 Флуд x3')
 end)
 sampRegisterChatCommand('or', function(param) 
-	sampSendChat('/mute ' .. param .. ' 5000 ГЋГ±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ/Г“ГЇГ®Г¬ГЁГ­Г Г­ГЁГҐ Г°Г®Г¤Г­ГЁ')
+	sampSendChat('/mute ' .. param .. ' 5000 Оскорбление/Упоминание родни')
 end)
 sampRegisterChatCommand('oa', function(param) 
-	sampSendChat('/mute ' .. param .. ' 2500 ГЋГ±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г Г¶ГЁГЁ')
+	sampSendChat('/mute ' .. param .. ' 2500 Оскорбление Администрации')
 end)
 sampRegisterChatCommand('kl', function(param) 
-	sampSendChat('/mute ' .. param .. ' 3000 ГЉГ«ГҐГўГҐГІГ  Г­Г  ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г Г¶ГЁГѕ')
+	sampSendChat('/mute ' .. param .. ' 3000 Клевета на Администрацию')
 end)
 sampRegisterChatCommand('po', function(param) 
-	sampSendChat('/mute ' .. param .. ' 120 ГЇГ®ГЇГ°Г®ГёГ Г©Г­ГЁГ·ГҐГ±ГІГўГ®')
+	sampSendChat('/mute ' .. param .. ' 120 попрошайничество')
 end)
 sampRegisterChatCommand('po2', function(param) 
-	sampSendChat('/mute ' .. param .. ' 240 ГЇГ®ГЇГ°Г®ГёГ Г©Г­ГЁГ·ГҐГ±ГІГўГ® x2')
+	sampSendChat('/mute ' .. param .. ' 240 попрошайничество x2')
 end)
 sampRegisterChatCommand('po3', function(param) 
-	sampSendChat('/mute ' .. param .. ' 360 ГЇГ®ГЇГ°Г®ГёГ Г©Г­ГЁГ·ГҐГ±ГІГўГ® x3')
+	sampSendChat('/mute ' .. param .. ' 360 попрошайничество x3')
 end)
 sampRegisterChatCommand('zs', function(param) 
-	sampSendChat('/mute ' .. param .. " 600 Г‡Г«Г®ГіГЇГ®ГІГ°ГҐГЎГ«ГҐГ­ГЁГҐ Г±ГЁГ¬ГўГ®Г«Г Г¬ГЁ")
+	sampSendChat('/mute ' .. param .. " 600 Злоупотребление символами")
+end)
+sampRegisterChatCommand('rz', function(param) 
+	sampSendChat('/mute ' .. param .. " 5000 Розжиг")
 end)
 sampRegisterChatCommand('oft', function(param) 
 	sampSendChat('/rmute ' .. param .. " 120 Offtop in /report")
@@ -958,58 +1101,64 @@ sampRegisterChatCommand('cp3', function(param)
 	sampSendChat('/rmute ' .. param .. " 360 Caps in /report x3")
 end)
 sampRegisterChatCommand('roa', function(param) 
-	sampSendChat('/rmute ' .. param .. " 2500 ГЋГ±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ ГЂГ¤Г¬ГЁГ­ГЁГ±ГІГ°Г Г¶ГЁГЁ")
+	sampSendChat('/rmute ' .. param .. " 2500 Оскорбление Администрации")
 end)
 sampRegisterChatCommand('ror', function(param) 
-	sampSendChat('/rmute ' .. param .. " 2500 ГЋГ±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ/Г“ГЇГ®Г¬ГЁГ­Г Г­ГЁГҐ ГђГ®Г¤Г­ГЁ")
+	sampSendChat('/rmute ' .. param .. " 2500 Оскорбление/Упоминание Родни")
 end)
 sampRegisterChatCommand('rrz', function(param) 
-	sampSendChat('/rmute ' .. param .. " 600 Г‡Г«Г®ГіГЇГ®ГІГ°ГҐГЎГ«ГҐГ­ГЁГҐ Г±ГЁГ¬ГўГ®Г«Г Г¬ГЁ")
+	sampSendChat('/rmute ' .. param .. " 600 Злоупотребление символами")
 end)
 sampRegisterChatCommand('rpo', function(param) 
-	sampSendChat('/rmute ' .. param .. " 120 ГЏГ®ГЇГ°Г®ГёГ Г©Г­ГЁГ·ГҐГ±ГІГўГ®")
+	sampSendChat('/rmute ' .. param .. " 120 Попрошайничество")
+end)
+sampRegisterChatCommand('rm', function(param) 
+	sampSendChat('/rmute ' .. param .. " 300 мат в /report")
+end)
+sampRegisterChatCommand('rok', function(param) 
+	sampSendChat('/rmute ' .. param .. " 400 оскорбление в /report")
 end)
 sampRegisterChatCommand('dz', function(param) 
 	sampSendChat('/jail ' .. param .. ' 300 DM/DB in ZZ')
 end)
 sampRegisterChatCommand('zv', function(param) 
-	sampSendChat('/jail ' .. param .. " 3000 Г‡Г«Г®ГіГЇГ®ГІГ°ГҐГЎГ«ГҐГ­ГЁГҐ VIP'Г®Г¬")
+	sampSendChat('/jail ' .. param .. " 3000 Злоупотребление VIP'ом")
 end)
 sampRegisterChatCommand('sk', function(param) 
 	sampSendChat('/jail ' .. param .. ' 300 Spawn Kill')
 end)
 sampRegisterChatCommand('jcb', function(param) 
-	sampSendChat('/jail ' .. param .. ' 3000 Г·ГЁГІ')
+	sampSendChat('/jail ' .. param .. ' 3000 чит')
 end)
 sampRegisterChatCommand('jc', function(param) 
-	sampSendChat('/jail ' .. param .. ' 900 Г·ГЁГІ')
+	sampSendChat('/jail ' .. param .. ' 900 чит')
 end)
 sampRegisterChatCommand('baguse', function(param) 
-	sampSendChat('/jail ' .. param .. ' 300 ГЃГ ГЈГ®ГѕГ§')
+	sampSendChat('/jail ' .. param .. ' 300 Багоюз')
 end)
 sampRegisterChatCommand('bosk', function(param) 
-	sampSendChat('/iban ' .. param .. ' 7 ГЋГ±ГЄГ®Г°ГЎГ«ГҐГ­ГЁГҐ ГЇГ°Г®ГҐГЄГІГ ')
+	sampSendChat('/iban ' .. param .. ' 7 Оскорбление проекта')
 end)
 sampRegisterChatCommand('rekl', function(param) 
-	sampSendChat('/iban ' .. param .. ' 7 Г°ГҐГЄГ«Г Г¬Г ')
+	sampSendChat('/iban ' .. param .. ' 7 реклама')
 end)
 sampRegisterChatCommand('ch', function(param) 
-	sampSendChat('/iban ' .. param .. ' 7 Г·ГЁГІ.')
+	sampSendChat('/iban ' .. param .. ' 7 чит.')
 end)
 sampRegisterChatCommand('oskhelper', function(param) 
-	sampSendChat('/ban ' .. param .. ' 3 ГЌГ Г°ГіГёГҐГ­ГЁГҐ ГЇГ°Г ГўГЁГ« /helper')
+	sampSendChat('/ban ' .. param .. ' 3 Нарушение правил /helper')
 end)
 sampRegisterChatCommand('cafk', function(param) 
-	sampSendChat('/kick ' .. param .. ' ГЂГґГЄ /arena') 
+	sampSendChat('/kick ' .. param .. ' Афк /arena') 
 end)
 sampRegisterChatCommand('kk1', function(param) 
-	sampSendChat('/kick ' .. param .. ' Г‘Г¬ГҐГ­ГЁГІГҐ Г­ГЁГЄ 1/3') 
+	sampSendChat('/kick ' .. param .. ' Смените ник 1/3') 
 end)
 sampRegisterChatCommand('kk2', function(param) 
-	sampSendChat('/kick ' .. param .. ' Г‘Г¬ГҐГ­ГЁГІГҐ Г­ГЁГЄ 2/3') 
+	sampSendChat('/kick ' .. param .. ' Смените ник 2/3') 
 end)
 sampRegisterChatCommand('kk3', function(param) 
-	sampSendChat('/ban ' .. param .. ' Г‘Г¬ГҐГ­ГЁГІГҐ Г­ГЁГЄ 3/3') 
+	sampSendChat('/ban ' .. param .. ' Смените ник 3/3') 
 end)
 
 
