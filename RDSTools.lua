@@ -1,8 +1,8 @@
 require 'lib.moonloader'
 require 'lib.sampfuncs'
-script_name('RDS Tools')
-script_author('Neon4ik')
-local version = 0.1
+script_name 'RDS Tools' 
+script_author 'Neon4ik'
+local version = 0.2
 local imgui = require 'imgui' 
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
@@ -11,6 +11,7 @@ local inicfg = require 'inicfg'
 local directIni = 'RDSTools.ini'
 encoding.default = 'CP1251' 
 u8 = encoding.UTF8 
+local ev = require 'lib.samp.events'
 local key = require 'vkeys'
 local rkeys = require "rkeys"
 local fa = require 'faIcons'
@@ -20,6 +21,7 @@ local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 
 local path_chatclear = getWorkingDirectory() .. "\\resource\\cleaner.lua" -- подгрузка скрипта для очистки чата (по желанию)
 local path_fastspawn = getWorkingDirectory() .. "\\resource\\FastSpawn.lua" -- подгрузка скрипта для быстрого спавна (по желанию)
 local path_trassera = getWorkingDirectory() .. "\\resource\\trassera.lua" -- подгрузка скрипта для трассеров (по желанию)
+local notify = import '\\resource\\lib_imgui_notf.lua'
 
 function sampev.onPlayerDeathNotification(killerId, killedId, reason) -------- Подпись ID в килл чате
 	local kill = ffi.cast('struct stKillInfo*', sampGetKillInfoPtr())
@@ -36,11 +38,19 @@ function sampev.onPlayerDeathNotification(killerId, killedId, reason) -------- П
 	end)
 end
 
-local string_flood = ""
-local string_number_max = 4 -- anti flood
-local msgs = {chat = {}}
-local string_time = 30
+require('samp.events').onShowDialog = function(dialogId, style, title, button1, button2, text)
+    text = ('ID: %d | %s'):format(dialogId, text)
+    return {dialogId, style, title, button1, button2, text}
+end
 
+
+function ev.onDisplayGameText(style, time, text)
+    if text:find("REPORT++") then
+        return false
+    end
+end
+
+local count = 0
 
 local cfg = inicfg.load({ -- базовые настройки скрипта
 	settings = {
@@ -56,6 +66,8 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		fastspawn = false,
 		autoonline = false,
 		inputhelper = true,
+		automute = false,
+		opreport = true,
 		prefixma = '2E8B57',
 		prefixa = '87CEEB',
 		prefixsa = 'FF4500',
@@ -65,12 +77,15 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		stylecolorform = '{FF0000}'
 	},
 	script = {
-		version = 0.1,
-		info = 'Изменен текст'
+		version = 0.2,
 	}
 }, directIni)
 inicfg.save(cfg,directIni)
-
+-- текст обновления
+info = 'Фикс автоонлайна, после перезагрузки скрипта не будет рассихрона\nТеперь WallHack адекватно выключается\nДобавлены быстрые команды.\nДобавлено оповещение о репортах, если их будет много (более 3-ех), скрипт сделает ульту.\nТакже убрано сообщение на экране REPORT++ это я долго думал как сделать.\nВ inputhelper убраны подсказки под чатом F6, хз меня они бесили\
+\nДобавлен мой, собственно ручно сделанный автомут на мат. Пока что только на мат, потому то с осками тяжелее.\nВозможны ошибочные муты, перепроверяйте по возможности\nАвтомут мутит за коренные слова, приведу пример "разъЕБАлся"\nдобавление своих слов невозможно и нежелательно в том числе через код\nПовышена общая стабильность скрипта, исправлены вылеты скрипта после выхода из афк.\nИзменено окно сокращённых админ команд, поскольку их стало слишком многo\
+Изменен дизайн, сделан более компактный\nУвеличен текст в интерфейсе. В автоформах добавлено исключение на добавление //nick а именно команда /iunban\nОбновление 0.2 реализовано за 1 полноценный день, если найдутся баги просьба сообщать об этом.\nДальнейших планов уйма, вопрос только успею и захочу ли реализовать'
+-- текст обновления
 local font = renderCreateFont('TimesNewRoman', 12, 5) -- таймер для форм
 local st = {
     bool = false,
@@ -91,7 +106,55 @@ spisok = {
 	'vvig'
 }
 
-local styleform = false
+local fontsize = nil
+function imgui.BeforeDrawFrame()
+    if fontsize == nil then
+        fontsize = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 17, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic()) -- вместо 30 любой нужный размер
+    end
+end
+
+automute = {
+	'пизд',
+	'ебл',
+	'ёба',
+	'еба',
+	'бля',
+	'6ля',
+	'охуе',
+	'ахуе',
+	'ебан',
+	'ёбан',
+	'хуя',
+	'хуй',
+	'хуе',
+	'заеб',
+	'збс',
+	'ебн',
+	'ёбн',
+	'ваху',
+	'pida',
+	'сук',
+	'suk',
+	'syk',
+	'blya',
+	'пи3',
+	'eba',
+	'ebn',
+	'xui',
+	'xyi',
+	'пид',
+	'pid',
+	'ebl',
+	'pizd'
+}
+
+
+
+local string_flood = ""
+local string_number_max = 4 -- anti flood
+local msgs = {chat = {}}
+local string_time = 30
+
 require 'lib.sampfuncs'
 ffi.cdef[[
 	short GetKeyState(int nVirtKey);
@@ -110,12 +173,6 @@ chars = {
 }
 
 
-local fa_glyph_ranges = imgui.ImGlyphRanges({ fa.min_range, fa.max_range })
-local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
-imgui.GetIO().Fonts:Clear() 
-imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\FRAMDIT.ttf', 17, nil, glyph_ranges) -- шрифт интерфейса
-main_color_text = 0xFFFFFF
-
 
 local checked_test = imgui.ImBool(cfg.settings.check_weapon_hack)
 local checked_test2 = imgui.ImBool(cfg.settings.helloadmin)
@@ -124,8 +181,8 @@ local checked_test4 = imgui.ImBool(cfg.settings.prfrandom)
 local checked_test5 = imgui.ImBool(cfg.settings.chatclear)
 local checked_test6 = imgui.ImBool(cfg.settings.fastspawn)
 local checked_test7 = imgui.ImBool(cfg.settings.FLD)
-local checked_test8 = imgui.ImBool(false)
-local checked_test9 = imgui.ImBool(false)
+local checked_test8 = imgui.ImBool(cfg.settings.opreport)
+local checked_test9 = imgui.ImBool(cfg.settings.automute)
 local checked_test10 = imgui.ImBool(cfg.settings.autoal)
 local checked_test11 = imgui.ImBool(cfg.settings.trassera)
 local checked_test12 = imgui.ImBool(cfg.settings.form)
@@ -161,6 +218,8 @@ function main()
 				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
 				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
 				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
+			else
+				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}был успешно загружен, активация: {808080}F3', -1)
 			end
             os.remove(update_path)
         end
@@ -170,7 +229,7 @@ function main()
 	func:run()
 	inputHelpText = renderCreateFont("Arial", 9, FCR_BORDER + FCR_BOLD) -- шрифт инпут хелпера
 	lua_thread.create(inputChat)
-	lua_thread.create(showInputHelp)
+
 	if cfg.settings.chatclear then
 		local chatclear = import(path_chatclear) -- подгрузка чистильщика чата
 	end
@@ -206,6 +265,7 @@ function main()
 				cfg.settings.forms = forms
 				cfg.settings.helloadmin = helladm
 				cfg.settings.autoal = pleaseal
+				cfg.settings.automute = checkmat
 				act = false
 				sampAddChatMessage('{FF0000}RDS Tools: {d5b3f5}Все значения переведены в прежний режим', -1)
 			else
@@ -214,11 +274,13 @@ function main()
 				forms = cfg.settings.forms
 				helladm = cfg.settings.helloadmin
 				pleaseal = cfg.settings.autoal
+				checkmat = cfg.settings.automute
 				cfg.settings.check_weapon_hack = false
 				cfg.settings.FLD = false
 				cfg.settings.forms = false
 				cfg.settings.helloadmin = false
 				cfg.settings.autoal = false
+				cfg.settings.automute = false
 				act = true
 				sampAddChatMessage('{FF0000}RDS Tools: {d5b3f5}Можете выходить в афк, блокирую работу скриптов.', -1)
 			end
@@ -254,7 +316,14 @@ function main()
 					local color = sampGetPlayerColor(i)
 					local aa, rr, gg, bb = explode_argb(color)
 					local color = join_argb(255, rr, gg, bb)
-					nameTagOn()
+					local pStSet = sampGetServerSettingsPtr();
+					NTdist = mem.getfloat(pStSet + 39)
+					NTwalls = mem.getint8(pStSet + 47)
+					NTshow = mem.getint8(pStSet + 56)
+					mem.setfloat(pStSet + 39, 1488.0)
+					mem.setint8(pStSet + 47, 0)
+					mem.setint8(pStSet + 56, 1)
+					nameTag = true
 					if result then
 						if doesCharExist(cped) and isCharOnScreen(cped) then
 							local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
@@ -279,6 +348,11 @@ function main()
 					end
 				end
 			end
+		else
+			local pStSet = sampGetServerSettingsPtr();
+			mem.setfloat(pStSet + 39, 50)
+			mem.setint8(pStSet + 47, 0)
+			mem.setint8(pStSet + 56, 1)
 		end
 		sampTextdrawDelete(437)
 		sampTextdrawDelete(2059)
@@ -342,6 +416,7 @@ function color()
     return mcolor
 end
 
+
 function ao() -- автоонлайн
 	if cfg.settings.autoonline then
 		if not isGamePaused() and not isPauseMenuActive() and not sampIsPlayerPaused(id) then
@@ -350,10 +425,8 @@ function ao() -- автоонлайн
 			online = false
 		end
 		while cfg.settings.autoonline do
-			if online then
-				while sampIsDialogActive() or sampIsChatInputActive() do
-					wait(20)
-				end 
+			wait(60000)
+			if online and not sampIsDialogActive() and not sampIsChatInputActive() then
 				sampSendChat("/online")
 				while not sampIsDialogActive() do
 					wait(0)
@@ -361,7 +434,6 @@ function ao() -- автоонлайн
 				local c = math.floor(sampGetPlayerCount(false) / 10)
 				sampSendDialogResponse(1098, 1, c - 1)
 				sampCloseCurrentDialogWithButton(0)
-				wait(60000)
 			end
 		end
 	end
@@ -418,7 +490,7 @@ function sampev.onServerMessage(color, text)
 								st.bool = true
 								st.timer = os.clock()
 								sampAddChatMessage('{C0C0C0}AForm: {FAEBD7}(U - Да), (J - Пропустить)')
-								if (text.sub(text, 2)):find('/') then
+								if (text.sub(text, 2)):find('/') and not text:find('iunban') then
 									styleform = true
 								end
 							end
@@ -429,7 +501,9 @@ function sampev.onServerMessage(color, text)
 		end
 	end
 	if cfg.settings.prfrandom then
-		if text:find("Администратор " .. nick) and text:find("авторизовался в админ") then
+		_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+		nick = sampGetPlayerNickname(id)
+		if text:find("Администратор " .. nick) and text:find("(18 level) авторизовался в админ") then
 			local ip = sampGetCurrentServerAddress()
 			local _, id = sampGetPlayerIdByCharHandle(playerPed)
 			local mcolor = ""
@@ -489,6 +563,8 @@ function sampev.onServerMessage(color, text)
 		end
 	end
 	if cfg.settings.helloadmin then
+		_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+		nick = sampGetPlayerNickname(id)
 		if text:find("Администратор ") and text:find('авторизовался в админ') then
 			if text:find("Администратор " .. nick) and text:find("авторизовался в админ") then
 				sampAddChatMessage('', -1)
@@ -520,7 +596,7 @@ function sampev.onServerMessage(color, text)
 	end
 	if cfg.settings.autoal then
 		if text:match("не авторизовался как администратор уже") then
-			poiskid = text:match('%(%d+)%')
+			poiskid = text:match('(%d+)')
 			--[A] Lawrence_Herson(29) не авторизовался как администратор уже 1 минут(ы)
 			if poiskid then
 				lua_thread.create(function()
@@ -620,6 +696,68 @@ function sampev.onServerMessage(color, text)
 			end
 		end
 	end
+	if cfg.settings.automute then
+		if text:match('%((%d+)%): %{......%}') then
+			local id = tonumber(text:match('%((%d+)%)'))
+			name = sampGetPlayerNickname(tostring(id))
+			for k,v in pairs(automute) do
+				if text:find(v) and not name:find(v) and not text:find('заколебал') and not text:find('захлебнулся') then
+					if id then
+						lua_thread.create(function()
+							wait(100)
+							sampAddChatMessage('Обнаружен мат (ключевое слово) - ' .. v, 0xFF0000)
+							sampSendChat('/mute ' .. id .. ' 300 мат')
+						end)
+					end
+				end
+			end
+		end
+		if text:match("[VIP чат] (.+)%[(%d+)%]: (.+)") then
+			local id = tonumber(text:match('%[(%d+)%]'))
+			name = sampGetPlayerNickname(tostring(id))
+			for k, v in pairs(automute) do
+				if text:find(v) and not name:find(v) then
+					if id then
+						lua_thread.create(function()
+							wait(100)
+							sampSendChat('/mute ' .. id .. ' 300 мат', -1)
+						end)
+					end
+				end
+			end
+		end
+		if text:match('(Hitmans Agency) (.+)%((%d+)%): (.+)') then
+			local id = tonumber(text:match('%((%d+)%)'))
+			name = sampGetPlayerNickname(tostring(id))
+			for k, v in pairs(automute) do
+				if text:find(v) and not name:find(v) then
+					if id then
+						lua_thread.create(function()
+							wait(100)
+							sampSendChat('/mute ' .. id .. ' 300 мат', -1)
+						end)
+					end
+				end
+			end
+		end
+	end
+	if cfg.settings.opreport then
+		if text:match('Жалоба #%d | {AFAFAF}') then
+			count = count + 1
+			notify.addNotify('Оповещение', "Пришёл новый репорт\nЗаймитесь делом.", 2, 1, 4)
+		end
+		if text:match('%[.*%] ') and text:match('%] ответил (.*)%[(%d+)%]: (.*)') then 
+			count = count - 1
+		end
+		if count >= 3 then
+			lua_thread.create(function()
+				while count >= 3 do
+					notify.addNotify('Оповещение', 'НА СЕРВЕРЕ ' .. count .. ' РЕПОРТОВ\nСРОЧНО РАЗБЕРИТЕСЬ!', 2, 1, 3)
+					wait(2000)
+				end
+			end)
+		end
+	end
 end
 
 function detectedFlood(name,id,msg,time,count,number)
@@ -660,17 +798,7 @@ function getBodyPartCoordinates(id, handle)
 	return vec[0], vec[1], vec[2]
   end
   
-  function nameTagOn()
-	  local pStSet = sampGetServerSettingsPtr();
-	  NTdist = mem.getfloat(pStSet + 39)
-	  NTwalls = mem.getint8(pStSet + 47)
-	  NTshow = mem.getint8(pStSet + 56)
-	  mem.setfloat(pStSet + 39, 1488.0)
-	  mem.setint8(pStSet + 47, 0)
-	  mem.setint8(pStSet + 56, 1)
-	  nameTag = true
-  end
-  
+
   function join_argb(a, r, g, b)
 	local argb = b  -- b
 	argb = bit.bor(argb, bit.lshift(g, 8))  -- g
@@ -696,160 +824,169 @@ function imgui.OnDrawFrame()
 		imgui.Begin('xX   ' .. " RDS Tools " .. '  Xx', main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 	-- END В КОНЦЕЕЕЕЕ
-	imgui.SetCursorPosX(60)
-	imgui.Text(u8'Кнопка F1 переводит работу скриптов в афк режим', -1)
-	imgui.Separator()
-	if imgui.Checkbox(u8"Weapon Hack +", checked_test) then
-		cfg.settings.check_weapon_hack = not cfg.settings.check_weapon_hack
-		inicfg.save(cfg,directIni)
-	end
-		imgui.SameLine()
-		imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8'Приветствие администраторов', checked_test2) then
-		if nick ~= 'N.E.O.N' and nick ~= '.morjik12345' then
-			checked_test2 = imgui.ImBool(false)
-			inicfg.save(cfg,directIni)
-		else
-			cfg.settings.helloadmin = not cfg.settings.helloadmin
+		imgui.SetCursorPosX(10)
+		imgui.PushFont(fontsize)
+		imgui.Text(u8'Кнопка F2 переводит работу скриптов в афк режим', -1)
+		imgui.PopFont()
+		imgui.Separator()
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Weapon Hack +", checked_test) then
+			cfg.settings.check_weapon_hack = not cfg.settings.check_weapon_hack
 			inicfg.save(cfg,directIni)
 		end
-	end
-	if imgui.Checkbox(u8"Рандом префикс", checked_test4) then
-		cfg.settings.prfrandom = not cfg.settings.prfrandom
-		inicfg.save(cfg,directIni)
-	end
-		imgui.SameLine()
-		imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"autoonline", checked_test3) then
-		cfg.settings.autoonline = not cfg.settings.autoonline
-		inicfg.save(cfg, directIni)
-		showCursor(false,false)
-		thisScript():reload()
-	end
-	if imgui.Checkbox(u8"Chat Cleaner", checked_test5) then
-		cfg.settings.chatclear = not cfg.settings.chatclear
-		inicfg.save(cfg, directIni)
-		sampShowDialog(1000, "Информация", "Chat Cleaner для выключения требует перезагрузку игры. Активация: /cleaner", "Понял", _)
-		showCursor(false,false)
-		thisScript():reload()
-	end
-		imgui.SameLine()
-		imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"Fast Spawn", checked_test6) then
-		cfg.settings.fastspawn = not cfg.settings.fastspawn
-		inicfg.save(cfg, directIni)
-		sampShowDialog(1000, "Информация", "Fast spawn для выключения требует перезагрузку игры. Активация: /fs", "Понял", _)
-		showCursor(false,false)
-		thisScript():reload()
-	end
-	if imgui.Checkbox(u8"Flood Detector", checked_test7) then
-		cfg.settings.FLD = not cfg.settings.FLD
-		inicfg.save(cfg, directIni)
-	end
-	imgui.SameLine()
-	imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"Функция засекречена", checked_test8) then
-		cfg.settings.clickwarp = not cfg.settings.clickwarp
-		inicfg.save(cfg, directIni)
-	end
-	if imgui.Checkbox(u8"Тут ничего нет.", checked_test9) then
-		autooskrod = not autooskrod
-	end
-	imgui.SameLine()
-	imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"Просьба войти в /alogin", checked_test10) then
-		cfg.settings.autoal = not cfg.settings.autoal
-		inicfg.save(cfg,directIni)
-	end
-	if imgui.Checkbox(u8"Трассера", checked_test11) then
-		cfg.settings.trassera = not cfg.settings.trassera
-		inicfg.save(cfg,directIni)
-		sampShowDialog(1000, "Информация", "Трассерам для вкл/выкл требуется перезагрузка игры. Активация: /trassera", "Понял", _)
-		showCursor(false,false)
-		thisScript():reload()
-	end
-	imgui.SameLine()
-	imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"Слежка за формами +", checked_test12) then
-		cfg.settings.form = not cfg.settings.form
-		inicfg.save(cfg,directIni)
-		sampAddChatMessage('Помощь в работе с данной функцией - /infoform', 0xCCCC33)
-	end
-	if imgui.Checkbox(u8"input helper", checked_test13) then
-		cfg.settings.inputhelper = not cfg.settings.inputhelper
-		inicfg.save(cfg,directIni)
-	end
-	imgui.SameLine()
-	imgui.SetCursorPosX(225)
-	if imgui.Checkbox(u8"WallHack", checked_test14) then
-		if cfg.settings.wallhack == true then
-			cfg.settings.wallhack = not cfg.settings.wallhack
+		imgui.PopFont()
+			imgui.SameLine()
+			imgui.SetCursorPosX(175)
+			imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8'Приветствие админов', checked_test2) then
+			if ya18lvl then
+				checked_test2 = imgui.ImBool(false)
+				inicfg.save(cfg,directIni)
+			else
+				cfg.settings.helloadmin = not cfg.settings.helloadmin
+				inicfg.save(cfg,directIni)
+			end
+		end
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Рандом префикс", checked_test4) then
+			cfg.settings.prfrandom = not cfg.settings.prfrandom
 			inicfg.save(cfg,directIni)
+		end
+		imgui.PopFont()
+			imgui.SameLine()
+			imgui.SetCursorPosX(175)
+			imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"autoonline", checked_test3) then
+			cfg.settings.autoonline = not cfg.settings.autoonline
+			inicfg.save(cfg, directIni)
 			showCursor(false,false)
 			thisScript():reload()
-		else
-			cfg.settings.wallhack = not cfg.settings.wallhack
+		end
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Chat Cleaner", checked_test5) then
+			cfg.settings.chatclear = not cfg.settings.chatclear
+			inicfg.save(cfg, directIni)
+			sampShowDialog(1000, "Информация", "Chat Cleaner для выключения требует перезагрузку игры. Активация: /cleaner", "Понял", _)
+			showCursor(false,false)
+			thisScript():reload()
+		end
+		imgui.PopFont()
+			imgui.SameLine()
+			imgui.SetCursorPosX(175)
+			imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Fast Spawn", checked_test6) then
+			cfg.settings.fastspawn = not cfg.settings.fastspawn
+			inicfg.save(cfg, directIni)
+			sampShowDialog(1000, "Информация", "Fast spawn для выключения требует перезагрузку игры. Активация: /fs", "Понял", _)
+			showCursor(false,false)
+			thisScript():reload()
+		end
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Flood Detector", checked_test7) then
+			cfg.settings.FLD = not cfg.settings.FLD
+			inicfg.save(cfg, directIni)
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.SetCursorPosX(175)
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Слежка за репортами", checked_test8) then
+			cfg.settings.opreport = not cfg.settings.opreport
+			inicfg.save(cfg, directIni)
+		end
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Автомут", checked_test9) then
+			cfg.settings.automute = not cfg.settings.automute
+			inicfg.save(cfg, directIni)
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.SetCursorPosX(175)
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Просьба войти в /alogin", checked_test10) then
+			cfg.settings.autoal = not cfg.settings.autoal
 			inicfg.save(cfg,directIni)
 		end
-	end
-	imgui.Separator()
-	imgui.SameLine()
-	imgui.SetCursorPosX(10)
-	if imgui.Button(u8'Выгрузить скрипт') then
-		sampAddChatMessage('Выгружаю...', 0xFFFFFF)
-		showCursor(false,false)
-		thisScript():unload()
-	end
-	imgui.SameLine()
-	imgui.SetCursorPosX(138)
-	if imgui.Button(u8'Сокр.Админ-Команды') then
-		sampShowDialog(1000, "Команды", '/m - m3 мут за мат\n/ok - /ok3 мут за оскорбление\n/fd - /fd3 мут за флуд\n/po - /po3 мут за попрошайничество\n/zs - мут за злоуп.симв\n/or - мут за оскорбление родных\n/oa - мут за оскорбление администрации\n/kl - клевета на администрацию\
-/oft - /oft3 мут репорта за оффтоп\n/rpo - мут репорта за попрошайничество\n/cp - /cp3 мут репорта за капс\n/roa - мут репорта за оскорбление администрации\n/ror - мут репорта за оскорбление родни\n/rrz - мут репорта за злоуп.симв\n/rz - мут за розжиг\n/rm - мут за мат в репорт\n/rok - мут за оск в репорт\
-/dz - джайл за DM/DB в зз\n/zv - джайл за злоупотребление VIP\n/sk - джайл за Спавн-Килл\n/jcb - Джайл за вредительские читы\n/jc - джайл за безвредные читы\n/baguse - джайл за багоюз\
-/bosk - бан за оскорбление проекта\n/rekl - бан за рекламу\n/ch - бан за читы\n/oskhelper - бан за оскорбление в хелпере\n/cafk - кик за афк на арене\
-/kk1 - /kk3 кик за ник\n/prefixma - выдача префикса Младшему Администратору\n/prefixa - выдача префикса Администратору\n/prefixsa - выдача префикса Старшему Администратору\n/prefixzga - выдача рандомного префикса ЗГА\n/prefixpga - выдача рандомного префикса ПГА\n/prefixGA - выдача рандомного префикса ГА\
-/newprfma - изменить цвет префикса МА\n/newprfa - изменить цвет префикса А\n/newprfsa - изменить цвет префикса СА\n/newprfnick - изменить должность (для рандом префикса)\n/stw - выдать миниган', "Спасибо", "", 0)
-	end
-	imgui.End()
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Трассера", checked_test11) then
+			cfg.settings.trassera = not cfg.settings.trassera
+			inicfg.save(cfg,directIni)
+			sampShowDialog(1000, "Информация", "Трассерам для вкл/выкл требуется перезагрузка игры. Активация: /trassera", "Понял", _)
+			showCursor(false,false)
+			thisScript():reload()
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.SetCursorPosX(175)
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"Слежка за формами +", checked_test12) then
+			cfg.settings.form = not cfg.settings.form
+			inicfg.save(cfg,directIni)
+			sampAddChatMessage('Помощь в работе с данной функцией - /infoform', 0xCCCC33)
+		end
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"input helper", checked_test13) then
+			cfg.settings.inputhelper = not cfg.settings.inputhelper
+			inicfg.save(cfg,directIni)
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.SetCursorPosX(175)
+		imgui.PushFont(fontsize)
+		if imgui.Checkbox(u8"WallHack", checked_test14) then
+			if cfg.settings.wallhack == true then
+				cfg.settings.wallhack = not cfg.settings.wallhack
+				inicfg.save(cfg,directIni)
+				showCursor(false,false)
+				thisScript():reload()
+			else
+				cfg.settings.wallhack = not cfg.settings.wallhack
+				inicfg.save(cfg,directIni)
+			end
+		end
+		imgui.PopFont()
+		imgui.Separator()
+		imgui.SameLine()
+		imgui.SetCursorPosX(10)
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Выгрузить скрипт') then
+			sampAddChatMessage('Выгружаю...', 0xFFFFFF)
+			showCursor(false,false)
+			thisScript():unload()
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.SetCursorPosX(150)
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Сокращ.Команды') then
+			secondary_window_state.v = true
+		end
+		imgui.PopFont()
+		imgui.End()
 	end
 	if secondary_window_state.v then -- второе окно на F2
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(" RDS Tools ", main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.ShowBorders)
-		imgui.Text(u8"Тут будет рекон меню")
+		imgui.SetNextWindowSize(imgui.ImVec2(400, 300), imgui.Cond.FirstUseEver)
+		imgui.Begin(" RDS Tools ", secondary_window_state, _)
+		imgui.PushFont(fontsize)
+		imgui.Text(u8"/m - m3 мут за мат\n/ok - /ok3 мут за оскорбление\n/fd - /fd3 мут за флуд\n/po - /po3 мут за попрошайничество\n/zs - мут за злоуп.симв\n/or - мут за оскорбление родных\n/oa - мут за оскорбление администрации\n/kl - клевета на администрацию\
+/oft - /oft3 мут репорта за оффтоп\n/rpo - мут репорта за попрошайничество\n/ia - мут за выдачу себя за администратора\n/up - упоминание сторонних проектов\n/cp - /cp3 мут репорта за капс\n/roa - мут репорта за оскорбление администрации\n/ror - мут репорта за оскорбление родни\n/rrz - мут репорта за злоуп.симв\n/rz - мут за розжиг\n/rm - мут за мат в репорт\n/rok - мут за оск в репорт\
+/dz - джайл за DM/DB в зз\n/zv - джайл за злоупотребление VIP\n/sk - джайл за Спавн-Килл\n/jcb - Джайл за вредительские читы\n/td - джайл за кар трейд\n/jc - джайл за безвредные читы\n/baguse - джайл за багоюз\
+/bosk - бан за оскорбление проекта\n/rekl - бан за рекламу\n/ch - бан за читы\n/oskhelper - бан за оскорбление в хелпере\n/cafk - кик за афк на арене\
+/kk1 - /kk3 кик за ник\n/prefixma - выдача префикса Младшему Администратору\n/prefixa - выдача префикса Администратору\n/prefixsa - выдача префикса Старшему Администратору\n/prefixzga - выдача рандомного префикса ЗГА\n/prefixpga - выдача рандомного префикса ПГА\n/prefixGA - выдача рандомного префикса ГА\
+/n - не вижу нарушений\n/c - начал работать над вашей жалобой\n/newprfma - изменить цвет префикса МА\n/newprfa - изменить цвет префикса А\n/newprfsa - изменить цвет префикса СА\n/newprfnick - изменить должность (для рандом префикса)\n/stw - выдать миниган\n/uu - снять мут")
+		imgui.PopFont()
 		imgui.End()
 	end
 end
 
 
-function showInputHelp()
-	while true do
-		wait(0)
-		if cfg.settings.inputhelper then
-			local chat = sampIsChatInputActive()
-			if chat == true then
-				local in1 = sampGetInputInfoPtr()
-				local in1 = getStructElement(in1, 0x8, 4)
-				local in2 = getStructElement(in1, 0x8, 4)
-				local in3 = getStructElement(in1, 0xC, 4)
-				fib = in3 + 41
-				fib2 = in2 + 10
-				local _, pID = sampGetPlayerIdByCharHandle(playerPed)
-				local name = sampGetPlayerNickname(pID)
-				local score = sampGetPlayerScore(pID)
-				local color = sampGetPlayerColor(pID)
-				local capsState = ffi.C.GetKeyState(20)
-				local success = ffi.C.GetKeyboardLayoutNameA(KeyboardLayoutName)
-				local errorCode = ffi.C.GetLocaleInfoA(tonumber(ffi.string(KeyboardLayoutName), 16), 0x00000002, LocalInfo, BuffSize)
-				local localName = ffi.string(LocalInfo)
-				local text = string.format(
-					"%s :: {%0.6x}%s[%d] {ffffff}:: Капс: %s {FFFFFF}:: Язык: {ffeeaa}%s{ffffff}",
-					os.date("%H:%M:%S"), bit.band(color,0xffffff), name, pID, getStrByState(capsState), string.match(localName, "([^%(]*)")
-				)
-				renderFontDrawText(inputHelpText, text, fib2, fib, 0xD7FFFFFF)
-			end
-		end
-	end
-end
 function getStrByState(keyState)
 	if keyState == 0 then
 		return "{ffeeaa}Выкл{ffffff}"
@@ -950,7 +1087,7 @@ end
 apply_custom_style()
 
 sampRegisterChatCommand('check_update', function(param) 
-	sampShowDialog(1000, "В этом обновлении", cfg.script.info, "Понял", _)
+	sampShowDialog(1000, "В этом обновлении", info, "Понял", _)
 end)
 
 sampRegisterChatCommand('newprfma', function(param) 
@@ -995,8 +1132,12 @@ sampRegisterChatCommand('stylecolorform', function(param)
 	st.timer = os.clock()
 	forma = ('//iban 75 7 cheat // Administrator')
 end)
-
-
+sampRegisterChatCommand('n', function(param) 
+	sampSendChat('/ans ' .. param .. ' Не вижу нарушений со стороны игрока.')
+end)
+sampRegisterChatCommand('c', function(param) 
+	sampSendChat('/ans ' .. param .. ' Начал(а) работу над вашей жалобой.')
+end)
 sampRegisterChatCommand('prefixma', function(param) 
 	if(param:match("(%d+)")) then
 		sampSendChat("/prefix " .. param .. " Мл.Администратор " .. cfg.settings.prefixma)
@@ -1061,6 +1202,10 @@ end)
 sampRegisterChatCommand('or', function(param) 
 	sampSendChat('/mute ' .. param .. ' 5000 Оскорбление/Упоминание родни')
 end)
+sampRegisterChatCommand('up', function(param) 
+	sampSendChat('/mute ' .. param .. ' 1000 Упоминание сторонних проектов')
+	sampSendChat('/cc')
+end)
 sampRegisterChatCommand('oa', function(param) 
 	sampSendChat('/mute ' .. param .. ' 2500 Оскорбление Администрации')
 end)
@@ -1081,6 +1226,9 @@ sampRegisterChatCommand('zs', function(param)
 end)
 sampRegisterChatCommand('rz', function(param) 
 	sampSendChat('/mute ' .. param .. " 5000 Розжиг")
+end)
+sampRegisterChatCommand('ia', function(param) 
+	sampSendChat('/mute ' .. param .. " 2500 Выдача себя за администратора")
 end)
 sampRegisterChatCommand('oft', function(param) 
 	sampSendChat('/rmute ' .. param .. " 120 Offtop in /report")
@@ -1127,6 +1275,9 @@ end)
 sampRegisterChatCommand('sk', function(param) 
 	sampSendChat('/jail ' .. param .. ' 300 Spawn Kill')
 end)
+sampRegisterChatCommand('td', function(param) 
+	sampSendChat('/jail ' .. param .. ' 300 car in /trade')
+end)
 sampRegisterChatCommand('jcb', function(param) 
 	sampSendChat('/jail ' .. param .. ' 3000 чит')
 end)
@@ -1159,6 +1310,9 @@ sampRegisterChatCommand('kk2', function(param)
 end)
 sampRegisterChatCommand('kk3', function(param) 
 	sampSendChat('/ban ' .. param .. ' Смените ник 3/3') 
+end)
+sampRegisterChatCommand('uu', function(param) 
+	sampSendChat('/unmute ' .. param) 
 end)
 
 
