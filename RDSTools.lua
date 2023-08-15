@@ -2,7 +2,7 @@ require 'lib.moonloader'
 require 'lib.sampfuncs'
 script_name 'RDS Tools' 
 script_author 'Neon4ik'
-local version = 0.3
+local version = 0.3.1
 local imgui = require 'imgui' 
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
@@ -79,15 +79,12 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		mytextreport = ' // Приятной игры на RDS <3'
 	},
 	script = {
-		version = 0.3,
+		version = 0.3.1,
 	}
 }, directIni)
 inicfg.save(cfg,directIni)
 
-info = 'Добавлен быстрый ответ на репорт, с возможностью добавить любой текст в конец, допустим // Приятной игры (разноцветное)\nЛибо задать свой текст командой /mytextreport допустим by Neon4ik\nВ том числе задать свой статичный цвет через {code}\
-в том числе он имеет защиту от слишком маленького количества символов и слишком большого, то есть если ответ в репорт "да", он автоматом поставит пробелы.\nИзменен принцип вкл/выкл WallHack теперь ему не нужна перезагрузка скрипта, а также он будет кушать меньше FPS.\nФункция об оповещении о репортах была добавлена в F2, что бы при выходе не было флуда\
-Изменен размер окна с командами на более оптимальный\nДобавлена версия тулса в скобочках [] чтобы знать с кем имеешь дело\nСменил дизайн интерфейса и добавил возможность вкл/выкл WallHack по команде /wh\
-Моё мнение об обновлении: дизайн параша надо менять, но это как-нибудь потом, сначала начинка'
+info = 'Изменено название кнопки сокр.команды на быстрые команды'
 
 local font = renderCreateFont('TimesNewRoman', 12, 5) -- таймер для форм
 local st = {
@@ -175,8 +172,6 @@ chars = {
 	["Ж"] = ":", ["Э"] = "\"", ["Я"] = "Z", ["Ч"] = "X", ["С"] = "C", ["М"] = "V", ["И"] = "B", ["Т"] = "N", ["Ь"] = "M", ["Б"] = "<", ["Ю"] = ">"
 }
 
-yaAdmin = false
-ya18lvl = false
 
 local checked_test = imgui.ImBool(cfg.settings.check_weapon_hack)
 local checked_test2 = imgui.ImBool(cfg.settings.helloadmin)
@@ -451,7 +446,6 @@ function cyrillic(text)
 	end
 	return table.concat(result)
 end
-
 local sw, sh = getScreenResolution() -- узнаем разрешение экрана
 function timer() -- таймер для автоформ
 	while true do
@@ -986,19 +980,20 @@ function imgui.OnDrawFrame()
 		end
 		imgui.PopFont()
 		imgui.Separator()
+		imgui.Separator()
 		imgui.SameLine()
 		imgui.SetCursorPosX(10)
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Выгрузить скрипт') then
+		if imgui.Button(u8'Выгрузить скрипт', imgui.ImVec2(150, 25)) then
 			sampAddChatMessage('Выгружаю...', 0xFFFFFF)
 			showCursor(false,false)
 			thisScript():unload()
 		end
 		imgui.PopFont()
 		imgui.SameLine()
-		imgui.SetCursorPosX(150)
+		imgui.SetCursorPosX(170)
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Сокращ.Команды') then
+		if imgui.Button(u8'Быстрые команды', imgui.ImVec2(150, 25)) then
 			secondary_window_state.v = true
 		end
 		imgui.PopFont()
@@ -1007,7 +1002,7 @@ function imgui.OnDrawFrame()
 	if secondary_window_state.v then -- второе окно сокращенных команд
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(550, 350), imgui.Cond.FirstUseEver)
-		imgui.Begin(" RDS Tools ", secondary_window_state, _)
+		imgui.Begin(u8"Быстрые команды", secondary_window_state, _)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
 		imgui.Text(u8"/m - m3 мут за мат\n/ok - /ok3 мут за оскорбление\n/fd - /fd3 мут за флуд\n/po - /po3 мут за попрошайничество\n/zs - мут за злоуп.симв\n/or - мут за оскорбление родных\n/oa - мут за оскорбление администрации\n/kl - клевета на администрацию\
@@ -1016,15 +1011,16 @@ function imgui.OnDrawFrame()
 /bosk - бан за оскорбление проекта\n/rekl - бан за рекламу\n/ch - бан за читы\n/oskhelper - бан за оскорбление в хелпере\n/cafk - кик за афк на арене\
 /kk1 - /kk3 кик за ник\n/prefixma - выдача префикса Младшему Администратору\n/prefixa - выдача префикса Администратору\n/prefixsa - выдача префикса Старшему Администратору\n/prefixzga - выдача рандомного префикса ЗГА\n/prefixpga - выдача рандомного префикса ПГА\n/prefixGA - выдача рандомного префикса ГА\
 /n - не вижу нарушений\n/cl - данный игрок чист\n/c - начал работать над вашей жалобой\n/newprfma - изменить цвет префикса МА\n/newprfa - изменить цвет префикса А\n/newprfsa - изменить цвет префикса СА\n/newprfnick - изменить должность (для рандом префикса)\n/stw - выдать миниган\n/uu - снять мут\n/mytextreport - изменить дополнительный текст при ответе в репорт\
-/wh - вкл/выкл функцию WallHack")
+/wh - вкл/выкл функцию WallHack\n/textform - изменить текст отправленный в /a после одобрения формы\n/stylecolor - изменить цвет текста оповещения автоформ\n/stylecolorform - изменить цвет текста форм внутри оповещения")
 		imgui.PopFont()
 		imgui.End()
 	end
 	if tree_window_state.v then --
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.SetNextWindowSize(imgui.ImVec2(400, 170), imgui.Cond.FirstUseEver)
+		--imgui.SetNextWindowSize(imgui.ImVec2(400, 170), imgui.Cond.FirstUseEver)
 		imgui.Begin(u8"Ответ на репорт", tree_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
 		imgui.Text(u8'Репорт от игрока: ' .. autor)
 		imgui.PopFont()
@@ -1032,7 +1028,7 @@ function imgui.OnDrawFrame()
 		imgui.Text(u8'Жалоба: ' .. u8(textreport))
 		imgui.PopFont()
 		imgui.PushFont(fontsize)
-		imgui.NewInputText('##SearchBar', text_buffer, 200, u8'Ваш ответ на репорт', 2)
+		imgui.NewInputText('##SearchBar', text_buffer, 200, u8' ', 2)
 		imgui.SameLine()
 		imgui.SetCursorPosX(210)
 		if imgui.Checkbox(' ', checked_test15) then
@@ -1041,55 +1037,84 @@ function imgui.OnDrawFrame()
 		end
 		imgui.PopFont()
 		imgui.SameLine()
-		imgui.SetCursorPosX(237)
+		imgui.SetCursorPosX(240)
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Отправить') then
+		
+		if imgui.Button(u8'Отправить', imgui.ImVec2(120, 25)) then
 			moiotvet = true
 		end
 		imgui.Separator()
 		imgui.PopFont()
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Работаю') then
+		if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) then
 			rabotay = true
 		end
 		imgui.PopFont()
 		imgui.SameLine()
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Слежу') then
+		if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) then
 			slejy = true
 		end
 		imgui.PopFont()
 		imgui.SameLine()
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Уточните') then
+		if imgui.Button(u8'Уточните', imgui.ImVec2(120, 25)) then
 			uto4 = true
 		end
 		imgui.PopFont()
 		imgui.SameLine()
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Передам') then
-			sampAddChatMessage('Игрок: ' .. autor .. ' | Жалоба: ' .. textreport, -1)
-			sampAddChatMessage('Пока сделать эту клавишу рабочей у меня не получилось :(', -1)
+		if imgui.Button(u8'Передам', imgui.ImVec2(120, 25)) then
+			peredamrep = true
 		end
 		imgui.PopFont()
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Будете наказаны') then
+		if imgui.Button(u8'Вас накажут.', imgui.ImVec2(120, 25)) then
 			nakajy = true
 		end
 		imgui.PopFont()
 		imgui.SameLine()
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'жб форум') then
+		if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) then
 			jb = true
 		end
 		imgui.PopFont()
 		imgui.SameLine()
 		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Ожидайте') then
+		if imgui.Button(u8'Ожидайте', imgui.ImVec2(120, 25)) then
 			ojid = true
 		end
-		imgui.Separator()
 		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Интернет', imgui.ImVec2(120, 25)) then
+			internet = true
+		end
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) then
+			uto4id = true
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'/help', imgui.ImVec2(120, 25)) then
+			helpest = true
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Игрок наказан', imgui.ImVec2(120, 25)) then
+			nakazan = true
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) then
+			otklon = true
+		end
+		imgui.PopFont()
+		imgui.Separator()
 		imgui.End()
 	end
 end
@@ -1131,7 +1156,6 @@ function inputChat()
 	end
 end
 
---1381 арена
 -- 2349 взятие репорта
 -- 2350 выбор ответить или отклонить
 -- 2351 ввод текста
@@ -1165,153 +1189,255 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 		tree_window_state.v = not tree_window_state.v
 		imgui.Process = tree_window_state
 		lua_thread.create(function()
-			while not rabotay and not uto4 and not nakajy and not slejy and not jb and not ojid and not moiotvet do -- ждем нажатия клавиши
-				wait(50)
-				doptext = ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport)
-				if rabotay then
-					if cfg.settings.doptext then
-						peremrep = ('Начал работу по вашей жалобе!' .. doptext)
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						rabotay = false
-					else
-						peremrep = ('Начал работу по вашей жалобе!')
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						rabotay = false
+			while tree_window_state.v do
+				while not rabotay and not uto4 and not nakajy and not slejy and not jb and not ojid and not moiotvet and not internet and not uto4id and not helpest and not nakazan and otklon ~= 2 and peredamrep ~= 2 do -- ждем нажатия клавиши
+					wait(50)
+					doptext = ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport)
+					if rabotay then
+						if cfg.settings.doptext then
+							peremrep = ('Начал работу по вашей жалобе!' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							rabotay = false
+						else
+							peremrep = ('Начал работу по вашей жалобе!')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							rabotay = false
+						end
 					end
-				end
-				if ojid then
-					if cfg.settings.doptext then
-						peremrep = ('Ожидайте, скоро всё будет.' .. doptext)
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						ojid = false
-					else
-						peremrep = ('Ожидайте, скоро всё будет.')
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						ojid = false
+					if ojid then
+						if cfg.settings.doptext then
+							peremrep = ('Ожидайте, скоро всё будет.' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							ojid = false
+						else
+							peremrep = ('Ожидайте, скоро всё будет.')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							ojid = false
+						end
 					end
-				end
-				if nakajy then
-					if cfg.settings.doptext then
-						peremrep = ('Будете наказаны!' .. doptext)
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						nakajy = false
-					else
-						peremrep = ('Будете наказаны!')
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						nakajy = false
+					if nakazan then
+						if cfg.settings.doptext then
+							peremrep = ('Данный игрок уже был наказан.' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							nakazan = false
+						else
+							peremrep = ('Данный игрок уже был наказан.')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							nakazan = false
+						end
 					end
-				end
-				if jb then
-					if cfg.settings.doptext then
-						peremrep = ('Напишите жалобу на forumrds.ru' .. doptext)
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						jb = false
-					else
-						peremrep = ('Напишите жалобу на forumrds.ru')
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						jb = false
+					if helpest then
+						if cfg.settings.doptext then
+							peremrep = ('Данная информация имеется в /help' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							helpest = false
+						else
+							peremrep = ('Данная информация имеется в /help')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							helpest = false
+						end
 					end
-				end
-				if moiotvet then
-					if cfg.settings.doptext then
-						peremrep = (u8:decode(text_buffer.v) .. doptext)
-						if #peremrep >= 80 then
+					if otklon then
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						otklon = 2
+					end
+					if peredamrep then
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						peredamrep = 2
+					end
+					if uto4id then
+						if cfg.settings.doptext then
+							peremrep = ('Уточните ID нарушителя в /report.' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							uto4id = false
+						else
+							peremrep = ('Уточните ID нарушителя в /report.')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							uto4id = false
+						end
+					end
+					if nakajy then
+						if cfg.settings.doptext then
+							peremrep = ('Будете наказаны!' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							nakajy = false
+						else
+							peremrep = ('Будете наказаны!')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							nakajy = false
+						end
+					end
+					if jb then
+						if cfg.settings.doptext then
+							peremrep = ('Напишите жалобу на forumrds.ru' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							jb = false
+						else
+							peremrep = ('Напишите жалобу на forumrds.ru')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							jb = false
+						end
+					end
+					if internet then
+						if cfg.settings.doptext then
+							peremrep = ('С данной информацией вы можете ознакомиться в интернете.' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							internet = false
+						else
+							peremrep = ('С данной информацией вы можете ознакомиться в интернете.')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							internet = false
+						end
+					end
+					if moiotvet then
+						if cfg.settings.doptext then
+							peremrep = (u8:decode(text_buffer.v) .. doptext)
+							if #peremrep >= 80 then
+								peremrep = (u8:decode(text_buffer.v))
+								if #peremrep >= 80 then
+									text_buffer.v = 'Слишком много символов'
+								end
+							end
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							moiotvet = false
+						else
 							peremrep = (u8:decode(text_buffer.v))
 							if #peremrep >= 80 then
 								text_buffer.v = 'Слишком много символов'
 							end
+							if #peremrep <= 3 then
+								peremrep = (u8:decode(text_buffer.v) .. '    ')
+							end
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							moiotvet = false
 						end
- 						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						moiotvet = false
-					else
-						peremrep = (u8:decode(text_buffer.v))
-						if #peremrep >= 80 then
-							text_buffer.v = 'Слишком много символов'
-						end
-						if #peremrep <= 3 then
-							peremrep = (u8:decode(text_buffer.v) .. '    ')
-						end
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						moiotvet = false
 					end
-				end
-				if slejy then
-					if cfg.settings.doptext then
-						peremrep = ('Слежу за данным игроком!' .. doptext)
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						slejy = false
-					else
-						peremrep = ('Слежу за данным игроком!')
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						slejy = false
+					if slejy then
+						if cfg.settings.doptext then
+							peremrep = ('Слежу за данным игроком!' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							slejy = false
+						else
+							peremrep = ('Слежу за данным игроком!')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							slejy = false
+						end
 					end
-				end
-				if uto4 then
-					if cfg.settings.doptext then
-						peremrep = ('Уточните вашу жалобу/вопрос.' .. doptext)
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						uto4 = false
-					else
-						peremrep = ('Уточните вашу жалобу/вопрос.')
-						setVirtualKeyDown(13, true)
-						setVirtualKeyDown(13, false)
-						tree_window_state.v = not tree_window_state.v
-						imgui.Process = tree_window_state
-						uto4 = false
+					if uto4 then
+						if cfg.settings.doptext then
+							peremrep = ('Уточните вашу жалобу/вопрос.' .. doptext)
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							uto4 = false
+						else
+							peremrep = ('Уточните вашу жалобу/вопрос.')
+							setVirtualKeyDown(13, true)
+							setVirtualKeyDown(13, false)
+							tree_window_state.v = not tree_window_state.v
+							imgui.Process = tree_window_state
+							uto4 = false
+						end
 					end
 				end
 			end
 		end)
 	end
 	if dialogId == 2350 then
-		setVirtualKeyDown(13, true)
-		setVirtualKeyDown(13, false)
+		if otklon == 2 then
+			lua_thread.create(function()
+				sampSendDialogResponse(dialogId, 1, 2, _)
+				setVirtualKeyDown(13, true)
+				setVirtualKeyDown(13, false)
+				otklon = nil
+			end)
+		else
+			setVirtualKeyDown(13, true)
+			setVirtualKeyDown(13, false)
+		end
 	end
 	if dialogId == 2351 then
 		lua_thread.create(function()
-			sampSendDialogResponse(dialogId, 1, _, peremrep)
-			setVirtualKeyDown(13, true)
-			setVirtualKeyDown(13, false)
-			text_buffer.v = ''
+			if peredamrep == 2 then
+				sampSendDialogResponse(dialogId, 1, _, 'Передам ваш репорт.')
+				setVirtualKeyDown(13, true)
+				setVirtualKeyDown(13, false)
+				wait(300)
+				sampSendChat('/a Игрок ' .. autor .. ' || Жалоба: ' .. textreport)
+				peredamrep = nil
+			else
+				sampSendDialogResponse(dialogId, 1, _, peremrep)
+				setVirtualKeyDown(13, true)
+				setVirtualKeyDown(13, false)
+				text_buffer.v = ''
+			end
 		end)
 	end
 end
@@ -1452,7 +1578,6 @@ sampRegisterChatCommand('wh', function()
 		end
 	end
 end)
-
 
 
 sampRegisterChatCommand('mytextreport', function(param) 
