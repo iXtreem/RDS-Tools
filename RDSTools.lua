@@ -2,7 +2,7 @@ require 'lib.moonloader'
 require 'lib.sampfuncs'
 script_name 'RDS Tools' 
 script_author 'Neon4ik'
-local version = 0.2
+local version = 0.3
 local imgui = require 'imgui' 
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
@@ -74,18 +74,21 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		texts = '+',
 		prefixnick = 'Главный-Администратор',
 		stylecolor = '{FFFFFF}',
-		stylecolorform = '{FF0000}'
+		stylecolorform = '{FF0000}',
+		doptext = true,
+		mytextreport = ' // Приятной игры на RDS <3'
 	},
 	script = {
-		version = 0.2,
+		version = 0.3,
 	}
 }, directIni)
 inicfg.save(cfg,directIni)
--- текст обновления
-info = 'Фикс автоонлайна, после перезагрузки скрипта не будет рассихрона\nТеперь WallHack адекватно выключается\nДобавлены быстрые команды.\nДобавлено оповещение о репортах, если их будет много (более 3-ех), скрипт сделает ульту.\nТакже убрано сообщение на экране REPORT++ это я долго думал как сделать.\nВ inputhelper убраны подсказки под чатом F6, хз меня они бесили\
-\nДобавлен мой, собственно ручно сделанный автомут на мат. Пока что только на мат, потому то с осками тяжелее.\nВозможны ошибочные муты, перепроверяйте по возможности\nАвтомут мутит за коренные слова, приведу пример "разъЕБАлся"\nдобавление своих слов невозможно и нежелательно в том числе через код\nПовышена общая стабильность скрипта, исправлены вылеты скрипта после выхода из афк.\nИзменено окно сокращённых админ команд, поскольку их стало слишком многo\
-Изменен дизайн, сделан более компактный\nУвеличен текст в интерфейсе. В автоформах добавлено исключение на добавление //nick а именно команда /iunban\nОбновление 0.2 реализовано за 1 полноценный день, если найдутся баги просьба сообщать об этом.\nДальнейших планов уйма, вопрос только успею и захочу ли реализовать'
--- текст обновления
+
+info = 'Добавлен быстрый ответ на репорт, с возможностью добавить любой текст в конец, допустим // Приятной игры (разноцветное)\nЛибо задать свой текст командой /mytextreport допустим by Neon4ik\nВ том числе задать свой статичный цвет через {code}\
+в том числе он имеет защиту от слишком маленького количества символов и слишком большого, то есть если ответ в репорт "да", он автоматом поставит пробелы.\nИзменен принцип вкл/выкл WallHack теперь ему не нужна перезагрузка скрипта, а также он будет кушать меньше FPS.\nФункция об оповещении о репортах была добавлена в F2, что бы при выходе не было флуда\
+Изменен размер окна с командами на более оптимальный\nДобавлена версия тулса в скобочках [] чтобы знать с кем имеешь дело\nСменил дизайн интерфейса и добавил возможность вкл/выкл WallHack по команде /wh\
+Моё мнение об обновлении: дизайн параша надо менять, но это как-нибудь потом, сначала начинка'
+
 local font = renderCreateFont('TimesNewRoman', 12, 5) -- таймер для форм
 local st = {
     bool = false,
@@ -172,7 +175,8 @@ chars = {
 	["Ж"] = ":", ["Э"] = "\"", ["Я"] = "Z", ["Ч"] = "X", ["С"] = "C", ["М"] = "V", ["И"] = "B", ["Т"] = "N", ["Ь"] = "M", ["Б"] = "<", ["Ю"] = ">"
 }
 
-
+yaAdmin = false
+ya18lvl = false
 
 local checked_test = imgui.ImBool(cfg.settings.check_weapon_hack)
 local checked_test2 = imgui.ImBool(cfg.settings.helloadmin)
@@ -188,10 +192,12 @@ local checked_test11 = imgui.ImBool(cfg.settings.trassera)
 local checked_test12 = imgui.ImBool(cfg.settings.form)
 local checked_test13 = imgui.ImBool(cfg.settings.inputhelper)
 local checked_test14 = imgui.ImBool(cfg.settings.wallhack)
+local checked_test15 = imgui.ImBool(cfg.settings.doptext)
 local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
 local main_window_state = imgui.ImBool(false)
 local secondary_window_state = imgui.ImBool(false)
+local tree_window_state = imgui.ImBool(false)
 
 local text_buffer_age = imgui.ImBuffer(256)
 local text_buffer_name = imgui.ImBuffer(256)
@@ -219,7 +225,7 @@ function main()
 				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
 				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
 			else
-				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}был успешно загружен, активация: {808080}F3', -1)
+				sampAddChatMessage('{FF0000}RDS Tools{d5d1eb}[' .. version .. ']: {FFFFFF}был успешно загружен, активация: {808080}F3', -1)
 			end
             os.remove(update_path)
         end
@@ -239,7 +245,6 @@ function main()
 	if cfg.settings.trassera then
 		local trassera = import(path_trassera) -- подгрузка трассеров
 	end
-	while not sampIsLocalPlayerSpawned() do wait(100) end
 	if defaultState and not nameTag then nameTagOn() end
 	while true do
         wait(0)
@@ -266,6 +271,7 @@ function main()
 				cfg.settings.helloadmin = helladm
 				cfg.settings.autoal = pleaseal
 				cfg.settings.automute = checkmat
+				cfg.settings.opreport = opreport
 				act = false
 				sampAddChatMessage('{FF0000}RDS Tools: {d5b3f5}Все значения переведены в прежний режим', -1)
 			else
@@ -275,12 +281,14 @@ function main()
 				helladm = cfg.settings.helloadmin
 				pleaseal = cfg.settings.autoal
 				checkmat = cfg.settings.automute
+				opreport = cfg.settings.opreport
 				cfg.settings.check_weapon_hack = false
 				cfg.settings.FLD = false
 				cfg.settings.forms = false
 				cfg.settings.helloadmin = false
 				cfg.settings.autoal = false
 				cfg.settings.automute = false
+				cfg.settings.opreport = false
 				act = true
 				sampAddChatMessage('{FF0000}RDS Tools: {d5b3f5}Можете выходить в афк, блокирую работу скриптов.', -1)
 			end
@@ -310,7 +318,7 @@ function main()
 			end
 		end
 		if cfg.settings.wallhack then
-				for i = 0, sampGetMaxPlayerId() do
+			for i = 0, sampGetMaxPlayerId() do
 				if sampIsPlayerConnected(i) then
 					local result, cped = sampGetCharHandleBySampPlayerId(i)
 					local color = sampGetPlayerColor(i)
@@ -334,10 +342,10 @@ function main()
 								pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
 								renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
 							end
-							for v = 4, 5 do
+								for v = 4, 5 do
 								pos2X, pos2Y, pos2Z = getBodyPartCoordinates(v * 10 + 1, cped)
 								pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
-								renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+									renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
 							end
 							local t = {53, 43, 24, 34, 6}
 							for v = 1, #t do
@@ -348,11 +356,6 @@ function main()
 					end
 				end
 			end
-		else
-			local pStSet = sampGetServerSettingsPtr();
-			mem.setfloat(pStSet + 39, 50)
-			mem.setint8(pStSet + 47, 0)
-			mem.setint8(pStSet + 56, 1)
 		end
 		sampTextdrawDelete(437)
 		sampTextdrawDelete(2059)
@@ -503,7 +506,7 @@ function sampev.onServerMessage(color, text)
 	if cfg.settings.prfrandom then
 		_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 		nick = sampGetPlayerNickname(id)
-		if text:find("Администратор " .. nick) and text:find("(18 level) авторизовался в админ") then
+		if text:find("Администратор " .. nick) and text:find("авторизовался в админ") then
 			local ip = sampGetCurrentServerAddress()
 			local _, id = sampGetPlayerIdByCharHandle(playerPed)
 			local mcolor = ""
@@ -743,19 +746,10 @@ function sampev.onServerMessage(color, text)
 	end
 	if cfg.settings.opreport then
 		if text:match('Жалоба #%d | {AFAFAF}') then
-			count = count + 1
 			notify.addNotify('Оповещение', "Пришёл новый репорт\nЗаймитесь делом.", 2, 1, 4)
 		end
-		if text:match('%[.*%] ') and text:match('%] ответил (.*)%[(%d+)%]: (.*)') then 
-			count = count - 1
-		end
-		if count >= 3 then
-			lua_thread.create(function()
-				while count >= 3 do
-					notify.addNotify('Оповещение', 'НА СЕРВЕРЕ ' .. count .. ' РЕПОРТОВ\nСРОЧНО РАЗБЕРИТЕСЬ!', 2, 1, 3)
-					wait(2000)
-				end
-			end)
+		if text:match('Жалоба #3 | {AFAFAF}') or text:match('Жалоба #4 | {AFAFAF}') or text:match('Жалоба #5 | {AFAFAF}') then
+			notify.addNotify('Оповещение', 'НА СЕРВЕРЕ ' .. count .. ' РЕПОРТОВ\nСРОЧНО РАЗБЕРИТЕСЬ!', 2, 1, 8)
 		end
 	end
 end
@@ -816,7 +810,7 @@ function getBodyPartCoordinates(id, handle)
   end
 
 function imgui.OnDrawFrame()
-	if not main_window_state.v and not secondary_window_state.v then
+	if not main_window_state.v and not secondary_window_state.v and not tree_window_state.v then
 		imgui.Process = false
 	end
 	if main_window_state.v then -- КНОПКИ ИНТЕРФЕЙСА F3
@@ -943,11 +937,51 @@ function imgui.OnDrawFrame()
 			if cfg.settings.wallhack == true then
 				cfg.settings.wallhack = not cfg.settings.wallhack
 				inicfg.save(cfg,directIni)
-				showCursor(false,false)
-				thisScript():reload()
+				local pStSet = sampGetServerSettingsPtr();
+				mem.setfloat(pStSet + 39, 50)
+				mem.setint8(pStSet + 47, 0)
+				mem.setint8(pStSet + 56, 1)
 			else
 				cfg.settings.wallhack = not cfg.settings.wallhack
 				inicfg.save(cfg,directIni)
+				for i = 0, sampGetMaxPlayerId() do
+					if sampIsPlayerConnected(i) then
+						local result, cped = sampGetCharHandleBySampPlayerId(i)
+						local color = sampGetPlayerColor(i)
+						local aa, rr, gg, bb = explode_argb(color)
+						local color = join_argb(255, rr, gg, bb)
+						local pStSet = sampGetServerSettingsPtr();
+						NTdist = mem.getfloat(pStSet + 39)
+						NTwalls = mem.getint8(pStSet + 47)
+						NTshow = mem.getint8(pStSet + 56)
+						mem.setfloat(pStSet + 39, 1488.0)
+						mem.setint8(pStSet + 47, 0)
+						mem.setint8(pStSet + 56, 1)
+						nameTag = true
+						if result then
+							if doesCharExist(cped) and isCharOnScreen(cped) then
+								local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
+								for v = 1, #t do
+									pos1X, pos1Y, pos1Z = getBodyPartCoordinates(t[v], cped)
+									pos2X, pos2Y, pos2Z = getBodyPartCoordinates(t[v] + 1, cped)
+									pos1, pos2 = convert3DCoordsToScreen(pos1X, pos1Y, pos1Z)
+									pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
+									renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+								end
+								for v = 4, 5 do
+									pos2X, pos2Y, pos2Z = getBodyPartCoordinates(v * 10 + 1, cped)
+									pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
+									renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+								end
+								local t = {53, 43, 24, 34, 6}
+								for v = 1, #t do
+									posX, posY, posZ = getBodyPartCoordinates(t[v], cped)
+									pos1, pos2 = convert3DCoordsToScreen(posX, posY, posZ)
+								end
+							end
+						end
+					end
+				end
 			end
 		end
 		imgui.PopFont()
@@ -970,17 +1004,91 @@ function imgui.OnDrawFrame()
 		imgui.PopFont()
 		imgui.End()
 	end
-	if secondary_window_state.v then -- второе окно на F2
+	if secondary_window_state.v then -- второе окно сокращенных команд
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.SetNextWindowSize(imgui.ImVec2(400, 300), imgui.Cond.FirstUseEver)
+		imgui.SetNextWindowSize(imgui.ImVec2(550, 350), imgui.Cond.FirstUseEver)
 		imgui.Begin(" RDS Tools ", secondary_window_state, _)
+		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
 		imgui.Text(u8"/m - m3 мут за мат\n/ok - /ok3 мут за оскорбление\n/fd - /fd3 мут за флуд\n/po - /po3 мут за попрошайничество\n/zs - мут за злоуп.симв\n/or - мут за оскорбление родных\n/oa - мут за оскорбление администрации\n/kl - клевета на администрацию\
 /oft - /oft3 мут репорта за оффтоп\n/rpo - мут репорта за попрошайничество\n/ia - мут за выдачу себя за администратора\n/up - упоминание сторонних проектов\n/cp - /cp3 мут репорта за капс\n/roa - мут репорта за оскорбление администрации\n/ror - мут репорта за оскорбление родни\n/rrz - мут репорта за злоуп.симв\n/rz - мут за розжиг\n/rm - мут за мат в репорт\n/rok - мут за оск в репорт\
 /dz - джайл за DM/DB в зз\n/zv - джайл за злоупотребление VIP\n/sk - джайл за Спавн-Килл\n/jcb - Джайл за вредительские читы\n/td - джайл за кар трейд\n/jc - джайл за безвредные читы\n/baguse - джайл за багоюз\
 /bosk - бан за оскорбление проекта\n/rekl - бан за рекламу\n/ch - бан за читы\n/oskhelper - бан за оскорбление в хелпере\n/cafk - кик за афк на арене\
 /kk1 - /kk3 кик за ник\n/prefixma - выдача префикса Младшему Администратору\n/prefixa - выдача префикса Администратору\n/prefixsa - выдача префикса Старшему Администратору\n/prefixzga - выдача рандомного префикса ЗГА\n/prefixpga - выдача рандомного префикса ПГА\n/prefixGA - выдача рандомного префикса ГА\
-/n - не вижу нарушений\n/c - начал работать над вашей жалобой\n/newprfma - изменить цвет префикса МА\n/newprfa - изменить цвет префикса А\n/newprfsa - изменить цвет префикса СА\n/newprfnick - изменить должность (для рандом префикса)\n/stw - выдать миниган\n/uu - снять мут")
+/n - не вижу нарушений\n/cl - данный игрок чист\n/c - начал работать над вашей жалобой\n/newprfma - изменить цвет префикса МА\n/newprfa - изменить цвет префикса А\n/newprfsa - изменить цвет префикса СА\n/newprfnick - изменить должность (для рандом префикса)\n/stw - выдать миниган\n/uu - снять мут\n/mytextreport - изменить дополнительный текст при ответе в репорт\
+/wh - вкл/выкл функцию WallHack")
+		imgui.PopFont()
+		imgui.End()
+	end
+	if tree_window_state.v then --
+		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowSize(imgui.ImVec2(400, 170), imgui.Cond.FirstUseEver)
+		imgui.Begin(u8"Ответ на репорт", tree_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.PushFont(fontsize)
+		imgui.Text(u8'Репорт от игрока: ' .. autor)
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		imgui.Text(u8'Жалоба: ' .. u8(textreport))
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		imgui.NewInputText('##SearchBar', text_buffer, 200, u8'Ваш ответ на репорт', 2)
+		imgui.SameLine()
+		imgui.SetCursorPosX(210)
+		if imgui.Checkbox(' ', checked_test15) then
+			cfg.settings.doptext = not cfg.settings.doptext
+			inicfg.save(cfg,directIni)
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.SetCursorPosX(237)
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Отправить') then
+			moiotvet = true
+		end
+		imgui.Separator()
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Работаю') then
+			rabotay = true
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Слежу') then
+			slejy = true
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Уточните') then
+			uto4 = true
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Передам') then
+			sampAddChatMessage('Игрок: ' .. autor .. ' | Жалоба: ' .. textreport, -1)
+			sampAddChatMessage('Пока сделать эту клавишу рабочей у меня не получилось :(', -1)
+		end
+		imgui.PopFont()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Будете наказаны') then
+			nakajy = true
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'жб форум') then
+			jb = true
+		end
+		imgui.PopFont()
+		imgui.SameLine()
+		imgui.PushFont(fontsize)
+		if imgui.Button(u8'Ожидайте') then
+			ojid = true
+		end
+		imgui.Separator()
 		imgui.PopFont()
 		imgui.End()
 	end
@@ -1023,73 +1131,335 @@ function inputChat()
 	end
 end
 
+--1381 арена
+-- 2349 взятие репорта
+-- 2350 выбор ответить или отклонить
+-- 2351 ввод текста
 
-function apply_custom_style()
-			imgui.SwitchContext()
-			local style = imgui.GetStyle()
-			local colors = style.Colors
-			local clr = imgui.Col
-			local ImVec4 = imgui.ImVec4
-			local ImVec2 = imgui.ImVec2
-			colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00);
-			colors[clr.TextDisabled]           = ImVec4(0.50, 0.50, 0.50, 1.00);
-			colors[clr.WindowBg]               = ImVec4(0.06, 0.06, 0.06, 0.94);
-			colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 0.94);
-			colors[clr.Border]                 = ImVec4(0.43, 0.43, 0.50, 0.50);
-			colors[clr.BorderShadow]           = ImVec4(0.00, 0.00, 0.00, 0.00);
-			colors[clr.FrameBg]                = ImVec4(0.16, 0.29, 0.48, 0.54);
-			colors[clr.FrameBgHovered]         = ImVec4(0.26, 0.59, 0.98, 0.40);
-			colors[clr.FrameBgActive]          = ImVec4(0.26, 0.59, 0.98, 0.67);
-			colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.00, 0.00, 0.51);
-			colors[clr.MenuBarBg]              = ImVec4(0.14, 0.14, 0.14, 1.00);
-			colors[clr.ScrollbarBg]            = ImVec4(0.02, 0.02, 0.02, 0.53);
-			colors[clr.ScrollbarGrab]          = ImVec4(0.31, 0.31, 0.31, 1.00);
-			colors[clr.ScrollbarGrabHovered]   = ImVec4(0.41, 0.41, 0.41, 1.00);
-			colors[clr.ScrollbarGrabActive]    = ImVec4(0.51, 0.51, 0.51, 1.00);
-			colors[clr.CheckMark]              = ImVec4(0.26, 0.59, 0.98, 1.00);
-			colors[clr.SliderGrab]             = ImVec4(0.24, 0.52, 0.88, 1.00);
-			colors[clr.SliderGrabActive]       = ImVec4(0.26, 0.59, 0.98, 1.00);
-			colors[clr.Button]                 = ImVec4(0.26, 0.59, 0.98, 0.40);
-			colors[clr.ButtonHovered]          = ImVec4(0.26, 0.59, 0.98, 1.00);
-			colors[clr.ButtonActive]           = ImVec4(0.06, 0.53, 0.98, 1.00);
-			colors[clr.Header]                 = ImVec4(0.26, 0.59, 0.98, 0.31);
-			colors[clr.HeaderHovered]          = ImVec4(0.26, 0.59, 0.98, 0.80);
-			colors[clr.HeaderActive]           = ImVec4(0.26, 0.59, 0.98, 1.00);
-			colors[clr.Separator]              = colors[clr.Border];
-			colors[clr.SeparatorHovered]       = ImVec4(0.10, 0.40, 0.75, 0.78);
-			colors[clr.SeparatorActive]        = ImVec4(0.10, 0.40, 0.75, 1.00);
-			colors[clr.ResizeGrip]             = ImVec4(0.26, 0.59, 0.98, 0.25);
-			colors[clr.ResizeGripHovered]      = ImVec4(0.26, 0.59, 0.98, 0.67);
-			colors[clr.ResizeGripActive]       = ImVec4(0.26, 0.59, 0.98, 0.95);
-			colors[clr.PlotLines]              = ImVec4(0.61, 0.61, 0.61, 1.00);
-			colors[clr.PlotLinesHovered]       = ImVec4(1.00, 0.43, 0.35, 1.00);
-			colors[clr.PlotHistogram]          = ImVec4(0.90, 0.70, 0.00, 1.00);
-			colors[clr.PlotHistogramHovered]   = ImVec4(1.00, 0.60, 0.00, 1.00);
-			colors[clr.TextSelectedBg]         = ImVec4(0.26, 0.59, 0.98, 0.35);
-	
-			imgui.SetColorEditOptions(imgui.ColorEditFlags.HEX)
-	
-			style.FrameRounding = 0.0
-			style.WindowRounding = 0.0
-			style.ChildWindowRounding = 0.0
-	
-			colors[clr.TitleBgActive] = ImVec4(0.000, 0.009, 0.120, 0.940);
-			colors[clr.TitleBg] = ImVec4(0.20, 0.25, 0.30, 1.0);
-			colors[clr.Button] = ImVec4(0.260, 0.590, 0.980, 0.670);
-			colors[clr.Header] = ImVec4(0.260, 0.590, 0.980, 0.670);
-			colors[clr.HeaderHovered] = ImVec4(0.260, 0.590, 0.980, 1.000);
-			colors[clr.ButtonHovered] = ImVec4(0.000, 0.545, 1.000, 1.000);
-			colors[clr.ButtonActive] = ImVec4(0.060, 0.416, 0.980, 1.000);
-			colors[clr.FrameBg] = ImVec4(0.20, 0.25, 0.30, 1.0);
-			colors[clr.WindowBg] = ImVec4(0.000, 0.009, 0.120, 0.940);
-			colors[clr.PopupBg] = ImVec4(0.076, 0.143, 0.209, 1.000);
+function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
+	if dialogId == 2349 then
+		local lineIndex = -1
+		for line in text:gmatch("[^\n]+") do
+			lineIndex = lineIndex + 1
+			if lineIndex == tonumber(1) - 1 then -- считываем автора жалобы
+				autor = line
+				rev = string.reverse(autor)
+				don = string.sub(rev, -1)
+				if don == '{' then
+					autor = string.sub(autor, 24)
+				end
+			end
+		end
+		local lineIndex = -1
+		for line in text:gmatch("[^\n]+") do
+			lineIndex = lineIndex + 1
+			if lineIndex == tonumber(3) - 1 then -- считываем жалобу
+				textreport = line
+				rev = string.reverse(textreport)
+				don = string.sub(rev, -1)
+				if don == '{' then
+					textreport = string.sub(textreport, 9)
+				end
+			end
+		end
+		tree_window_state.v = not tree_window_state.v
+		imgui.Process = tree_window_state
+		lua_thread.create(function()
+			while not rabotay and not uto4 and not nakajy and not slejy and not jb and not ojid and not moiotvet do -- ждем нажатия клавиши
+				wait(50)
+				doptext = ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport)
+				if rabotay then
+					if cfg.settings.doptext then
+						peremrep = ('Начал работу по вашей жалобе!' .. doptext)
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						rabotay = false
+					else
+						peremrep = ('Начал работу по вашей жалобе!')
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						rabotay = false
+					end
+				end
+				if ojid then
+					if cfg.settings.doptext then
+						peremrep = ('Ожидайте, скоро всё будет.' .. doptext)
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						ojid = false
+					else
+						peremrep = ('Ожидайте, скоро всё будет.')
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						ojid = false
+					end
+				end
+				if nakajy then
+					if cfg.settings.doptext then
+						peremrep = ('Будете наказаны!' .. doptext)
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						nakajy = false
+					else
+						peremrep = ('Будете наказаны!')
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						nakajy = false
+					end
+				end
+				if jb then
+					if cfg.settings.doptext then
+						peremrep = ('Напишите жалобу на forumrds.ru' .. doptext)
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						jb = false
+					else
+						peremrep = ('Напишите жалобу на forumrds.ru')
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						jb = false
+					end
+				end
+				if moiotvet then
+					if cfg.settings.doptext then
+						peremrep = (u8:decode(text_buffer.v) .. doptext)
+						if #peremrep >= 80 then
+							peremrep = (u8:decode(text_buffer.v))
+							if #peremrep >= 80 then
+								text_buffer.v = 'Слишком много символов'
+							end
+						end
+ 						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						moiotvet = false
+					else
+						peremrep = (u8:decode(text_buffer.v))
+						if #peremrep >= 80 then
+							text_buffer.v = 'Слишком много символов'
+						end
+						if #peremrep <= 3 then
+							peremrep = (u8:decode(text_buffer.v) .. '    ')
+						end
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						moiotvet = false
+					end
+				end
+				if slejy then
+					if cfg.settings.doptext then
+						peremrep = ('Слежу за данным игроком!' .. doptext)
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						slejy = false
+					else
+						peremrep = ('Слежу за данным игроком!')
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						slejy = false
+					end
+				end
+				if uto4 then
+					if cfg.settings.doptext then
+						peremrep = ('Уточните вашу жалобу/вопрос.' .. doptext)
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						uto4 = false
+					else
+						peremrep = ('Уточните вашу жалобу/вопрос.')
+						setVirtualKeyDown(13, true)
+						setVirtualKeyDown(13, false)
+						tree_window_state.v = not tree_window_state.v
+						imgui.Process = tree_window_state
+						uto4 = false
+					end
+				end
+			end
+		end)
+	end
+	if dialogId == 2350 then
+		setVirtualKeyDown(13, true)
+		setVirtualKeyDown(13, false)
+	end
+	if dialogId == 2351 then
+		lua_thread.create(function()
+			sampSendDialogResponse(dialogId, 1, _, peremrep)
+			setVirtualKeyDown(13, true)
+			setVirtualKeyDown(13, false)
+			text_buffer.v = ''
+		end)
+	end
 end
-apply_custom_style()
 
-sampRegisterChatCommand('check_update', function(param) 
+function imgui.NewInputText(lable, val, width, hint, hintpos)
+    local hint = hint and hint or ''
+    local hintpos = tonumber(hintpos) and tonumber(hintpos) or 1
+    local cPos = imgui.GetCursorPos()
+    imgui.PushItemWidth(width)
+    local result = imgui.InputText(lable, val)
+    if #val.v == 0 then
+        local hintSize = imgui.CalcTextSize(hint)
+        if hintpos == 2 then imgui.SameLine(cPos.x + (width - hintSize.x) / 2)
+        elseif hintpos == 3 then imgui.SameLine(cPos.x + (width - hintSize.x - 5))
+        else imgui.SameLine(cPos.x + 5) end
+        imgui.TextColored(imgui.ImVec4(1.00, 1.00, 1.00, 0.40), tostring(hint))
+    end
+    imgui.PopItemWidth()
+    return result
+end
+
+function theme()
+    imgui.SwitchContext()
+    local style = imgui.GetStyle()
+    local colors = style.Colors
+    local clr = imgui.Col
+    local ImVec4 = imgui.ImVec4
+    
+    style.WindowRounding = 3
+    style.WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+    style.ChildWindowRounding = 3
+    style.FrameRounding = 3
+    style.ItemSpacing = imgui.ImVec2(5.0, 4.0)
+    style.ScrollbarSize = 13.0
+    style.ScrollbarRounding = 1
+    style.GrabMinSize = 8.0
+    style.GrabRounding = 3
+    style.WindowPadding = imgui.ImVec2(4.0, 4.0)
+    style.FramePadding = imgui.ImVec2(2.5, 3.5)
+    style.ButtonTextAlign = imgui.ImVec2(0.02, 0.4)   
+    
+    colors[clr.WindowBg]              = ImVec4(0, 0, 0, 1);
+    colors[clr.ChildWindowBg]         = ImVec4(0, 0, 0, 1);
+    colors[clr.PopupBg]               = ImVec4(0.05, 0.05, 0.10, 0.90);
+    colors[clr.Border]                = ImVec4(0.89, 0.85, 0.92, 0.30);
+    colors[clr.BorderShadow]          = ImVec4(0.00, 0.00, 0.00, 0.00);
+    colors[clr.FrameBg]               = ImVec4(0.12, 0.12, 0.12, 0.94);
+    colors[clr.FrameBgHovered]        = ImVec4(0.41, 0.19, 0.63, 0.68);
+    colors[clr.FrameBgActive]         = ImVec4(0.41, 0.19, 0.63, 1.00);
+    colors[clr.TitleBg]               = ImVec4(0.41, 0.19, 0.63, 0.45);
+    colors[clr.TitleBgCollapsed]      = ImVec4(0.41, 0.19, 0.63, 0.35);
+    colors[clr.TitleBgActive]         = ImVec4(0.41, 0.19, 0.63, 0.78);
+    colors[clr.MenuBarBg]             = ImVec4(0.30, 0.20, 0.39, 0.57);
+    colors[clr.ScrollbarBg]           = ImVec4(0.04, 0.04, 0.04, 1.00);
+    colors[clr.ScrollbarGrab]         = ImVec4(0.41, 0.19, 0.63, 0.31);
+    colors[clr.ScrollbarGrabHovered]  = ImVec4(0.41, 0.19, 0.63, 0.78);
+    colors[clr.ScrollbarGrabActive]   = ImVec4(0.41, 0.19, 0.63, 1.00);
+    colors[clr.ComboBg]               = ImVec4(0.30, 0.20, 0.39, 1.00);
+    colors[clr.CheckMark]             = ImVec4(0.56, 0.61, 1.00, 1.00);
+    colors[clr.SliderGrab]            = ImVec4(0.28, 0.28, 0.28, 1.00);
+    colors[clr.SliderGrabActive]      = ImVec4(0.35, 0.35, 0.35, 1.00);
+    colors[clr.Button]                = ImVec4(0.41, 0.19, 0.63, 0.44);
+    colors[clr.ButtonHovered]         = ImVec4(0.41, 0.19, 0.63, 0.86);
+    colors[clr.ButtonActive]          = ImVec4(0.64, 0.33, 0.94, 1.00);
+    colors[clr.Header]                = ImVec4(0.41, 0.19, 0.63, 0.76);
+    colors[clr.HeaderHovered]         = ImVec4(0.41, 0.19, 0.63, 0.86);
+    colors[clr.HeaderActive]          = ImVec4(0.41, 0.19, 0.63, 1.00);
+    colors[clr.ResizeGrip]            = ImVec4(0.41, 0.19, 0.63, 0.20);
+    colors[clr.ResizeGripHovered]     = ImVec4(0.41, 0.19, 0.63, 0.78);
+    colors[clr.ResizeGripActive]      = ImVec4(0.41, 0.19, 0.63, 1.00);
+    colors[clr.CloseButton]           = ImVec4(1.00, 1.00, 1.00, 0.75);
+    colors[clr.CloseButtonHovered]    = ImVec4(0.88, 0.74, 1.00, 0.59);
+    colors[clr.CloseButtonActive]     = ImVec4(0.88, 0.85, 0.92, 1.00);
+    colors[clr.PlotLines]             = ImVec4(0.89, 0.85, 0.92, 0.63);
+    colors[clr.PlotLinesHovered]      = ImVec4(0.41, 0.19, 0.63, 1.00);
+    colors[clr.PlotHistogram]         = ImVec4(0.89, 0.85, 0.92, 0.63);
+    colors[clr.PlotHistogramHovered]  = ImVec4(0.41, 0.19, 0.63, 1.00);
+    colors[clr.TextSelectedBg]        = ImVec4(0.41, 0.19, 0.63, 0.43);
+    colors[clr.ModalWindowDarkening]  = ImVec4(0.20, 0.20, 0.20, 0.35);
+end
+theme()
+
+sampRegisterChatCommand('check_update', function() 
 	sampShowDialog(1000, "В этом обновлении", info, "Понял", _)
 end)
 
+
+sampRegisterChatCommand('wh', function() 
+	if cfg.settings.wallhack == true then
+		sampAddChatMessage('{FF0000}RDS Tools{d5d1eb}[' .. version .. ']: {FFFFFF}скрипт WallHack выключен', -1)
+		cfg.settings.wallhack = not cfg.settings.wallhack
+		inicfg.save(cfg,directIni)
+		local pStSet = sampGetServerSettingsPtr();
+		mem.setfloat(pStSet + 39, 50)
+		mem.setint8(pStSet + 47, 0)
+		mem.setint8(pStSet + 56, 1)
+	else
+		sampAddChatMessage('{FF0000}RDS Tools{d5d1eb}[' .. version .. ']: {FFFFFF}скрипт WallHack включен', -1)
+		cfg.settings.wallhack = not cfg.settings.wallhack
+		inicfg.save(cfg,directIni)
+		for i = 0, sampGetMaxPlayerId() do
+			if sampIsPlayerConnected(i) then
+				local result, cped = sampGetCharHandleBySampPlayerId(i)
+				local color = sampGetPlayerColor(i)
+				local aa, rr, gg, bb = explode_argb(color)
+				local color = join_argb(255, rr, gg, bb)
+				local pStSet = sampGetServerSettingsPtr();
+				NTdist = mem.getfloat(pStSet + 39)
+				NTwalls = mem.getint8(pStSet + 47)
+				NTshow = mem.getint8(pStSet + 56)
+				mem.setfloat(pStSet + 39, 1488.0)
+				mem.setint8(pStSet + 47, 0)
+				mem.setint8(pStSet + 56, 1)
+				nameTag = true
+				if result then
+					if doesCharExist(cped) and isCharOnScreen(cped) then
+						local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
+						for v = 1, #t do
+							pos1X, pos1Y, pos1Z = getBodyPartCoordinates(t[v], cped)
+							pos2X, pos2Y, pos2Z = getBodyPartCoordinates(t[v] + 1, cped)
+							pos1, pos2 = convert3DCoordsToScreen(pos1X, pos1Y, pos1Z)
+							pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
+							renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+						end
+						for v = 4, 5 do
+							pos2X, pos2Y, pos2Z = getBodyPartCoordinates(v * 10 + 1, cped)
+							pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
+							renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+						end
+						local t = {53, 43, 24, 34, 6}
+						for v = 1, #t do
+							posX, posY, posZ = getBodyPartCoordinates(t[v], cped)
+							pos1, pos2 = convert3DCoordsToScreen(posX, posY, posZ)
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+
+
+sampRegisterChatCommand('mytextreport', function(param) 
+	cfg.settings.mytextreport = param
+	inicfg.save(cfg, directIni)
+	sampAddChatMessage('Новый дополнительный текст после ответа в репорт - ' .. param, -1)
+end)
 sampRegisterChatCommand('newprfma', function(param) 
 	cfg.settings.prefixma = param
 	sampAddChatMessage('Новый цвет префикса для младших администраторов: ' .. param, 0xCCCC33)
@@ -1137,6 +1507,9 @@ sampRegisterChatCommand('n', function(param)
 end)
 sampRegisterChatCommand('c', function(param) 
 	sampSendChat('/ans ' .. param .. ' Начал(а) работу над вашей жалобой.')
+end)
+sampRegisterChatCommand('cl', function(param) 
+	sampSendChat('/ans ' .. param .. ' Данный игрок чист.')
 end)
 sampRegisterChatCommand('prefixma', function(param) 
 	if(param:match("(%d+)")) then
@@ -1252,7 +1625,7 @@ sampRegisterChatCommand('roa', function(param)
 	sampSendChat('/rmute ' .. param .. " 2500 Оскорбление Администрации")
 end)
 sampRegisterChatCommand('ror', function(param) 
-	sampSendChat('/rmute ' .. param .. " 2500 Оскорбление/Упоминание Родни")
+	sampSendChat('/rmute ' .. param .. " 5000 Оскорбление/Упоминание Родни")
 end)
 sampRegisterChatCommand('rrz', function(param) 
 	sampSendChat('/rmute ' .. param .. " 600 Злоупотребление символами")
