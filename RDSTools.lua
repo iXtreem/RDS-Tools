@@ -22,7 +22,7 @@ local path_chatclear = getWorkingDirectory() .. "\\resource\\cleaner.lua" -- п�
 local path_fastspawn = getWorkingDirectory() .. "\\resource\\FastSpawn.lua" -- подгрузка скрипта для быстрого спавна (по желанию)
 local path_trassera = getWorkingDirectory() .. "\\resource\\trassera.lua" -- подгрузка скрипта для трассеров (по желанию)
 local notify = import '\\resource\\lib_imgui_notf.lua'
-
+local function recode(u8) return encoding.UTF8:decode(u8) end
 function sampev.onPlayerDeathNotification(killerId, killedId, reason) -------- Подпись ID в килл чате
 	local kill = ffi.cast('struct stKillInfo*', sampGetKillInfoPtr())
 	local _, myid = sampGetPlayerIdByCharHandle(playerPed)
