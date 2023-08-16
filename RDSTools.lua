@@ -85,7 +85,7 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 }, directIni)
 inicfg.save(cfg,directIni)
 
-info = 'Изменено название кнопки сокр.команды на быстрые команды'
+info = 'Изменено название кнопки сокр.команды на быстрые команды\nГлобальненько изменил интерфейса окна репортов, добавил кнопочки рабочие\nЕсли нажать "работаю" или "слежу" и в жалобе будет указан ид, то автоматом перекинет в рекон.'
 
 local font = renderCreateFont('TimesNewRoman', 12, 5) -- таймер для форм
 local st = {
@@ -1184,6 +1184,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 				don = string.sub(rev, -1)
 				if don == '{' then
 					textreport = string.sub(textreport, 9)
+					reportid =  string.match(textreport, '%d[%d.,]*')
 				end
 			end
 		end
@@ -1191,7 +1192,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 		imgui.Process = tree_window_state
 		lua_thread.create(function()
 			while tree_window_state.v do
-				while not rabotay and not uto4 and not nakajy and not slejy and not jb and not ojid and not moiotvet and not internet and not uto4id and not helpest and not nakazan and otklon ~= 2 and peredamrep ~= 2 do -- ждем нажатия клавиши
+				while rabotay ~= 2 and not uto4 and not nakajy and slejy ~= 2 and not jb and not ojid and not moiotvet and not internet and not uto4id and not helpest and not nakazan and otklon ~= 2 and peredamrep ~= 2 do -- ждем нажатия клавиши
 					wait(50)
 					doptext = ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport)
 					if rabotay then
@@ -1201,14 +1202,14 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 							setVirtualKeyDown(13, false)
 							tree_window_state.v = not tree_window_state.v
 							imgui.Process = tree_window_state
-							rabotay = false
+							rabotay = 2
 						else
 							peremrep = ('Начал работу по вашей жалобе!')
 							setVirtualKeyDown(13, true)
 							setVirtualKeyDown(13, false)
 							tree_window_state.v = not tree_window_state.v
 							imgui.Process = tree_window_state
-							rabotay = false
+							rabotay = 2
 						end
 					end
 					if ojid then
@@ -1380,14 +1381,14 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 							setVirtualKeyDown(13, false)
 							tree_window_state.v = not tree_window_state.v
 							imgui.Process = tree_window_state
-							slejy = false
+							slejy = 2
 						else
 							peremrep = ('Слежу за данным игроком!')
 							setVirtualKeyDown(13, true)
 							setVirtualKeyDown(13, false)
 							tree_window_state.v = not tree_window_state.v
 							imgui.Process = tree_window_state
-							slejy = false
+							slejy = 2
 						end
 					end
 					if uto4 then
@@ -1433,6 +1434,32 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 				wait(300)
 				sampSendChat('/a Игрок ' .. autor .. ' || Жалоба: ' .. textreport)
 				peredamrep = nil
+			end
+			if rabotay == 2 then
+				sampSendDialogResponse(dialogId, 1, _, peremrep)
+				setVirtualKeyDown(13, true)
+				setVirtualKeyDown(13, false)
+				if reportid then
+					while sampIsDialogActive() do
+						wait(0)
+					end
+					sampSendChat('/re ' .. reportid)
+					reportid = nil
+				end
+				rabotay = nil
+			end
+			if slejy == 2 then
+				sampSendDialogResponse(dialogId, 1, _, peremrep)
+				setVirtualKeyDown(13, true)
+				setVirtualKeyDown(13, false)
+				if reportid then
+					while sampIsDialogActive() do
+						wait(0)
+					end
+					sampSendChat('/re ' .. reportid)
+					slejy = nil
+				end
+				slejy = nil
 			else
 				sampSendDialogResponse(dialogId, 1, _, peremrep)
 				setVirtualKeyDown(13, true)
