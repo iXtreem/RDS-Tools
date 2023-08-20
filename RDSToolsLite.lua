@@ -118,18 +118,16 @@ function main()
 	func:run()
 	update_state = false
 	local dlstatus = require('moonloader').download_status
-	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
+	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSToolsLite.ini" -- Ссылка на конфиг
 	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут ту же самую ссылку
-	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSToolsLite.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
     downloadUrlToFile(update_url, update_path, function(id, status)
         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-            RDSTools = inicfg.load(nil, update_path)
+            RDSToolsLite = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.version) > version then
                 update_state = true
-				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
-				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
-				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, проверить что добавлено командой /check_update, загружаю ... ', -1)
+				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, введите /update, чтобы загрузить ', -1)
 			else
 				sampAddChatMessage('{FF0000}RDS Tools{d5d1eb}[' .. version .. ']: {FFFFFF}был успешно загружен, активация: {808080}F3', -1)
 			end
@@ -159,11 +157,11 @@ function main()
 	end
 	while true do
         wait(0)
-        if update_state then
+        if update_state and updatetrue then
             downloadUrlToFile(script_url, script_path, function(id, status)
                 if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 					wait(10000)
-                    sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. RDSTools.script.version .. '\n{FFFFFF}В ней добавлено ' .. RDSTools.script.info, "Спасибо", "", 0)
+                    sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. RDSToolsLite.script.version .. '\n{FFFFFF}В ней добавлено ' .. RDSTools.script.info, "Спасибо", "", 0)
 					showCursor(false,false)
                     thisScript():reload()
                 end
@@ -1718,6 +1716,11 @@ function imgui.NewInputText(lable, val, width, hint, hintpos)
     imgui.PopItemWidth()
     return result
 end
+
+sampRegisterChatCommand('update', function(param)
+	updatetrue = true
+end)
+
 
 sampRegisterChatCommand('mytextreport', function(param)
 	if #param ~= 0  then 
