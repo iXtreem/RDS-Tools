@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'RDS Tools Lite' 
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 0.5
+local version = 0.6
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local mimgui = require "mimgui"
@@ -56,7 +56,7 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		rep = 'None'
 	},
 	script = {
-		version = 0.5
+		version = 0.6
 	},
 }, directIni)
 inicfg.save(cfg,directIni)
