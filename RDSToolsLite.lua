@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'RDS Tools Lite' 
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 0.6
+local version = 0.7
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local mimgui = require "mimgui"
@@ -13,6 +13,7 @@ local directIni = 'RDSToolsLite.ini'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
 u8 = encoding.UTF8 
+local font_admin_chat = require ("moonloader").font_flag -- textdraw
 local ev = require 'lib.samp.events'
 local vkeys = require 'vkeys'
 local ffi = require "ffi"
@@ -56,7 +57,7 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		rep = 'None'
 	},
 	script = {
-		version = 0.6
+		version = 0.7
 	},
 }, directIni)
 inicfg.save(cfg,directIni)
@@ -109,6 +110,125 @@ local mute_window_state = imgui.ImBool(false)
 local jail_window_state = imgui.ImBool(false)
 local kick_window_state = imgui.ImBool(false)
 local rmute_window_state = imgui.ImBool(false)
+
+
+
+
+function main()
+	while not isSampAvailable() do wait(0) end
+	func = lua_thread.create_suspended(ao)
+	func:run()
+	update_state = false
+	local dlstatus = require('moonloader').download_status
+	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSToolsLite.ini" -- Ссылка на конфиг
+	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут ту же самую ссылку
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSToolsLite.lua" -- Ссылка на сам файл
+	local script_path = thisScript().path
+    downloadUrlToFile(update_url, update_path, function(id, status)
+        if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+            RDSToolsLite = inicfg.load(nil, update_path)
+            if tonumber(RDSToolsLite.script.version) > version then
+                update_state = true
+				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, загрузиться можно в основном меню, активация: {808080}F3 ', -1)
+			else
+				sampAddChatMessage('{FF0000}RDS Tools{d5d1eb}[' .. version .. ']: {FFFFFF}был успешно загружен, активация: {808080}F3', -1)
+			end
+            os.remove(update_path)
+        end
+    end)
+	imgui.Process = false
+	inputHelpText = renderCreateFont("Arial", 9, FCR_BORDER + FCR_BOLD) -- шрифт инпут хелпера
+	lua_thread.create(inputChat)
+	if cfg.settings.fastspawn then
+		local fastspawn = import(path_fastspawn) -- подгрузка скрипта фастспавн
+	end
+	if cfg.settings.trassera then
+		local trassera = import(path_trassera) -- подгрузка трассеров
+	end
+	if cfg.settings.wallhack then
+		local pStSet = sampGetServerSettingsPtr();
+		NTdist = mem.getfloat(pStSet + 39)
+		NTwalls = mem.getint8(pStSet + 47)
+		NTshow = mem.getint8(pStSet + 56)
+		mem.setfloat(pStSet + 39, 200.0)
+		mem.setint8(pStSet + 47, 0)
+		mem.setint8(pStSet + 56, 1)
+		nameTag = true
+	end
+	while true do
+        wait(0)
+		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then  -- кнопка активации окна RDS Tools
+			main_window_state.v = not main_window_state.v
+			imgui.Process = true
+			showCursor(true,false)
+		end
+		if cfg.settings.wallhack then
+			for i = 0, sampGetMaxPlayerId() do
+				if sampIsPlayerConnected(i) then
+					local result, cped = sampGetCharHandleBySampPlayerId(i)
+					local color = sampGetPlayerColor(i)
+					local aa, rr, gg, bb = explode_argb(color)
+					local color = join_argb(255, rr, gg, bb)
+					if result then
+						if doesCharExist(cped) and isCharOnScreen(cped) then
+							local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
+							for v = 1, #t do
+								pos1X, pos1Y, pos1Z = getBodyPartCoordinates(t[v], cped)
+								pos2X, pos2Y, pos2Z = getBodyPartCoordinates(t[v] + 1, cped)
+								pos1, pos2 = convert3DCoordsToScreen(pos1X, pos1Y, pos1Z)
+								pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
+								renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+							end
+							for v = 4, 5 do
+								pos2X, pos2Y, pos2Z = getBodyPartCoordinates(v * 10 + 1, cped)
+								pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
+								renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+							end
+							local t = {53, 43, 24, 34, 6}
+							for v = 1, #t do
+								posX, posY, posZ = getBodyPartCoordinates(t[v], cped)
+								pos1, pos2 = convert3DCoordsToScreen(posX, posY, posZ)
+							end
+						end
+					end
+				end
+			end
+		else
+			local pStSet = sampGetServerSettingsPtr();
+			mem.setfloat(pStSet + 39, 50)
+			mem.setint8(pStSet + 47, 0)
+			mem.setint8(pStSet + 56, 1)
+			nameTag = false
+		end
+		if isKeyJustPressed(cfg.settings.ans) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
+			sampSendChat("/ans ")
+			sampSendDialogResponse (2348, 1, 0)
+		end
+		if isKeyJustPressed(cfg.settings.tr) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
+			sampSendChat("/tr ")
+		end
+		if isKeyJustPressed(cfg.settings.wh) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
+			sampSetChatInputText('/wh ')
+			sampSetChatInputEnabled(true)
+			setVirtualKeyDown(13, true)
+			setVirtualKeyDown(13, false)
+		end
+		if isKeyJustPressed(cfg.settings.agm) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
+			sampSendChat('/agm ')
+		end
+		if isKeyJustPressed(cfg.settings.rep) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
+			sampSendChat('/a /ANS /ANS /ANS /ANS /ANS /ANS ANS /ANS /ANS')
+		end
+	end
+end
+
+
+
+
+
+
+
+
 
  --- определение ид нажатой клавиши
  function getDownKeys()
@@ -1299,7 +1419,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 					uto4id = 2
 				end
 				if nakajy then
-					peremrep = ('Будете наказаны!')
+					peremrep = ('Будете наказаны за нарушения правил /report')
 					rmute_window_state.v = true
 					if oftop or oskadm or matrep or oskrep or poprep or oskrod or capsrep then
 						nakajy = 2
@@ -1375,7 +1495,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 				while sampIsDialogActive() do
 					wait(0)
 				end
-				sampSendChat(autor .. '[' ..autorid.. ']: ' .. textreport)
+				sampSendChat('/a ' .. autor .. '[' ..autorid.. ']: ' .. textreport)
 				peredamrep = nil
 			end
 			if rabotay == 2 then
@@ -1483,6 +1603,10 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 					if capsrep then
 						sampSendChat('/rmute ' .. autorid .. ' 120 Капс в /report')
 						capsrep = false
+					end
+					if matrep then
+						sampSendChat('/rmute ' .. autorid .. ' 300 Нецензурная лексика')
+						matrep = false
 					end
 				end)
 			end
@@ -1737,9 +1861,9 @@ sampRegisterChatCommand('wh' , function()
 		sampAddChatMessage('{FF0000}RDS Tools{d5d1eb}[' .. version .. ']: {FFFFFF}WallHack выключен', -1)
 		inicfg.save(cfg,directIni)
 		local pStSet = sampGetServerSettingsPtr();
-		mem.setfloat(pStSet + 39, 25)
-		mem.setint8(pStSet + 47, 0)
-		mem.setint8(pStSet + 56, 1)
+		mem.setfloat(pStSet + 39, mem.getfloat(pStSet + 39))
+		mem.setint8(pStSet + 47, mem.getint8(pStSet + 47))
+		mem.setint8(pStSet + 56, mem.getint8(pStSet + 56))
 		nameTag = false
 	end
 end)
@@ -2211,117 +2335,6 @@ sampRegisterChatCommand('al', function(param)
 		sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Вы не указали значение.')
 	end
 end)
-
-
-
-function main()
-	while not isSampAvailable() do wait(0) end
-	func = lua_thread.create_suspended(ao)
-	func:run()
-	update_state = false
-	local dlstatus = require('moonloader').download_status
-	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSToolsLite.ini" -- Ссылка на конфиг
-	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут ту же самую ссылку
-	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSToolsLite.lua" -- Ссылка на сам файл
-	local script_path = thisScript().path
-    downloadUrlToFile(update_url, update_path, function(id, status)
-        if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-            RDSToolsLite = inicfg.load(nil, update_path)
-            if tonumber(RDSToolsLite.script.version) > version then
-                update_state = true
-				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, загрузиться можно в основном меню, активация: {808080}F3 ', -1)
-			else
-				sampAddChatMessage('{FF0000}RDS Tools{d5d1eb}[' .. version .. ']: {FFFFFF}был успешно загружен, активация: {808080}F3', -1)
-			end
-            os.remove(update_path)
-        end
-    end)
-	imgui.Process = false
-	inputHelpText = renderCreateFont("Arial", 9, FCR_BORDER + FCR_BOLD) -- шрифт инпут хелпера
-	lua_thread.create(inputChat)
-	if cfg.settings.fastspawn then
-		local fastspawn = import(path_fastspawn) -- подгрузка скрипта фастспавн
-	end
-	if cfg.settings.trassera then
-		local trassera = import(path_trassera) -- подгрузка трассеров
-	end
-	if cfg.settings.wallhack then
-		local pStSet = sampGetServerSettingsPtr();
-		NTdist = mem.getfloat(pStSet + 39)
-		NTwalls = mem.getint8(pStSet + 47)
-		NTshow = mem.getint8(pStSet + 56)
-		mem.setfloat(pStSet + 39, 200.0)
-		mem.setint8(pStSet + 47, 0)
-		mem.setint8(pStSet + 56, 1)
-		nameTag = true
-	end
-	while true do
-        wait(0)
-		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then  -- кнопка активации окна RDS Tools
-			main_window_state.v = not main_window_state.v
-			imgui.Process = true
-			showCursor(true,false)
-		end
-		if cfg.settings.wallhack then
-			for i = 0, sampGetMaxPlayerId() do
-				if sampIsPlayerConnected(i) then
-					local result, cped = sampGetCharHandleBySampPlayerId(i)
-					local color = sampGetPlayerColor(i)
-					local aa, rr, gg, bb = explode_argb(color)
-					local color = join_argb(255, rr, gg, bb)
-					if result then
-						if doesCharExist(cped) and isCharOnScreen(cped) then
-							local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
-							for v = 1, #t do
-								pos1X, pos1Y, pos1Z = getBodyPartCoordinates(t[v], cped)
-								pos2X, pos2Y, pos2Z = getBodyPartCoordinates(t[v] + 1, cped)
-								pos1, pos2 = convert3DCoordsToScreen(pos1X, pos1Y, pos1Z)
-								pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
-								renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
-							end
-							for v = 4, 5 do
-								pos2X, pos2Y, pos2Z = getBodyPartCoordinates(v * 10 + 1, cped)
-								pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
-								renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
-							end
-							local t = {53, 43, 24, 34, 6}
-							for v = 1, #t do
-								posX, posY, posZ = getBodyPartCoordinates(t[v], cped)
-								pos1, pos2 = convert3DCoordsToScreen(posX, posY, posZ)
-							end
-						end
-					end
-				end
-			end
-		else
-			local pStSet = sampGetServerSettingsPtr();
-			mem.setfloat(pStSet + 39, 50)
-			mem.setint8(pStSet + 47, 0)
-			mem.setint8(pStSet + 56, 1)
-			nameTag = false
-		end
-		if isKeyJustPressed(cfg.settings.ans) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
-			sampSendChat("/ans ")
-			sampSendDialogResponse (2348, 1, 0)
-		end
-		if isKeyJustPressed(cfg.settings.tr) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
-			sampSendChat("/tr ")
-		end
-		if isKeyJustPressed(cfg.settings.wh) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
-			sampSetChatInputText('/wh ')
-			sampSetChatInputEnabled(true)
-			setVirtualKeyDown(13, true)
-			setVirtualKeyDown(13, false)
-		end
-		if isKeyJustPressed(cfg.settings.agm) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
-			sampSendChat('/agm ')
-		end
-		if isKeyJustPressed(cfg.settings.rep) and not sampIsChatInputActive() and not sampIsDialogActive() and not six_window_state.v then
-			sampSendChat('/a /ANS /ANS /ANS /ANS /ANS /ANS ANS /ANS /ANS')
-		end
-	end
-end
-
 
 
 
