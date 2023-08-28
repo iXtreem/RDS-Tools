@@ -9,6 +9,7 @@ local encoding = require 'encoding'
 encoding.default = 'CP1251' 
 u8 = encoding.UTF8 
 local vkeys = require 'vkeys'
+local inicfg = require 'inicfg'
 local main_window_state = imgui.ImBool(false)
 local menu_window_state = imgui.ImBool(false)
 local secondary_window_state = imgui.ImBool(false)
@@ -20,36 +21,41 @@ local sportzal_window_state = imgui.ImBool(false)
 local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
 
+local cfg = inicfg.load({ -- базовые настройки скрипта
+	script = {
+		version = 0.1
+	},
+}, directIni)
+
 function main()
     repeat wait(0) until isSampAvailable()
     update_state = false
     local dlstatus = require('moonloader').download_status
 	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
 	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут ту же самую ссылку
-	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSToolsMP.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
     downloadUrlToFile(update_url, update_path, function(id, status)
         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
             RDSTools = inicfg.load(nil, update_path)
             if tonumber(RDSTools.script.versionMP) > version then
                 update_state = true
-				sampAddChatMessage('{FF0000}RDS Tools MP: {FFFFFF}Найдено обновление, загрузить можно командой {808080}/update', -1)
+				sampAddChatMessage('{FF0000}RDS Tools MP: {FFFFFF}Найдено обновление, загрузить можно командой {808080}/updatemp', -1)
 			end
             os.remove(update_path)
         end
     end)
-	sampRegisterChatCommand('update', function(param)
+	sampRegisterChatCommand('updatemp', function()
 		if update_state then
 			downloadUrlToFile(script_url, script_path, function(id, status)
 				if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-					wait(10000)
-					sampShowDialog(1000, "xX RDS Tools Xx", '{FFFFFF}Была найдена новая версия - ' .. RDSTools.script.versionMP .. '\n{FFFFFF}В ней добавлено ' .. RDSTools.script.info, "Спасибо", "", 0)
+					sampAddChatMessage('{FF0000}RDS Tools MP: Скрипт успешно обновлен!', -1)
 					showCursor(false,false)
 					thisScript():reload()
 				end
 			end)
 		else
-			sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}У вас установлена актуальная версия.')
+			sampAddChatMessage('{FF0000}RDS Tools MP: {FFFFFF}У вас установлена актуальная версия.')
 		end
 	end)
     writeMemory(sampGetBase() + 0x9D9D0, 4, 0x5051FF15, true)
