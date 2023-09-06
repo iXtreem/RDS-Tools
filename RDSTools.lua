@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'RDS Tools'  -- ВНИМАНИЕ, КОД НУЖДАЕТСЯ В ОПТИМИЗАЦИИ. КАК ДОЙДУТ РУКИ ТАК СДЕЛАЮ.
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 1.7
+local version = 1.8
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local mimgui = require "mimgui"
@@ -79,6 +79,7 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		chatposx = nil,
 		chatposy = nil,
 		size = 10,
+		autosave = false,
 		limit = 5,
 		slejkaform = false,
 		texts = 'RDS Tools: Форма принята.',
@@ -132,6 +133,7 @@ local checked_test1 = imgui.ImBool(cfg.settings.inputhelperdop)
 local checked_test2 = imgui.ImBool(cfg.settings.keysync)
 local checked_test3 = imgui.ImBool(cfg.settings.autoonline)
 local checked_test4 = imgui.ImBool(cfg.settings.slejkaform)
+local checked_test5 = imgui.ImBool(cfg.settings.autosave)
 local checked_test6 = imgui.ImBool(cfg.settings.fastspawn)
 local checked_test8 = imgui.ImBool(cfg.settings.acon)
 local checked_test11 = imgui.ImBool(cfg.settings.trassera)
@@ -749,6 +751,7 @@ function imgui.OnDrawFrame()
 					sampSetChatInputEnabled(true)
 					setVirtualKeyDown(13, true)
 					setVirtualKeyDown(13, false)
+					sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Обновление загружается, ожидайте.', -1)
 				end
 			end
 			imgui.Separator()
@@ -1107,7 +1110,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'/tool - открыть меню скрипта\n/wh - вкл/выкл функцию WallHack\n/textform - поставить свой текст после одобрения формы\n/stylecolor - поставить свой цвет оповещ.\n/stylecolorform - поставить свой текст формы.')
 			imgui.Separator()
 			imgui.CenterText(u8'Вспомогательные команды')
-			imgui.Text(u8'/n - Не вижу нарушений от игрока\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/uu - краткая команда снятия мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
+			imgui.Text(u8'/n - Не вижу нарушений от игрока\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/uu - краткая команда снятия мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
 			imgui.Separator()
 			imgui.CenterText(u8'Выдать мут чата')
 			imgui.Text(u8'/m - /m3 мат\n/ok - /ok3 оскорбление\n/fd - /fd3 флуд\n/or - оск/упом родных\n/up - упоминание проекта с очисткой чата\n/oa - оскорбление администрации\n/kl - клевета на администрацию\n/po - /po3 - попрошайничество\n/rekl - реклама\n/zs - злоупотребление символами\n/rz - розжиг\n/ia - выдача себя за администрацию')
@@ -1202,22 +1205,26 @@ function imgui.OnDrawFrame()
 	end
 	if tree_window_state.v then -- быстрый ответ на репорт
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2) - 250, (sh / 2)-90), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8"Ответ на репорт", tree_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.Begin(autor .. '[' ..autorid.. ']', tree_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
-		imgui.Text(u8'Репорт от игрока ' .. autor .. '[' ..autorid.. ']: ')
-		imgui.Text(u8'Жалоба: ' .. u8(textreport))
-		imgui.NewInputText('##SearchBar', text_buffer, 345, nil, 2)
+		imgui.TextWrapped(u8('Жалоба/Вопрос: ') .. u8(textreport))
+		imgui.NewInputText('##SearchBar', text_buffer, 370, nil, 2)
 		imgui.SameLine()
-		imgui.SetCursorPosX(355)
-		if imgui.Checkbox(' ', checked_test15) then
-			cfg.settings.doptext = not cfg.settings.doptext
-			inicfg.save(cfg,directIni)
-		end
-		imgui.SameLine()
-		imgui.SetCursorPosX(380)
-		if imgui.Button(u8'Отправить', imgui.ImVec2(120, 25)) then
+		imgui.SetCursorPosX(383)
+		if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) then
+			if cfg.settings.autosave then
+				if cfg.settings.doptext then
+					key = #cfg.customotvet + 1
+					cfg.customotvet[key] = u8:decode(text_buffer.v .. doptext)
+					inicfg.save(cfg,directIni)
+				else
+					key = #cfg.customotvet + 1
+					cfg.customotvet[key] = u8:decode(text_buffer.v)
+					inicfg.save(cfg,directIni)
+				end
+			end
 			moiotvet = true
 		end
 		imgui.Separator()
@@ -1233,7 +1240,7 @@ function imgui.OnDrawFrame()
 			custom_otvet_state.v = not custom_otvet_state.v
 		end
 		imgui.SameLine()
-		if imgui.Button(u8'Передам ', imgui.ImVec2(120, 25)) then
+		if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) then
 			peredamrep = true
 		end
 		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) then
@@ -1244,34 +1251,27 @@ function imgui.OnDrawFrame()
 			end
 		end
 		imgui.SameLine()
-		if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) then
-			jb = true
-		end
-		imgui.SameLine()
-		if imgui.Button(u8'Ожидайте', imgui.ImVec2(120, 25)) then
-			ojid = true
+		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) then
+			uto4id = true
 		end
 		imgui.SameLine()
 		if imgui.Button(u8'Уточните', imgui.ImVec2(120, 25)) then
 			uto4 = true
 		end
-		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) then
-			uto4id = true
-		end
-		imgui.SameLine()
-		if imgui.Button(u8'/help', imgui.ImVec2(120, 25)) then
-			helpest = true
-		end
-		imgui.SameLine()
-		if imgui.Button(u8'Игрок наказан', imgui.ImVec2(120, 25)) then
-			nakazan = true
-		end
 		imgui.SameLine()
 		if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) then
 			otklon = true
 		end
-		imgui.PopFont()
 		imgui.Separator()
+		if imgui.Checkbox(u8'Добавить ваш текст к ответу ' .. fa.ICON_COMMENTING_O, checked_test15) then
+			cfg.settings.doptext = not cfg.settings.doptext
+			inicfg.save(cfg,directIni)
+		end
+		if imgui.Checkbox(u8'Сохранять ответы в базе данных скрипта ' .. fa.ICON_DATABASE, checked_test5) then
+			cfg.settings.autosave = not cfg.settings.autosave
+			inicfg.save(cfg,directIni)
+		end
+		imgui.PopFont()
 		imgui.End()
 	end
 	if ban_window_state.v then
@@ -2298,36 +2298,6 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 		end
 	end)
 end
-------------- Input Helper -------------
-function translite(text)
-	for k, v in pairs(chars) do
-		text = string.gsub(text, k, v)
-	end
-	return text
-end
-function inputChat()
-	while true do
-		wait(0)
-		if(sampIsChatInputActive()) and cfg.settings.inputhelper then
-			local getInput = sampGetChatInputText()
-			if(oldText ~= getInput and #getInput > 0)then
-				local firstChar = string.sub(getInput, 1, 1)
-				if(firstChar == "." or firstChar == "/")then
-					local cmd, text = string.match(getInput, "^([^ ]+)(.*)")
-					local nText = "/" .. translite(string.sub(cmd, 2)) .. text
-					local chatInfoPtr = sampGetInputInfoPtr()
-					local chatBoxInfo = getStructElement(chatInfoPtr, 0x8, 4)
-					local lastPos = mem.getint8(chatBoxInfo + 0x11E)
-					sampSetChatInputText(nText)
-					mem.setint8(chatBoxInfo + 0x11E, lastPos)
-					mem.setint8(chatBoxInfo + 0x119, lastPos)
-					oldText = nText
-				end
-			end
-		end
-	end
-end
-------------- Input Helper -------------
 function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
 	nick = tostring(nick)
 	local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
@@ -2763,6 +2733,36 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 		return false
 	end
 end
+------------- Input Helper -------------
+function translite(text)
+	for k, v in pairs(chars) do
+		text = string.gsub(text, k, v)
+	end
+	return text
+end
+function inputChat()
+	while true do
+		wait(0)
+		if(sampIsChatInputActive()) and cfg.settings.inputhelper then
+			local getInput = sampGetChatInputText()
+			if(oldText ~= getInput and #getInput > 0)then
+				local firstChar = string.sub(getInput, 1, 1)
+				if(firstChar == "." or firstChar == "/")then
+					local cmd, text = string.match(getInput, "^([^ ]+)(.*)")
+					local nText = "/" .. translite(string.sub(cmd, 2)) .. text
+					local chatInfoPtr = sampGetInputInfoPtr()
+					local chatBoxInfo = getStructElement(chatInfoPtr, 0x8, 4)
+					local lastPos = mem.getint8(chatBoxInfo + 0x11E)
+					sampSetChatInputText(nText)
+					mem.setint8(chatBoxInfo + 0x11E, lastPos)
+					mem.setint8(chatBoxInfo + 0x119, lastPos)
+					oldText = nText
+				end
+			end
+		end
+	end
+end
+------------- Input Helper -------------
  ------------- KEYSYNC ----------------
 function sampev.onPlayerSync(playerId, data)
 	local result, id = sampGetPlayerIdByCharHandle(target)
@@ -2977,6 +2977,10 @@ function playersToStreamZone() -- игроки в радиусе
 end
 
 ----======================= Исключительно для скрипта ===============------------------
+sampRegisterChatCommand('test' , function()
+	tree_window_state.v = not tree_window_state.v
+	imgui.Process = tree_window_state
+end)
 sampRegisterChatCommand('wh' , function()
 	if not cfg.settings.wallhack then
 		cfg.settings.wallhack = true
@@ -3159,8 +3163,16 @@ sampRegisterChatCommand('uj', function(param)
 end)
 sampRegisterChatCommand('al', function(param) 
 	if #param ~= 0 then
-		sampSendChat('/ans ' .. param .. '  Здравствуйте! Вы забыли ввести /alogin!') 
+		sampSendChat('/ans ' .. param .. ' Здравствуйте! Вы забыли ввести /alogin!') 
 		sampSendChat('/ans ' .. param .. ' Введите команду /alogin и свой пароль, пожалуйста.')
+	else
+		sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Вы не указали значение.')
+	end
+end)
+sampRegisterChatCommand('rep', function(param) 
+	if #param ~= 0 then
+		sampSendChat('/ans ' .. param .. ' Задать вопрос или пожаловаться на игрока вы можете в /report') 
+		sampSendChat('/ans ' .. param .. ' Администрация сразу решит ваш вопрос.')
 	else
 		sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Вы не указали значение.')
 	end
