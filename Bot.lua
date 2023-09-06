@@ -13,11 +13,6 @@ local encoding = require 'encoding'
 local min = math.huge
 encoding.default = 'CP1251' 
 u8 = encoding.UTF8 
-local cfg = inicfg.load({ -- базовые настройки скрипта
-	settings = {
-	}
-}, directIni)
-inicfg.save(cfg,directIni)
 local sw, sh = getScreenResolution()
 local tag = ('{FF0000}Bot: {FFFFFF}')
 function runToPoint(tox, toy) -- для беспалевного метода
