@@ -11,6 +11,7 @@ local inicfg = require 'inicfg'
 local directIni = 'Bot.ini' -- 1207 камень 422 бобкат 19133 пикап загрузки выгрузки
 local encoding = require 'encoding' 
 local min = math.huge
+local key = require 'vkeys'
 encoding.default = 'CP1251' 
 u8 = encoding.UTF8 
 local sw, sh = getScreenResolution()
@@ -216,10 +217,6 @@ function main()
 	sampRegisterChatCommand('off', function()
 		thisScript():reload()
 	end)
-	sampRegisterChatCommand('save', function()
-		posx, posy, posz = getCharCoordinates(PLAYER_PED)
-		sampAddChatMessage(posx .. ' ' .. posy .. ' ' .. posz, -1)
-	end)
 	sampRegisterChatCommand('tpb', function()
 		setCharCoordinates(PLAYER_PED, 1494.5980224609, 1308.1614990234, 1093.2878417969)
 	end)
@@ -229,6 +226,7 @@ function sampev.onDisplayGameText(style, time, text)
 		klicker()
 	end
 end
+
 function klicker()
 	lua_thread.create(function()
 		while i ~= 10 do
@@ -252,7 +250,7 @@ end
 function sp.onApplyPlayerAnimation(playerId, animLib, animName, frameDelta, loop, lockX, lockY, freeze, time)
     local _, myId = sampGetPlayerIdByCharHandle(PLAYER_PED)
     if playerId == myId then -- Если анимация наша
-		sampAddChatMessage(animName, -1)
+		--sampAddChatMessage(animName, -1)
         if animName == 'putdwn105' then -- Если анимация - Анимация стадии смерти
             contin = true
         end
