@@ -3,7 +3,7 @@ require 'lib.sampfuncs' -- Код написан не профессионалом, я не хочу углубляться 
 script_name 'AdminTool'  -- Просьба ничего в коде не менять, если меняете - то на свой страх и риск, меня даже не спрашивайте.
 script_author 'Neon4ik' -- Есть пожелание - предложите мне в лс, нашли баг? - также в лс. 
 script_properties("work-in-pause") -- некий фикс работы автомута в АФК
-local version = '2.0'
+local version = 1.9
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -194,9 +194,9 @@ function main() -- основной сценарий скрипта
 	font_watermark = renderCreateFont("Javanese Text", 9, font.BOLD + font.BORDER + font.SHADOW)
 	lua_thread.create(function()
 		while true do 
-			wait(0)
+			wait(8)
 			if not isPauseMenuActive() then
-				renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. thisScript().version..']', 10, sh-20, 0xCCFFFFFF)
+				renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. version .. ']', 10, sh-20, 0xCCFFFFFF)
 			end
 		end	
 	end)
@@ -206,35 +206,37 @@ function main() -- основной сценарий скрипта
 	if cfg.settings.trassera then
 		trassera = import(path_trassera) -- подгрузка трассеров
 	end
+	update_state = false
 	local dlstatus = require('moonloader').download_status
-	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.ini" -- Ссылка на конфиг
-	local update_path = getWorkingDirectory() .. "/RDSTools.ini" -- и тут ту же самую ссылку
-	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/RDSTools.lua" -- Ссылка на сам файл
+	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini" -- Ссылка на конфиг
+	local update_path = getWorkingDirectory() .. "/AdminTools.ini" -- и тут ту же самую ссылку
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
     downloadUrlToFile(update_url, update_path, function(id, status)
-        if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			while not doesFileExist(getWorkingDirectory() .. 'AdminTools.ini') do
-				wait(0)
+		lua_thread.create(function()
+			wait(1000)
+			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+				AdminTools = inicfg.load(nil, update_path)
+				wait(1000)
+				if tonumber(AdminTools.script.version) > version then
+					update_state = true
+				end
+				wait(1000)
+				os.remove(update_path)
 			end
-            RDSTools = inicfg.load(nil, update_path)
-            if tonumber(RDSTools.script.version) > version then
-                update_state = true
-				sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Найдено обновление, загрузить можно командой {808080}/update', -1)
-			end
-            os.remove(update_path)
-        end
+		end)
     end)
 	sampRegisterChatCommand('update', function()
 		if update_state then
 			downloadUrlToFile(script_url, script_path, function(id, status)
 				if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-					sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}Скрипт успешно обновлен.')
+					sampAddChatMessage(tag .. 'Скрипт успешно обновлен.')
 					showCursor(false,false)
 					thisScript():reload()
 				end
 			end)
 		else
-			sampAddChatMessage('{FF0000}RDS Tools: {FFFFFF}У вас установлена актуальная версия.')
+			sampAddChatMessage(tag .. 'У вас установлена актуальная версия.')
 		end
 	end)
 	imgui.Process = false
@@ -1097,7 +1099,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'/n - Не вижу нарушений от игрока\n/nak - игрок наказан\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/uu - краткая команда снятия мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
 			imgui.Separator()
 			imgui.CenterText(u8'Выдать мут чата')
-			imgui.Text(u8'/m - /m3 мат\n/ok - /ok3 оскорбление\n/fd - /fd3 флуд\n/or - оск/упом родных\n/up - упоминание проекта с очисткой чата\n/oa - оскорбление администрации\n/kl - клевета на администрацию\n/po - /po3 - попрошайничество\n/rekl - реклама\n/zs - злоупотребление символами\n/rz - розжиг\n/ia - выдача себя за администрацию')
+			imgui.Text(u8'/m - /m3 мат\n/ok - /ok3 оскорбление\n/fd - /fd3 флуд\n/nm - неадекватное поведение(600)\n/or - оск/упом родных\n/up - упоминание проекта с очисткой чата\n/oa - оскорбление администрации\n/kl - клевета на администрацию\n/po - /po3 - попрошайничество\n/rekl - реклама\n/zs - злоупотребление символами\n/rz - розжиг\n/ia - выдача себя за администрацию')
 			imgui.Separator()
 			imgui.CenterText(u8'Выдать мут репорта')
 			imgui.Text(u8'/oft - /oft3 оффтоп\n/cp - /cp3 капс\n/roa - оскорбление администрации\n/ror - оск/упом род\n/rzs - злоупотребление символами\n/rrz - розжиг\n/rpo - попрошайничество\n/rm - мат\n/rok - оскорбление')
@@ -1109,7 +1111,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'/cafk - Афк на арене\n/kk1 - Смените ник 1/3\n/kk2 - Смените ник 2/3\n/kk3 - Смените ник 3/3 (бан)')
 			imgui.Separator()
 			imgui.CenterText(u8'Блокировка аккаунта')
-			imgui.Text(u8'/ch - читы\n/bosk - оскорбление проекта\n/obm - Обман/развод\n/neadekv - Неадекватное поведение(3 дня)\n/oskhelper - Нарушение правил хелпера\n/reklama - реклама')
+			imgui.Text(u8'/ch - читы\n/bosk - оскорбление проекта\n/obm - Обман/развод\n/nmb - Неадекватное поведение(3 дня)\n/oskhelper - Нарушение правил хелпера\n/reklama - реклама')
 			imgui.Separator()
 			imgui.Text(u8'Выдача наказания в оффлайне - /okf /mf /dzf')
 		end
@@ -3597,6 +3599,13 @@ end)
 sampRegisterChatCommand('zsf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 600 Злоупотребление символами')
+	else
+		sampAddChatMessage(tag .. 'Вы не указали значение.')
+	end
+end)
+sampRegisterChatCommand('nm', function(param)
+	if #param ~= 0 then
+		sampSendChat('/mute ' .. param .. ' 600 неадекватное поведение.')
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
