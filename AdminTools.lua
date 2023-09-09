@@ -3,7 +3,7 @@ require 'lib.sampfuncs' -- Код написан не профессионалом, я не хочу углубляться 
 script_name 'AdminTool'  -- Просьба ничего в коде не менять, если меняете - то на свой страх и риск, меня даже не спрашивайте.
 script_author 'Neon4ik' -- Есть пожелание - предложите мне в лс, нашли баг? - также в лс. 
 script_properties("work-in-pause") -- некий фикс работы автомута в АФК
-local version = 2.0
+local version = 2.01
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -65,7 +65,7 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		prefixa = '87CEEB',
 		prefixsa = 'FF4500',
 		doptext = true,
-		automute = true,
+		automute = false,
 		mytextreport = ' // Приятной игры на RDS <3',
 		customposx = false,
 		customposy = false,
@@ -76,18 +76,19 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		agm = 'None',
 		rep = 'None',
 		wallhack = true,
-		ansreport = true,
+		ansreport = false,
 		bloknotik = '',
-		acon = true,
+		acon = false,
 		chatposx = nil,
 		chatposy = nil,
 		size = 10,
 		autosave = false,
-		limit = 5,
 		slejkaform = false,
 		texts = 'Admin Tools: Форму принял.',
 		stylecolor = '{FFFFFF}',
 		stylecolorform = '{FF0000}'
+	},
+	customotvet = {
 	},
 	osk = {
 		[1] = 'лох'	
@@ -817,6 +818,7 @@ function imgui.OnDrawFrame()
 			end
 		end
 		if menu2[5] then
+			imgui.CenterText(u8'Зажми клавишу и сохрани значение.')
 			imgui.SetCursorPosX(10)
 			imgui.CenterText(u8'Открытие репорта:')
 			imgui.SameLine()
@@ -1074,6 +1076,7 @@ function imgui.OnDrawFrame()
 				key = #cfg.customotvet + 1
 				cfg.customotvet[key] = u8:decode(customotv.v)
 				inicfg.save(cfg,directIni)
+				customotv.v = ''
 			end
 			imgui.InputText('.', customotv)
 			imgui.PopItemWidth()
@@ -1089,7 +1092,7 @@ function imgui.OnDrawFrame()
 		end
 		if menu2[6] then
 			imgui.CenterText(u8'Скрипт')
-			imgui.Text(u8'/tool - открыть меню скрипта\n/wh - вкл/выкл функцию WallHack\n/add_mat - добавить мат\n/add_osk - добавить оскорбление\n/del_mat - удалить мат\n/del_osk - удалить оскорбление\n/textform - поставить свой текст после одобрения формы\n/stylecolor - поставить свой цвет оповещ.\n/stylecolorform - поставить свой текст формы.')
+			imgui.Text(u8'/tool - открыть меню скрипта\n/wh - вкл/выкл функцию WallHack\n/add_mat - добавить мат\n/add_osk - добавить оскорбление\n/del_mat - удалить мат\n/del_osk - удалить оскорбление\n/textform - свой текст одобрения формы\n/stylecolor - поставить свой цвет оповещ.\n/stylecolorform - поставить свой текст формы.')
 			imgui.Separator()
 			imgui.CenterText(u8'Вспомогательные команды')
 			imgui.Text(u8'/n - Не вижу нарушений от игрока\n/nak - игрок наказан\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/uu - краткая команда снятия мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
@@ -2141,7 +2144,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 						break
 					end
 					if count == 5 then
-						if count == cfg.settings.limit then
+						if count == 5 then
 							count = count - 1
 							func5:terminate()
 							ac5 = messange
@@ -2178,7 +2181,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
                     end
                 end)
 				if oskid and not isGamePaused() and not isPauseMenuActive() and not sampIsPlayerPaused(id) then
-				--	sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
+					sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
 					if notify then
 						notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,4)
 					end
