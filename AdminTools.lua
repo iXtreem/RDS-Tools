@@ -19,8 +19,8 @@ local ffi = require "ffi"
 local mem = require "memory"
 local font = require ("moonloader").font_flag
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local path_fastspawn = getWorkingDirectory() .. "\\resource\\FastSpawn.lua" -- подгрузка скрипта для быстрого спавна
-local path_trassera = getWorkingDirectory() .. "\\resource\\trassera.lua" -- подгрузка скрипта для трассеров
+local fastspawn = import(getWorkingDirectory() .. "\\resource\\FastSpawn.lua") -- подгрузка быстрого спавна
+local trassera = import(getWorkingDirectory() .. "\\resource\\trassera.lua") -- подгрузка трассеров
 local mp = import "\\resource\\AdminToolsMP.lua" -- подгрузка плагина для мероприятий
 local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
@@ -200,12 +200,6 @@ function main() -- основной сценарий скрипта
 			end
 		end	
 	end)
-	if cfg.settings.fastspawn then
-		fastspawn = import(path_fastspawn) -- подгрузка скрипта фастспавн
-	end
-	if cfg.settings.trassera then
-		trassera = import(path_trassera) -- подгрузка трассеров
-	end
 	update_state = false
 	local dlstatus = require('moonloader').download_status
 	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini" -- Ссылка на конфиг
