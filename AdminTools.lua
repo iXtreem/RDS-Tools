@@ -3,7 +3,7 @@ require 'lib.sampfuncs' -- Код написан не профессионалом, я не хочу углубляться 
 script_name 'AdminTool'  -- Просьба ничего в коде не менять, если меняете - то на свой страх и риск, меня даже не спрашивайте.
 script_author 'Neon4ik' -- Есть пожелание - предложите мне в лс, нашли баг? - также в лс. 
 script_properties("work-in-pause") -- некий фикс работы автомута в АФК
-local version = 1.9
+local version = 2.0
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
