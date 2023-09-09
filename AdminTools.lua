@@ -194,7 +194,7 @@ function main() -- основной сценарий скрипта
 	font_watermark = renderCreateFont("Javanese Text", 9, font.BOLD + font.BORDER + font.SHADOW)
 	lua_thread.create(function()
 		while true do 
-			wait(8)
+			wait(1)
 			if not isPauseMenuActive() then
 				renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. version .. ']', 10, sh-20, 0xCCFFFFFF)
 			end
@@ -623,7 +623,9 @@ local menu2 = {true, -- рекон меню
 function imgui.OnDrawFrame()
 	if not main_window_state.v and not tree_window_state.v and not four_window_state.v and not fourtwo_window_state.v and not five_window_state.v and not ac_window_state.v and not ansreport_window_state.v and not ansreport_window_state.v and not dopcustomreport_window_state.v then
 		imgui.Process = false
-		sampSendInputChat('/keysync off')
+		if cfg.settings.keysync then
+			sampSendInputChat('/keysync off')
+		end
 		showCursor(false,false)
 	end
 	if main_window_state.v then -- КНОПКИ ИНТЕРФЕЙСА F3
@@ -718,7 +720,7 @@ function imgui.OnDrawFrame()
 			if update_state then
 				if imgui.Button(u8'Обновить скрипт', imgui.ImVec2(300, 24)) then
 					main_window_state.v = false
-					sampAddChatMessage(tag .. 'Обновление загружается, ожидайте.', -1)
+					imgui.Process = false
 					sampSendInputChat('/update')
 				end
 			end
