@@ -1,9 +1,9 @@
 require 'lib.moonloader' --
-require 'lib.sampfuncs' -- Код написан не профессионалом, я не хочу углубляться в оптимизацию, пока не будет потребности
-script_name 'AdminTool'  -- Просьба ничего в коде не менять, если меняете - то на свой страх и риск, меня даже не спрашивайте.
-script_author 'Neon4ik' -- Есть пожелание - предложите мне в лс, нашли баг? - также в лс. 
-script_properties("work-in-pause") -- некий фикс работы автомута в АФК
-local version = 2.2
+require 'lib.sampfuncs' 
+script_name 'AdminTool'  
+script_author 'Neon4ik' 
+script_properties("work-in-pause") 
+local version = 2.28
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -19,7 +19,7 @@ local ffi = require "ffi"
 local mem = require "memory"
 local font = require ("moonloader").font_flag
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local fastspawn = import(getWorkingDirectory() .. "\\resource\\FastSpawn.lua") -- подгрузка быстрого спавна
+local fastspawn = script.load(getWorkingDirectory() .. "\\resource\\FastSpawn.lua") -- подгрузка быстрого спавна
 local trassera = import(getWorkingDirectory() .. "\\resource\\trassera.lua") -- подгрузка трассеров
 local mp = import "\\resource\\AdminToolsMP.lua" -- подгрузка плагина для мероприятий
 local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
@@ -119,8 +119,8 @@ local windows = {
 	ac_window_state = imgui.ImBool(false),
 	dopcustomreport_window_state = imgui.ImBool(false),
 }
-local style_selected = imgui.ImInt(cfg.settings.style) -- Берём стандартное значение стиля из конфига
-local style_list = {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8"Бирюзовая тема", u8"Вишневая тема", u8"Голубая тема"}
+local style_selected = imgui.ImInt(cfg.settings.style)
+local style_list = {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8"Бирюзовая тема", u8"Розовая тема", u8"Голубая тема"}
 local sw, sh = getScreenResolution()
 local selected_item = imgui.ImInt(cfg.settings.size)
 local st = { -- таймер для автоформ
@@ -136,6 +136,18 @@ local spisok = { -- список для автоформ
 	'spawncars',
 	'aspawn',
 	'vvig'
+}
+local spisokproject = { -- список проектов за который идет автомут
+	[1] = 'аризон',
+	[2] = 'блэк раша',
+	[3] = 'блек раша',
+	[4] = 'эвольв',
+	[5] = 'евольв',
+	[6] = 'монсер',
+}
+local spisokoskrod = { -- список оск.род за который идет автомут
+	[1] = 'mq',
+	[2] = 'rnq',
 }
 local target = -1
 local keys = {
@@ -209,7 +221,7 @@ function main() -- основной сценарий скрипта
 	if cfg.settings.autoonline then
 		func:run()
 	end
-	font_watermark = renderCreateFont("Javanese Text", 9, font.BOLD + font.BORDER + font.SHADOW)
+	font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 	lua_thread.create(function()
 		while true do 
 			wait(1)
@@ -218,7 +230,6 @@ function main() -- основной сценарий скрипта
 			end
 		end	
 	end)
-	update_state = false
 	local dlstatus = require('moonloader').download_status
 	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini" -- Ссылка на конфиг
 	local update_path = getWorkingDirectory() .. "/AdminTools.ini" -- и тут ту же самую ссылку
@@ -254,7 +265,7 @@ function main() -- основной сценарий скрипта
 	imgui.Process = false
 	lua_thread.create(inputChat)
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
-	wait(4000)
+	wait(2000)
 	if sampGetCurrentServerAddress() == '46.174.52.246' then
 		sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1)
 	elseif sampGetCurrentServerAddress() == '46.174.49.170' then
@@ -287,11 +298,11 @@ function main() -- основной сценарий скрипта
 	end
 	while true do
         wait(0)
-		if cfg.settings.automute and isPauseMenuActive() then
+		if cfg.settings.automute and (isPauseMenuActive() or isGamePaused()) then
 			cfg.settings.automute = false
 			activeam = true
 		end
-		if not cfg.settings.automute  and activeam and not isPauseMenuActive() then
+		if activeam and not (isPauseMenuActive() or isGamePaused()) then
 			cfg.settings.automute = true
 			activeam = nil
 		end
@@ -868,7 +879,7 @@ function imgui.OnDrawFrame()
 				cfg.settings.tr = getDownKeysText()
 				inicfg.save(cfg,directIni)
 			end
-			imgui.CenterText(u8"Очистка транспорта в 100 метрах: ")
+			imgui.CenterText(u8"Очистка транспорта: ")
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.wh))
 			if imgui.Button(u8"Cоxрaнить.", imgui.ImVec2(300, 24)) then
@@ -995,11 +1006,11 @@ function imgui.OnDrawFrame()
 					sampSendChat('/mess 16 --------=================== Автомастерская ================-----------')
 				end
 				if imgui.Button(u8'Группа/Форум', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 -------============= Сторонние площадки ==========-----------------')
-					sampSendChat('/mess 7 У нашего проекта имеется группа vk.сom/teamadmrds ...')
-					sampSendChat('/mess 7 ... и даже форум, на котором игроки могут оставить жалобу на администрацию или игроков.')
+					sampSendChat('/mess 11 -------============= Наш форум и группа ==========-----------------')
+					sampSendChat('/mess 7 У нашего проекта имеется группа https:vk.сom/teamadmrds ...')
+					sampSendChat('/mess 7 ... и даже форум https:forumrds.ru, на котором игроки могут оставить жалобу на администрацию или игроков.')
 					sampSendChat('/mess 7 Следи за новостями и будь вкурсе событий.')
-					sampSendChat('/mess 11 -------============= Автомобиль ==========-----------------')
+					sampSendChat('/mess 11 -------============= Наш форум и группа ==========-----------------')
 				end
 				if imgui.Button(u8'VIP', imgui.ImVec2(130, 25)) then
 					sampSendChat('/mess 13 --------============ Преимущества VIP ===========------------------')
@@ -1108,7 +1119,7 @@ function imgui.OnDrawFrame()
 			imgui.PushItemWidth(300)
 			if imgui.Button(u8'Добавить свой ответ', imgui.ImVec2(300, 24)) and #buffer.customotv.v~=0 then
 				key = #cfg.customotvet + 1
-				cfg.customotvet[key] = u8:decode(windows.customotv.v)
+				cfg.customotvet[key] = u8:decode(buffer.customotv.v)
 				inicfg.save(cfg,directIni)
 				buffer.customotv.v = ''
 				imgui.SetKeyboardFocusHere(-1)
@@ -1130,7 +1141,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'/tool - открыть меню скрипта\n/wh - вкл/выкл функцию WallHack')
 			imgui.Separator()
 			imgui.CenterText(u8'Вспомогательные команды')
-			imgui.Text(u8'/n - Не вижу нарушений от игрока\n/nak - игрок наказан\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/uu - краткая команда снятия мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
+			imgui.Text(u8'/n - Не вижу нарушений от игрока\n/nak - игрок наказан\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/ur - снять мут репорта\n/uu - снятие мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
 			imgui.Separator()
 			imgui.CenterText(u8'Выдать мут чата')
 			imgui.Text(u8'/m - /m3 мат\n/ok - /ok3 оскорбление\n/fd - /fd3 флуд\n/nm - неадекватное поведение(600)\n/or - оск/упом родных\n/up - упоминание проекта с очисткой чата\n/oa - оскорбление администрации\n/kl - клевета на администрацию\n/po - /po3 - попрошайничество\n/rekl - реклама\n/zs - злоупотребление символами\n/rz - розжиг\n/ia - выдача себя за администрацию')
@@ -1236,7 +1247,7 @@ function imgui.OnDrawFrame()
 			imgui.SameLine()
 			imgui.SetCursorPosX(275)
 			if imgui.Button(fa.ICON_BAN .. ' ', imgui.ImVec2(24,24)) and string.len(u8:decode(buffer.newosk.v)) >= 2 then
-				buffer.newosk.v = u8:decode(newosk.v)
+				buffer.newosk.v = u8:decode(buffer.newosk.v)
 				buffer.newosk.v = buffer.newosk.v:lower()
 				buffer.newosk.v = buffer.newosk.v:rlower()
 				for k, v in pairs(cfg.osk) do
@@ -1343,37 +1354,39 @@ function imgui.OnDrawFrame()
 		imgui.PushFont(fontsize)
 		imgui.Text(u8'Репорт от игрока ' .. autor .. '[' ..autorid.. ']')
 		imgui.TextWrapped(u8('Жалоба: ') .. u8(textreport))
-		if imgui.IsWindowAppearing() then
+		if isKeyJustPressed(VK_SPACE) then
 			imgui.SetKeyboardFocusHere(-1)
 		end
 		imgui.NewInputText('##SearchBar', buffer.text_buffer, 370, nil, 2)
 		imgui.SameLine()
 		imgui.SetCursorPosX(383)
-		if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) then
-			if cfg.settings.autosave then
-				key = #cfg.customotvet + 1
-				cfg.customotvet[key] = u8:decode(buffer.text_buffer.v)
-				inicfg.save(cfg,directIni)
+		if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_RETURN) then
+			if #(u8:decode(buffer.text_buffer.v)) >= 1 then
+				if cfg.settings.autosave then
+					key = #cfg.customotvet + 1
+					cfg.customotvet[key] = u8:decode(buffer.text_buffer.v)
+					inicfg.save(cfg,directIni)
+				end
+				moiotvet = true
 			end
-			moiotvet = true
 		end
 		imgui.Separator()
-		if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) then
+		if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_Q) then
 			rabotay = true
 		end
 		imgui.SameLine()
-		if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) then
+		if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_E) then
 			slejy = true
 		end
 		imgui.SameLine()
-		if imgui.Button(u8'Список своих', imgui.ImVec2(120, 25)) then
+		if imgui.Button(u8'Список своих', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_R) then
 			windows.custom_otvet_state.v = not windows.custom_otvet_state.v
 		end
 		imgui.SameLine()
-		if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) then
+		if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_V) then
 			peredamrep = true
 		end
-		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) then
+		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_G) then
 			if tonumber(autorid) then
 				nakajy = true
 			else
@@ -1402,6 +1415,8 @@ function imgui.OnDrawFrame()
 			inicfg.save(cfg,directIni)
 		end
 		imgui.PopFont()
+		imgui.CenterText(u8'Пробел активирует поле ввода')
+		imgui.Text(u8'E - отправиться в слежку. Q - начать работу по жалобе. V - передать репорт.\nR - открыть список своих ответов. Enter - отправить ответ. G - список наказаний')
 		imgui.End()
 	end
 	if windows.ban_window_state.v then
@@ -1605,25 +1620,25 @@ function imgui.OnDrawFrame()
 		else
 			imgui.SetNextWindowPos(imgui.ImVec2(sw-270, 0))
 		end
-		imgui.Begin(u8"Рекон", windows.four_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		if sw <= 1400 then
+			imgui.SetNextWindowSize(imgui.ImVec2(265, 283), imgui.Cond.FirstUseEver)
+			imgui.Begin(u8"Рекон", windows.four_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		else
+			imgui.Begin(u8"Рекон", windows.four_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		end
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.ShowCursor = false
 		imgui.PushFont(fontsize)
 		if imgui.Button(u8'Игрок ' ..fa.ICON_MALE, imgui.ImVec2(120, 25)) then uu() menu[1] = true end imgui.SameLine()
         if imgui.Button(u8'В радиусе ' .. fa.ICON_USERS, imgui.ImVec2(120, 25)) then uu() menu[2] = true end 
-		imgui.PopFont()
         imgui.Separator()
         imgui.NewLine()
         imgui.SameLine(3)
         if menu[1] then
-			imgui.PushFont(fontsize)
 			imgui.SetCursorPosX(10)
 			if imgui.Button(fa.ICON_FILES_O) then
 				setClipboardText(nickplayerrecon)
 				sampAddChatMessage(tag .. 'Ник скопирован в буффер обмена.', -1)
-			end
-			if imgui.IsWindowAppearing() then
-				imgui.SetKeyboardFocusHere(-1)
 			end
 			if windows.ansreport_window_state.v then
 				windows.ansreport_window_state.v = false
@@ -1647,7 +1662,6 @@ function imgui.OnDrawFrame()
 					end
 				end)
 			end
-			imgui.PopFont()
 			imgui.Separator()
 			if hpcar then
 				imgui.Text(u8'Здоровье авто: ' .. u8(hpcar))
@@ -1679,7 +1693,6 @@ function imgui.OnDrawFrame()
 			if collision then
 				imgui.Text(u8'Коллизия: ' .. u8(collision))
 			end
-			imgui.PushFont(fontsize)
 			if imgui.Button(u8'Посмотреть статистику', imgui.ImVec2(250, 25)) then
 				if not sampIsDialogActive() then
 					sampSendChat('/statpl ' .. playerrecon)
@@ -1723,7 +1736,10 @@ function imgui.OnDrawFrame()
 			if imgui.Button(u8'Дополнительные действия', imgui.ImVec2(250, 25)) then
 				windows.dopcustomreport_window_state.v = true
 			end
-			imgui.PopFont()
+			if ansid ~= playerrecon then
+				ansid = nil
+				saveplayerrecon = nil
+			end
 			if isKeyJustPressed(VK_R) and not sampIsChatInputActive() and not sampIsDialogActive() then
 				sampSendClickTextdraw(156)
 				lua_thread.create(function()
@@ -1744,19 +1760,14 @@ function imgui.OnDrawFrame()
 				end
 			end
 			if isKeyJustPressed(VK_RBUTTON) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				if isCursorActive() then
-					showCursor(false,false)
-				else
-					showCursor(true,false)
-				end
-			end
-			if ansid ~= playerrecon then
-				ansid = nil
-				saveplayerrecon = nil
+				lua_thread.create(function()
+					setVirtualKeyDown(70, true)
+					wait(150)
+					setVirtualKeyDown(70, false)
+				end)
 			end
         end
         if menu[2] then
-			imgui.PushFont(fontsize)
 			local playerzone = playersToStreamZone()
 			for _,v in pairs(playerzone) do
 				if v ~= playerrecon then
@@ -1766,38 +1777,12 @@ function imgui.OnDrawFrame()
 					end
 				end
 			end
-			if isKeyJustPressed(VK_R) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				sampSendClickTextdraw(156)
-				lua_thread.create(function()
-					if cfg.settings.keysync then
-						wait(1000)
-						while sampIsDialogActive() or sampIsChatInputActive() do
-							wait(0)
-						end
-						sampSendInputChat('/keysync ' .. playerrecon)
-					end
-				end)
-			end
-			if isKeyJustPressed(VK_Q) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				sampSendClickTextdraw(177)
-				windows.four_window_state.v = false
-				if cfg.settings.keysync then
-					sampSendInputChat('/keysync off')
-				end
-			end
-			if isKeyJustPressed(VK_RBUTTON) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				if isCursorActive() then
-					showCursor(false,false)
-				else
-					showCursor(true,false)
-				end
-			end
-			imgui.PopFont()
         end
+		imgui.PopFont()
 		imgui.End()
 	end
 	if windows.fourtwo_window_state.v then -- Сохранения расположения кастом рекон меню
-		imgui.SetNextWindowSize(imgui.ImVec2(250, 400), imgui.Cond.FirstUseEver)
+		imgui.SetNextWindowSize(imgui.ImVec2(265, 283), imgui.Cond.FirstUseEver)
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8"Настройки рекона", windows.fourtwo_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
@@ -2221,18 +2206,6 @@ function ac5()
 		end
 	end
 end
-local spisokproject = {
-	[1] = 'аризон',
-	[2] = 'блэк раша',
-	[3] = 'блек раша',
-	[4] = 'эвольв',
-	[5] = 'евольв',
-	[6] = 'монсер',
-}
-local oskrod = {
-	[1] = 'mq',
-	[2] = 'rnq',
-}
 function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 	if cfg.settings.slejkaform then
 		if text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") then
@@ -2300,92 +2273,90 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 			poiskform = nil
 		end
 	end
-	if cfg.settings.acon and text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") then
+	if cfg.settings.acon and text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: (.+)") then
 		lua_thread.create(function()
-			while true do
-				wait(1)
-				if text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") then
-					local admlvl= string.match(string.sub(text, 1, 8), '%d[%d.,]*')
-					if #admlvl == 2 then
-						messange = ('['..admlvl..'] ' .. string.sub(text, 8))
-					else
-						messange = ('['..admlvl..'] ' .. string.sub(text, 7))
-					end
-					if maximum == true then
-						func0:terminate()
-						func1:terminate()
-						func2:terminate()
-						func3:terminate()
-						func4:terminate()
-						func5:terminate()
-						ac0 = ac1
-						ac1 = ac2
-						ac2 = ac3 
-						ac3 = ac4
-						ac4 = ac5
-						ac5 = messange
-						func0:run()
-						func1:run()
-						func2:run()
-						func3:run()
-						func4:run()
-						func5:run()
-						break
-					end
-					if count == 0 then
-						count = count + 1
-						ac0 = messange
-						func0:run()
-						break
-					end
-					if count == 1 then
-						count = count + 1
-						ac1 = messange
-						func1:run()
-						break
-					end
-					if count == 2 then
-						count = count + 1
-						ac2 = messange
-						func2:run()
-						break
-					end
-					if count == 3 then
-						count = count + 1
-						ac3 = messange
-						func3:run()
-						break
-					end
-					if count == 4 then
-						count = count + 1
-						ac4 = messange
-						func4:run()
-						break
-					end
+			while true do --string.format(prefix .. ' ' admlvl .. ' ' .. nickadm .. '[' .. idadm .. ']: ' .. admtext)
+				wait(1) -- string.sub(prefix, 2)
+				local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)')
+				local messange = string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext
+				if #messange >= 110 then
+					messange = string.sub(messange, 1, 110) .. '...'
+				end 
+				admlvl, prefix, nickadm, idadm, admtext = nil
+				if maximum == true then
+					func0:terminate()
+					func1:terminate()
+					func2:terminate()
+					func3:terminate()
+					func4:terminate()
+					func5:terminate()
+					ac0 = ac1
+					ac1 = ac2
+					ac2 = ac3 
+					ac3 = ac4
+					ac4 = ac5
+					ac5 = messange
+					func0:run()
+					func1:run()
+					func2:run()
+					func3:run()
+					func4:run()
+					func5:run()
+					break
+				end
+				if count == 0 then
+					count = count + 1
+					ac0 = messange
+					func0:run()
+					break
+				end
+				if count == 1 then
+					count = count + 1
+					ac1 = messange
+					func1:run()
+					break
+				end
+				if count == 2 then
+					count = count + 1
+					ac2 = messange
+					func2:run()
+					break
+				end
+				if count == 3 then
+					count = count + 1
+					ac3 = messange
+					func3:run()
+					break
+				end
+				if count == 4 then
+					count = count + 1
+					ac4 = messange
+					func4:run()
+					break
+				end
+				if count == 5 then
 					if count == 5 then
-						if count == 5 then
-							count = count - 1
-							func5:terminate()
-							ac5 = messange
-							func5:run()
-							maximum = true
-						else
-							ac5 = messange
-							func5:run()
-						end
-						count = count + 1
-						break
+						count = count - 1
+						func5:terminate()
+						ac5 = messange
+						func5:run()
+						maximum = true
+					else
+						ac5 = messange
+						func5:run()
 					end
+					count = count + 1
+					break
 				end
 			end
 		end)
 		return false --
 	end
-	if cfg.settings.automute then 
+	if cfg.settings.automute and not isPauseMenuActive() then 
 		if text:match('Жалоба') then
 			oskid = tonumber(text:match('%[(%d+)%]'))
-			for i = 0, #oskrod do
-				if (text:match('%s'.. tostring(oskrod[i])) or text:match('}'..tostring(oskrod[i]))) or (text:match('%s'..tostring(oskrod[i])) or text:match('}'..tostring(oskrod[i]))) then
+			for i = 0, #spisokoskrod do
+				if (text:match('%s'.. tostring(spisokoskrod[i])) or text:match('}'..tostring(spisokoskrod[i]))) or (text:match('%s'..tostring(spisokoskrod[i])) or text:match('}'..tostring(spisokoskrod[i]))) then
 					sampAddChatMessage('{00FF00}[АВТОМУТ]{DCDCDC} ' .. text .. ' {00FF00}[АВТОМУТ]', -1)
 					lua_thread.create(function()
 						while sampIsDialogActive() do
@@ -2394,7 +2365,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 					end)
 					sampSendChat('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
 					if notify then
-						notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,4)
+						notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,6)
 					end
 					return false
 				end
@@ -2408,8 +2379,8 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
             end
             text = text:lower()
             text = text:rlower()
-			for i = 0, #oskrod do
-				if (text:match('%s'.. tostring(oskrod[i])) or text:match('}'..tostring(oskrod[i]))) or (text:match('%s'..tostring(oskrod[i])) or text:match('}'..tostring(oskrod[i]))) then
+			for i = 0, #spisokoskrod do
+				if (text:match('%s'.. tostring(spisokoskrod[i])) or text:match('}'..tostring(spisokoskrod[i]))) or (text:match('%s'..tostring(spisokoskrod[i])) or text:match('}'..tostring(spisokoskrod[i]))) then
 					sampAddChatMessage('{00FF00}[АВТОМУТ]{DCDCDC} ' .. text .. ' {00FF00}[АВТОМУТ]', -1)
 					lua_thread.create(function()
 						while sampIsDialogActive() do
@@ -2418,7 +2389,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 					end)
 					sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
 					if notify then
-						notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,4)
+						notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,6)
 					end
 					return false
 				end
@@ -2448,7 +2419,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
                     end)
                     sampSendChat('/mute ' .. oskid .. ' 400 Оскорбление/Унижение')
 					if notify then
-						notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Запрещенное слово: ' .. tostring(cfg.osk[i]), 2,1,4)
+						notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Запрещенное слово: ' .. tostring(cfg.osk[i]), 2,1,6)
 					end
                     return false
                 end
@@ -2463,7 +2434,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
                     end)
                     sampSendChat('/mute ' .. oskid .. ' 300 Нецензурная лексика')
 					if notify then
-						notify.addNotify('Автомут\n-------------------------------', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Запрещенное слово: ' .. tostring(cfg.mat[i]), 2,1,4)
+						notify.addNotify('<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Запрещенное слово: ' .. tostring(cfg.mat[i]), 2,1,6)
 					end
                     return false
                 end
@@ -2702,6 +2673,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					autor = string.sub(line, 24) -- считываем автора жалобы
 					if sampGetPlayerIdByNickname(autor) then
 						autorid = sampGetPlayerIdByNickname(autor) -- узнаем ид
+						saveplayerrecon = nil
 					else
 						autorid = (u8'НЕ В СЕТИ')
 					end
@@ -3018,10 +2990,17 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				saveplayerrecon = nil
 				ansid = nil
 			end
+			kl = nil
+			oftop = nil
+			capsrep = nil
+			matrep = nil
+			oskrod = nil
+			poprep = nil
+			oskadm = nil
 			autorid = nil
 			myid = nil
 			customans = nil
-			reportid = nil
+			reportid = nil -- вот над этим пиздецом надо поработать, запихнуть его в массив как минимум
 			rabotay = nil
 			slejy = nil
 			buffer.text_buffer.v = ''
@@ -3485,6 +3464,13 @@ sampRegisterChatCommand('uj', function(param)
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
 end)
+sampRegisterChatCommand('ur', function(param) 
+	if #param ~= 0 then
+		sampSendChat('/unrmute ' .. param) 
+	else
+		sampAddChatMessage(tag .. 'Вы не указали значение.')
+	end
+end)
 sampRegisterChatCommand('al', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/ans ' .. param .. ' Здравствуйте! Вы забыли ввести /alogin!') 
@@ -3510,28 +3496,16 @@ sampRegisterChatCommand('as', function(param)
 end)
 sampRegisterChatCommand("sbanip", function(arg)
 	if arg:find('(.+) (.+) (.+)') then
-		arg = textSplit(arg, ' ')
-		for i in pairs(arg) do
-			if not arg1 then
-				arg1 = i
-			end
-			if not arg2 then
-				arg2 = i
-			end
-			if not arg3 then
-				arg3 = i
-			end
-		end
+        arg1, arg2, arg3 = arg:match('(.+) (.+) (.+)')
 		ipfind = true
-		sampAddChatMessage(arg1, -1)
 		sampSendChat('/offstats ' .. arg1)
 		lua_thread.create(function()
 			while not regip or sampIsDialogActive() do
 				wait(0)
 			end
-			--sampSendChat('/banoff ' .. arg1 .. ' ' .. arg2 .. ' ' .. arg3)
-			--sampSendChat('/banip ' .. regip .. ' ' .. arg2 .. ' ' .. arg3)
-			--sampSendChat('/banip ' .. lastip .. ' ' .. arg2 .. ' ' .. arg3)
+			sampSendChat('/banoff ' .. arg1 .. ' ' .. arg2 .. ' ' .. arg3)
+			sampSendChat('/banip ' .. regip .. ' ' .. arg2 .. ' ' .. arg3)
+			sampSendChat('/banip ' .. lastip .. ' ' .. arg2 .. ' ' .. arg3)
 			lastip = nil
 			regip = nil
 		end)
@@ -4240,7 +4214,7 @@ function style(id) -- ТЕМЫ
 		colors[clr.CheckMark]              = ImVec4(0.98, 0.26, 0.26, 1.00)
 		colors[clr.SliderGrab]             = ImVec4(0.88, 0.26, 0.24, 1.00)
 		colors[clr.SliderGrabActive]       = ImVec4(0.98, 0.26, 0.26, 1.00)
-		colors[clr.Button]                 = ImVec4(0.98, 0.26, 0.26, 0.40)
+		colors[clr.Button]                 = ImVec4(0.98, 0.26, 0.26, 0.70)
 		colors[clr.ButtonHovered]          = ImVec4(0.98, 0.26, 0.26, 1.00)
 		colors[clr.ButtonActive]           = ImVec4(0.98, 0.06, 0.06, 1.00)
 		colors[clr.Header]                 = ImVec4(0.98, 0.26, 0.26, 0.31)
@@ -4275,49 +4249,49 @@ function style(id) -- ТЕМЫ
 		colors[clr.PlotHistogramHovered]   = ImVec4(1.00, 0.60, 0.00, 1.00)
 		colors[clr.ModalWindowDarkening]   = ImVec4(0.80, 0.80, 0.80, 0.35)
     elseif id == 2 then -- зеленая тема
-		colors[clr.FrameBg]                = ImVec4(0.42, 0.48, 0.16, 0.54)
-		colors[clr.FrameBgHovered]         = ImVec4(0.85, 0.98, 0.26, 0.40)
-		colors[clr.FrameBgActive]          = ImVec4(0.85, 0.98, 0.26, 0.67)
-		colors[clr.TitleBg]                = ImVec4(0.04, 0.04, 0.04, 1.00)
-		colors[clr.TitleBgActive]          = ImVec4(0.42, 0.48, 0.16, 1.00)
-		colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.00, 0.00, 0.51)
-		colors[clr.CheckMark]              = ImVec4(0.85, 0.98, 0.26, 1.00)
-		colors[clr.SliderGrab]             = ImVec4(0.77, 0.88, 0.24, 1.00)
-		colors[clr.SliderGrabActive]       = ImVec4(0.85, 0.98, 0.26, 1.00)
-		colors[clr.Button]                 = ImVec4(0.85, 0.98, 0.26, 0.40)
-		colors[clr.ButtonHovered]          = ImVec4(0.85, 0.98, 0.26, 1.00)
-		colors[clr.ButtonActive]           = ImVec4(0.82, 0.98, 0.06, 1.00)
-		colors[clr.Header]                 = ImVec4(0.85, 0.98, 0.26, 0.31)
-		colors[clr.HeaderHovered]          = ImVec4(0.85, 0.98, 0.26, 0.80)
-		colors[clr.HeaderActive]           = ImVec4(0.85, 0.98, 0.26, 1.00)
-		colors[clr.Separator]              = colors[clr.Border]
-		colors[clr.SeparatorHovered]       = ImVec4(0.63, 0.75, 0.10, 0.78)
-		colors[clr.SeparatorActive]        = ImVec4(0.63, 0.75, 0.10, 1.00)
-		colors[clr.ResizeGrip]             = ImVec4(0.85, 0.98, 0.26, 0.25)
-		colors[clr.ResizeGripHovered]      = ImVec4(0.85, 0.98, 0.26, 0.67)
-		colors[clr.ResizeGripActive]       = ImVec4(0.85, 0.98, 0.26, 0.95)
-		colors[clr.PlotLines]              = ImVec4(0.61, 0.61, 0.61, 1.00)
-		colors[clr.PlotLinesHovered]       = ImVec4(1.00, 0.81, 0.35, 1.00)
-		colors[clr.TextSelectedBg]         = ImVec4(0.85, 0.98, 0.26, 0.35)
-		colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
-		colors[clr.TextDisabled]           = ImVec4(0.50, 0.50, 0.50, 1.00)
-		colors[clr.WindowBg]               = ImVec4(0.06, 0.06, 0.06, 0.94)
-		colors[clr.ChildWindowBg]          = ImVec4(1.00, 1.00, 1.00, 0.00)
-		colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
-		colors[clr.ComboBg]                = colors[clr.PopupBg]
-		colors[clr.Border]                 = ImVec4(0.43, 0.43, 0.50, 0.50)
+		colors[clr.Text]                   = ImVec4(0.90, 0.90, 0.90, 1.00)
+		colors[clr.TextDisabled]           = ImVec4(0.60, 0.60, 0.60, 1.00)
+		colors[clr.WindowBg]               = ImVec4(0.08, 0.08, 0.08, 1.00)
+		colors[clr.ChildWindowBg]          = ImVec4(0.10, 0.10, 0.10, 1.00)
+		colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 1.00)
+		colors[clr.Border]                 = ImVec4(0.70, 0.70, 0.70, 0.40)
 		colors[clr.BorderShadow]           = ImVec4(0.00, 0.00, 0.00, 0.00)
-		colors[clr.MenuBarBg]              = ImVec4(0.14, 0.14, 0.14, 1.00)
-		colors[clr.ScrollbarBg]            = ImVec4(0.02, 0.02, 0.02, 0.53)
-		colors[clr.ScrollbarGrab]          = ImVec4(0.31, 0.31, 0.31, 1.00)
-		colors[clr.ScrollbarGrabHovered]   = ImVec4(0.41, 0.41, 0.41, 1.00)
-		colors[clr.ScrollbarGrabActive]    = ImVec4(0.51, 0.51, 0.51, 1.00)
-		colors[clr.CloseButton]            = ImVec4(0.41, 0.41, 0.41, 0.50)
-		colors[clr.CloseButtonHovered]     = ImVec4(0.98, 0.39, 0.36, 1.00)
-		colors[clr.CloseButtonActive]      = ImVec4(0.98, 0.39, 0.36, 1.00)
-		colors[clr.PlotHistogram]          = ImVec4(0.90, 0.70, 0.00, 1.00)
-		colors[clr.PlotHistogramHovered]   = ImVec4(1.00, 0.60, 0.00, 1.00)
-		colors[clr.ModalWindowDarkening]   = ImVec4(0.80, 0.80, 0.80, 0.35)
+		colors[clr.FrameBg]                = ImVec4(0.15, 0.15, 0.15, 1.00)
+		colors[clr.FrameBgHovered]         = ImVec4(0.19, 0.19, 0.19, 0.71)
+		colors[clr.FrameBgActive]          = ImVec4(0.34, 0.34, 0.34, 0.79)
+		colors[clr.TitleBg]                = ImVec4(0.00, 0.69, 0.33, 0.60)
+		colors[clr.TitleBgActive]          = ImVec4(0.00, 0.74, 0.36, 0.60)
+		colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.69, 0.33, 0.50)
+		colors[clr.MenuBarBg]              = ImVec4(0.00, 0.80, 0.38, 1.00)
+		colors[clr.ScrollbarBg]            = ImVec4(0.16, 0.16, 0.16, 1.00)
+		colors[clr.ScrollbarGrab]          = ImVec4(0.00, 0.69, 0.33, 1.00)
+		colors[clr.ScrollbarGrabHovered]   = ImVec4(0.00, 0.82, 0.39, 1.00)
+		colors[clr.ScrollbarGrabActive]    = ImVec4(0.00, 1.00, 0.48, 1.00)
+		colors[clr.ComboBg]                = ImVec4(0.20, 0.20, 0.20, 0.99)
+		colors[clr.CheckMark]              = ImVec4(0.00, 0.69, 0.33, 1.00)
+		colors[clr.SliderGrab]             = ImVec4(0.00, 0.69, 0.33, 1.00)
+		colors[clr.SliderGrabActive]       = ImVec4(0.00, 0.77, 0.37, 1.00)
+		colors[clr.Button]                 = ImVec4(0.00, 0.69, 0.33, 0.50)
+		colors[clr.ButtonHovered]          = ImVec4(0.00, 0.82, 0.39, 1.00)
+		colors[clr.ButtonActive]           = ImVec4(0.00, 0.87, 0.42, 1.00)
+		colors[clr.Header]                 = ImVec4(0.00, 0.69, 0.33, 1.00)
+		colors[clr.HeaderHovered]          = ImVec4(0.00, 0.76, 0.37, 0.57)
+		colors[clr.HeaderActive]           = ImVec4(0.00, 0.88, 0.42, 0.89)
+		colors[clr.Separator]              = ImVec4(1.00, 1.00, 1.00, 0.40)
+		colors[clr.SeparatorHovered]       = ImVec4(1.00, 1.00, 1.00, 0.60)
+		colors[clr.SeparatorActive]        = ImVec4(1.00, 1.00, 1.00, 0.80)
+		colors[clr.ResizeGrip]             = ImVec4(0.00, 0.69, 0.33, 1.00)
+		colors[clr.ResizeGripHovered]      = ImVec4(0.00, 0.76, 0.37, 1.00)
+		colors[clr.ResizeGripActive]       = ImVec4(0.00, 0.86, 0.41, 1.00)
+		colors[clr.CloseButton]            = ImVec4(0.00, 0.82, 0.39, 1.00)
+		colors[clr.CloseButtonHovered]     = ImVec4(0.00, 0.88, 0.42, 1.00)
+		colors[clr.CloseButtonActive]      = ImVec4(0.00, 1.00, 0.48, 1.00)
+		colors[clr.PlotLines]              = ImVec4(0.00, 0.69, 0.33, 1.00)
+		colors[clr.PlotLinesHovered]       = ImVec4(0.00, 0.74, 0.36, 1.00)
+		colors[clr.PlotHistogram]          = ImVec4(0.00, 0.69, 0.33, 1.00)
+		colors[clr.PlotHistogramHovered]   = ImVec4(0.00, 0.80, 0.38, 1.00)
+		colors[clr.TextSelectedBg]         = ImVec4(0.00, 0.69, 0.33, 0.72)
+		colors[clr.ModalWindowDarkening]   = ImVec4(0.17, 0.17, 0.17, 0.48)
     elseif id == 3 then -- бирюзовая
         colors[clr.Text]                 = ImVec4(0.86, 0.93, 0.89, 0.78)
 		colors[clr.TextDisabled]         = ImVec4(0.36, 0.42, 0.47, 1.00)
@@ -4341,7 +4315,7 @@ function style(id) -- ТЕМЫ
 		colors[clr.CheckMark]              = ImVec4(0.26, 0.98, 0.85, 1.00)
 		colors[clr.SliderGrab]             = ImVec4(0.24, 0.88, 0.77, 1.00)
 		colors[clr.SliderGrabActive]       = ImVec4(0.26, 0.98, 0.85, 1.00)
-		colors[clr.Button]                 = ImVec4(0.26, 0.98, 0.85, 0.30)
+		colors[clr.Button]                 = ImVec4(0.26, 0.98, 0.85, 0.35)
 		colors[clr.ButtonHovered]          = ImVec4(0.26, 0.98, 0.85, 0.50)
 		colors[clr.ButtonActive]           = ImVec4(0.06, 0.98, 0.82, 0.50)
 		colors[clr.Header]                 = ImVec4(0.26, 0.98, 0.85, 0.31)
@@ -4362,45 +4336,46 @@ function style(id) -- ТЕМЫ
 		colors[clr.PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00)
 		colors[clr.TextSelectedBg]       = ImVec4(0.25, 1.00, 0.00, 0.43)
 		colors[clr.ModalWindowDarkening] = ImVec4(1.00, 0.98, 0.95, 0.73)
-	elseif id == 4 then -- Вишневая тема
-		colors[clr.WindowBg]              = ImVec4(0, 0, 0, 1);
-		colors[clr.ChildWindowBg]         = ImVec4(0, 0, 0, 1);
-		colors[clr.PopupBg]               = ImVec4(0.05, 0.05, 0.10, 0.90);
-		colors[clr.Border]                = ImVec4(0.89, 0.85, 0.92, 0.30);
-		colors[clr.BorderShadow]          = ImVec4(0.00, 0.00, 0.00, 0.00);
-		colors[clr.FrameBg]               = ImVec4(0.12, 0.12, 0.12, 0.94);
-		colors[clr.FrameBgHovered]        = ImVec4(0.41, 0.19, 0.63, 0.68);
-		colors[clr.FrameBgActive]         = ImVec4(0.41, 0.19, 0.63, 1.00);
-		colors[clr.TitleBg]               = ImVec4(0.41, 0.19, 0.63, 0.45);
-		colors[clr.TitleBgCollapsed]      = ImVec4(0.41, 0.19, 0.63, 0.35);
-		colors[clr.TitleBgActive]         = ImVec4(0.41, 0.19, 0.63, 0.78);
-		colors[clr.MenuBarBg]             = ImVec4(0.30, 0.20, 0.39, 0.57);
-		colors[clr.ScrollbarBg]           = ImVec4(0.04, 0.04, 0.04, 1.00);
-		colors[clr.ScrollbarGrab]         = ImVec4(0.41, 0.19, 0.63, 0.31);
-		colors[clr.ScrollbarGrabHovered]  = ImVec4(0.41, 0.19, 0.63, 0.78);
-		colors[clr.ScrollbarGrabActive]   = ImVec4(0.41, 0.19, 0.63, 1.00);
-		colors[clr.ComboBg]               = ImVec4(0.30, 0.20, 0.39, 1.00);
-		colors[clr.CheckMark]             = ImVec4(0.56, 0.61, 1.00, 1.00);
-		colors[clr.SliderGrab]            = ImVec4(0.28, 0.28, 0.28, 1.00);
-		colors[clr.SliderGrabActive]      = ImVec4(0.35, 0.35, 0.35, 1.00);
-		colors[clr.Button]                = ImVec4(0.41, 0.19, 0.63, 0.44);
-		colors[clr.ButtonHovered]         = ImVec4(0.41, 0.19, 0.63, 0.86);
-		colors[clr.ButtonActive]          = ImVec4(0.64, 0.33, 0.94, 1.00);
-		colors[clr.Header]                = ImVec4(0.41, 0.19, 0.63, 0.76);
-		colors[clr.HeaderHovered]         = ImVec4(0.41, 0.19, 0.63, 0.86);
-		colors[clr.HeaderActive]          = ImVec4(0.41, 0.19, 0.63, 1.00);
-		colors[clr.ResizeGrip]            = ImVec4(0.41, 0.19, 0.63, 0.20);
-		colors[clr.ResizeGripHovered]     = ImVec4(0.41, 0.19, 0.63, 0.78);
-		colors[clr.ResizeGripActive]      = ImVec4(0.41, 0.19, 0.63, 1.00);
-		colors[clr.CloseButton]           = ImVec4(1.00, 1.00, 1.00, 0.75);
-		colors[clr.CloseButtonHovered]    = ImVec4(0.88, 0.74, 1.00, 0.59);
-		colors[clr.CloseButtonActive]     = ImVec4(0.88, 0.85, 0.92, 1.00);
-		colors[clr.PlotLines]             = ImVec4(0.89, 0.85, 0.92, 0.63);
-		colors[clr.PlotLinesHovered]      = ImVec4(0.41, 0.19, 0.63, 1.00);
-		colors[clr.PlotHistogram]         = ImVec4(0.89, 0.85, 0.92, 0.63);
-		colors[clr.PlotHistogramHovered]  = ImVec4(0.41, 0.19, 0.63, 1.00);
-		colors[clr.TextSelectedBg]        = ImVec4(0.41, 0.19, 0.63, 0.43);
-		colors[clr.ModalWindowDarkening]  = ImVec4(0.20, 0.20, 0.20, 0.35);
+	elseif id == 4 then -- Розовая тема
+		colors[clr.FrameBg]                = ImVec4(0.46, 0.11, 0.29, 1.00)
+		colors[clr.FrameBgHovered]         = ImVec4(0.69, 0.16, 0.43, 1.00)
+		colors[clr.FrameBgActive]          = ImVec4(0.58, 0.10, 0.35, 1.00)
+		colors[clr.TitleBg]                = ImVec4(0.00, 0.00, 0.00, 1.00)
+		colors[clr.TitleBgActive]          = ImVec4(0.61, 0.16, 0.39, 1.00)
+		colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.00, 0.00, 0.51)
+		colors[clr.CheckMark]              = ImVec4(0.94, 0.30, 0.63, 1.00)
+		colors[clr.SliderGrab]             = ImVec4(0.85, 0.11, 0.49, 1.00)
+		colors[clr.SliderGrabActive]       = ImVec4(0.89, 0.24, 0.58, 1.00)
+		colors[clr.Button]                 = ImVec4(0.46, 0.11, 0.29, 1.00)
+		colors[clr.ButtonHovered]          = ImVec4(0.69, 0.17, 0.43, 1.00)
+		colors[clr.ButtonActive]           = ImVec4(0.59, 0.10, 0.35, 1.00)
+		colors[clr.Header]                 = ImVec4(0.46, 0.11, 0.29, 1.00)
+		colors[clr.HeaderHovered]          = ImVec4(0.69, 0.16, 0.43, 1.00)
+		colors[clr.HeaderActive]           = ImVec4(0.58, 0.10, 0.35, 1.00)
+		colors[clr.Separator]              = ImVec4(0.69, 0.16, 0.43, 1.00)
+		colors[clr.SeparatorHovered]       = ImVec4(0.58, 0.10, 0.35, 1.00)
+		colors[clr.SeparatorActive]        = ImVec4(0.58, 0.10, 0.35, 1.00)
+		colors[clr.ResizeGrip]             = ImVec4(0.46, 0.11, 0.29, 0.70)
+		colors[clr.ResizeGripHovered]      = ImVec4(0.69, 0.16, 0.43, 0.67)
+		colors[clr.ResizeGripActive]       = ImVec4(0.70, 0.13, 0.42, 1.00)
+		colors[clr.TextSelectedBg]         = ImVec4(1.00, 0.78, 0.90, 0.35)
+		colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
+		colors[clr.TextDisabled]           = ImVec4(0.60, 0.19, 0.40, 1.00)
+		colors[clr.WindowBg]               = ImVec4(0.06, 0.06, 0.06, 0.94)
+		colors[clr.ChildWindowBg]          = ImVec4(1.00, 1.00, 1.00, 0.00)
+		colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
+		colors[clr.ComboBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
+		colors[clr.Border]                 = ImVec4(0.49, 0.14, 0.31, 1.00)
+		colors[clr.BorderShadow]           = ImVec4(0.49, 0.14, 0.31, 0.00)
+		colors[clr.MenuBarBg]              = ImVec4(0.15, 0.15, 0.15, 1.00)
+		colors[clr.ScrollbarBg]            = ImVec4(0.02, 0.02, 0.02, 0.53)
+		colors[clr.ScrollbarGrab]          = ImVec4(0.31, 0.31, 0.31, 1.00)
+		colors[clr.ScrollbarGrabHovered]   = ImVec4(0.41, 0.41, 0.41, 1.00)
+		colors[clr.ScrollbarGrabActive]    = ImVec4(0.51, 0.51, 0.51, 1.00)
+		colors[clr.CloseButton]            = ImVec4(0.41, 0.41, 0.41, 0.50)
+		colors[clr.CloseButtonHovered]     = ImVec4(0.98, 0.39, 0.36, 1.00)
+		colors[clr.CloseButtonActive]      = ImVec4(0.98, 0.39, 0.36, 1.00)
+		colors[clr.ModalWindowDarkening]   = ImVec4(0.80, 0.80, 0.80, 0.35)
     elseif id == 5 then -- голубая тема
 		colors[clr.Text]                   = ImVec4(2.00, 2.00, 2.00, 2.00)
 		colors[clr.TextDisabled]           = ImVec4(0.28, 0.30, 0.35, 1.00)
@@ -4424,7 +4399,7 @@ function style(id) -- ТЕМЫ
 		colors[clr.CheckMark]              = ImVec4(0.90, 0.90, 0.90, 0.50)
 		colors[clr.SliderGrab]             = ImVec4(1.00, 1.00, 1.00, 0.30)
 		colors[clr.SliderGrabActive]       = ImVec4(0.80, 0.50, 0.50, 1.00)
-		colors[clr.Button]                 = ImVec4(0.41, 0.55, 0.78, 1.00)
+		colors[clr.Button]                 = ImVec4(0.41, 0.55, 0.78, 0.60)
 		colors[clr.ButtonHovered]          = ImVec4(0.49, 0.62, 0.85, 1.00)
 		colors[clr.ButtonActive]           = ImVec4(0.49, 0.62, 0.85, 1.00)
 		colors[clr.Header]                 = ImVec4(0.19, 0.22, 0.26, 1.00)
