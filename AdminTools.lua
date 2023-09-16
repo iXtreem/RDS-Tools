@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.3
+local version = 2.31
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -134,16 +134,6 @@ local style_list = {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8
 local sw, sh = getScreenResolution()
 local selected_item = imgui.ImInt(cfg.settings.size)
 local st = { -- таймер для автоформ
-    bool = false,
-    timer = -1,
-    id = -1,
-	sett = nil,
-	forumplease = nil,
-	idadmin = nil,
-	nicknameform = nil,
-	styleform = nil,
-	cheater = nil,
-	probid = nil
 }
 local spisok = { -- список для автоформ
 	'ban',
@@ -329,6 +319,9 @@ function main() -- основной сценарий скрипта
 		end
 		if activeam and not (isPauseMenuActive() or isGamePaused()) then
 			activeam = nil
+		end
+		if isKeyJustPressed(0x54 --[[VK_T]]) and not sampIsDialogActive() and not sampIsScoreboardOpen() and not isSampfuncsConsoleActive() then
+			sampSetChatInputEnabled(true)
 		end
 		while st.sett do
 			wait(50)
@@ -662,14 +655,14 @@ local menu2 = {true, -- рекон меню
 
 function imgui.OnDrawFrame()
 	if not windows.checkadm_window_state.v and not windows.main_window_state.v and not windows.tree_window_state.v and not windows.four_window_state.v and not windows.helperma_window_state.v and not windows.fourtwo_window_state.v and not windows.five_window_state.v and not windows.ac_window_state.v and not windows.ansreport_window_state.v and not windows.dopcustomreport_window_state.v then
-		imgui.Process = false
 		if cfg.settings.keysync then
 			sampSendInputChat('/keysync off')
 		end
-		showCursor(false,false)
 		if cfg.settings.checkadmins then
 			sampSendChat('/admins')
 		end
+		showCursor(false,false)
+		imgui.Process = false
 	end
 	if windows.main_window_state.v then -- КНОПКИ ИНТЕРФЕЙСА F3
 		if windows.checkadm_window_state.v then
@@ -1348,7 +1341,7 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.SetCursorPosX(383)
 		imgui.Tooltip('Space')
-		if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_RETURN) then
+		if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) then
 			if #(u8:decode(buffer.text_buffer.v)) >= 1 then
 				if cfg.settings.autosave then
 					key = #cfg.customotvet + 1
@@ -2158,7 +2151,6 @@ function timerans()
 					windows.ansreport_window_state.v = false
 					saveplayerrecon = nil
 				end
-				break
 			else
 				sampAddChatMessage(tag .. 'Игрок, написавший репорт, находится вне сети.', -1)
 			end
@@ -2256,9 +2248,11 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 		if not activeam then
 			if text:match('Weapon hack .code. 015.') then
 				if sampIsDialogActive() or sampIsChatInputActive() then
-					while not (sampIsDialogActive() and sampIsChatInputActive()) do
-						wait(0)
-					end
+					lua_thread.create(function()
+						while not (sampIsDialogActive() and sampIsChatInputActive()) do
+							wait(0)
+						end
+					end)
 				end
 				local idwh = string.match(text, "%[(%d+)%]")
 				sampSendChat("/iwep " .. idwh)
@@ -2702,21 +2696,24 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			while not (answer.rabotay or answer.uto4 or answer.nakajy or answer.customans or answer.slejy or answer.jb or answer.ojid or answer.moiotvet or answer.uto4id or answer.nakazan or answer.otklon or answer.peredamrep) do -- ждем нажатия клавиши
 				wait(200)
 			end
-			windows.tree_window_state.v = false
 			setVirtualKeyDown(13, true)
 			setVirtualKeyDown(13, false)
 		end)
 	end
 	if dialogId == 2350 then -- окно с возможностью принять или отклонить репорт
 		windows.tree_window_state.v = false
-		if (u8:decode(buffer.text_buffer.v)) then
+		if (u8:decode(buffer.text_buffer.v)) and #answer == 0 then
 			peremrep = (u8:decode(buffer.text_buffer.v))
 			if #buffer.text_buffer.v >= 80 then
-				peremrep = u8'Мой ответ не вмещается в окно репорта, я отпишу вам лично'
+				peremrep = 'Мой ответ не вмещается в окно репорта, я отпишу вам лично'
 			end
-			if #peremrep <= 4 and #peremrep ~= 0 then
-				peremrep = (u8:decode(buffer.text_buffer.v) .. '    ')
+			if #peremrep <= 4 then
+				peremrep = (u8:decode(buffer.text_buffer.v) .. '   ')
 			end
+			if cfg.settings.autosave then
+				cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_buffer.v)
+				inicfg.save(cfg,directIni)
+			end	
 			answer.moiotvet = true
 		end
 		if answer.otklon then
@@ -3597,14 +3594,14 @@ sampRegisterChatCommand('reklf', function(param)
 end)
 sampRegisterChatCommand('rz', function(param) 
 	if #param ~= 0 then
-		sampSendChat('/mute ' .. param .. " 5000 Розжиг")
-	else
+		sampSendChat('/mute ' .. param .. " 5000 Розжиг меж.нац. розни")
+	else 
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
 end)
 sampRegisterChatCommand('rzf', function(param) 
 	if #param ~= 0 then
-		sampSendChat('/muteoff ' .. param .. ' 5000 Розжиг')
+		sampSendChat('/muteoff ' .. param .. ' 5000 Розжиг меж.нац. розни')
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
@@ -3724,14 +3721,14 @@ sampRegisterChatCommand('rzsf', function(param)
 end)
 sampRegisterChatCommand('rrz', function(param) 
 	if #param ~= 0 then
-		sampSendChat('/rmute ' .. param .. " 5000 Розжиг")
+		sampSendChat('/rmute ' .. param .. " 5000 Розжиг меж.нац. розни")
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
 end)
 sampRegisterChatCommand('rrzf', function(param) 
 	if #param ~= 0 then
-		sampSendChat('/rmuteoff ' .. param .. " 5000 Розжиг")
+		sampSendChat('/rmuteoff ' .. param .. " 5000 Розжиг меж.нац. розни")
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
