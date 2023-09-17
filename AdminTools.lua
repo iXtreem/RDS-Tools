@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.31
+local version = 2.32
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -1013,11 +1013,46 @@ function imgui.OnDrawFrame()
 					sampSendChat('/mess 16 --------=================== Автомастерская ================-----------')
 				end
 				if imgui.Button(u8'Группа/Форум', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 -------============= Наш форум и группа ==========-----------------')
-					sampSendChat('/mess 7 У нашего проекта имеется группа https://vk.сom/teamadmrds ...')
-					sampSendChat('/mess 7 ... и даже форум https://forumrds.ru, на котором игроки могут оставить жалобу на администрацию или игроков.')
+					sampSendChat('/mess 11 -------============= Сторонние площадки ==========-----------------')
+					sampSendChat('/mess 7 У нашего проекта имеется группа vk.сom/teamadmrds ...')
+					sampSendChat('/mess 7 ... и даже форум, на котором игроки могут оставить жалобу на администрацию или игроков.')
 					sampSendChat('/mess 7 Следи за новостями и будь вкурсе событий.')
-					sampSendChat('/mess 11 -------============= Наш форум и группа ==========-----------------')
+					sampSendChat('/mess 11 -------============= Автомобиль ==========-----------------')
+				end
+				if imgui.Button(u8'VIP', imgui.ImVec2(130, 25)) then
+					sampSendChat('/mess 13 --------============ Преимущества VIP ===========------------------')
+					sampSendChat('/mess 7 Хочешь играть с друзьями без дискомфорта?')
+					sampSendChat('/mess 7 Хочешь всегда телепортироваться по карте и к друзьям, чтобы быть всегда вместе?')
+					sampSendChat('/mess 7 Хочешь получать каждый PayDay плюшки на свой аккаунт? Обзаведись VIP-статусом!')
+					sampSendChat('/mess 13 --------============ Преимущества VIP ===========------------------')
+				end
+				if imgui.Button(u8'Арене', imgui.ImVec2(130, 25)) then
+					sampSendChat('/mess 12 -------============= PVP Arena ==========-----------------')
+					sampSendChat('/mess 10 Не знаешь чем заняться? Хочется экшена и быстрой реакции?')
+					sampSendChat('/mess 10 Вводи /arena и покажи на что ты способен!')
+					sampSendChat('/mess 10 Набей максимальное количество киллов, добейся идеала в своем +C')
+					sampSendChat('/mess 12 -------============= PVP Arena ==========-----------------')
+				end
+				if imgui.Button(u8'Виртуальный мир', imgui.ImVec2(130, 25)) then
+					sampSendChat('/mess 8 --------============ Твой виртуальный мир ===========------------------')
+					sampSendChat('/mess 15 Мешают играть? Постоянно преследуют танки и самолёты?')
+					sampSendChat('/mess 15 Обычный пассив режим не спасает во время дрифта?')
+					sampSendChat('/mess 15 Выход есть! Вводи /dt [0-999] и дрифти с комфортом.')
+					sampSendChat('/mess 8 --------============ Твой виртуальный мир ===========------------------')
+				end
+				if imgui.Button(u8'Покупка автомобиля', imgui.ImVec2(130, 25)) then
+					sampSendChat('/mess 3 -------============= Автомобиль ==========-----------------')
+					sampSendChat('/mess 2 Мечтал приобрести суперкар? Мечтал сделать шикарный тюнинг под себя?')
+					sampSendChat('/mess 2 Всё это возможно! Используй /tp - разное - автосалоны и покупай нужное авто.')
+					sampSendChat('/mess 2 В автосалоне нет нужного авто? Договорись с игроком, либо телепортируйся на /autoyartp')
+					sampSendChat('/mess 3 -------============= Автомобиль ==========-----------------')
+				end
+				if imgui.Button(u8'О /report', imgui.ImVec2(130, 25)) then
+					sampSendChat('/mess 17 --------========== Связь с администрацией ==========----------')
+					sampSendChat('/mess 13 Нашел читера, злостного нарушителя, ДМера, или просто мешают играть?')
+					sampSendChat('/mess 13 Появился вопрос о возможностях сервера или его ньансах?')
+					sampSendChat('/mess 13 Администрация поможет! Пиши /report и свою жалобу/вопрос')
+					sampSendChat('/mess 17 --------========== Связь с администрацией ==========----------')
 				end
 				imgui.Separator()
 				imgui.Text(u8'Мероприятия /join')
@@ -2151,8 +2186,6 @@ function timerans()
 					windows.ansreport_window_state.v = false
 					saveplayerrecon = nil
 				end
-			else
-				sampAddChatMessage(tag .. 'Игрок, написавший репорт, находится вне сети.', -1)
 			end
 		end
 	end
@@ -2282,9 +2315,6 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 							local d = d - 1
 							if don == '/' then
 								forma = poiskform
-								if v == 'ban' and not poiskform:find('banoff') and not poiskform:find('offban') and not poiskform:find('banakk') and not poiskform:find('unban') then
-									st.forumplease = true
-								end
 								if poiskform:find('unban') then
 									st.bool = true
 									st.timer = os.clock()
@@ -2299,6 +2329,9 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 									end
 									st.sett = true
 									break
+								end
+								if v == 'ban' then
+									st.forumplease = true
 								end
 								st.probid = string.match(forma, '%d[%d.,]*')
 								if st.probid and sampIsPlayerConnected(st.probid) then
@@ -2330,13 +2363,13 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 			end
 		end
 	end
-	if cfg.settings.acon and text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: (.+)") then
+	if cfg.settings.acon and text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)") then
 		local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)')
 		local messange = string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext
 		if #messange >= 150 then
 			messange = string.sub(messange, 1, 150) .. '...'
 		end 
-		admlvl, prefix, nickadm, idadm, admtext = nil
+		local admlvl, prefix, nickadm, idadm, admtext = nil
 		if maximum == true then
 			func0:terminate()
 			func1:terminate()
@@ -2391,6 +2424,11 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 		count = count + 1
 		return false --
 	end
+	if cfg.settings.ban or cfg.settings.mute or cfg.settings.jail or cfg.settings.kick then
+        if text:match('{FFFFFF}У Вас нет доступа к этой команде, для покупки {FFFFFF}перейдите в панель администратора.') then
+            return false
+        end
+    end
 	if cfg.settings.automute and not activeam then 
 		text = text:lower()
         text = text:rlower() .. ' '
@@ -2410,7 +2448,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 				end
 			end
 		end
-        if (text:match("(.*)%((%d+)%):%s(.+)(.+)") or text:match("(.*)%[(%d+)%]:%s(.+)")) and not text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") and not text:match('написал %[(%d+)%]:') and not text:match('ответил (.*)%[(%d+)%]: (.*)') and not text:match('жалоба') then
+        if (text:match("(.*)%((%d+)%):%s(.+)(.+)") or text:match("(.*)%[(%d+)%]:%s(.+)")) and not text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)") and not text:match('написал %[(%d+)%]:') and not text:match('ответил (.*)%[(%d+)%]: (.*)') and not text:match('жалоба') then
             if tonumber(text:match('%((%d+)%)')) then
                 oskid = tonumber(text:match('%((%d+)%)'))
             else
@@ -2468,11 +2506,6 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
                     return false
                 end
             end
-        end
-    end
-	if cfg.settings.ban or cfg.settings.mute or cfg.settings.jail or cfg.settings.kick then
-        if text:match('{FFFFFF}У Вас нет доступа к этой команде, для покупки {FFFFFF}перейдите в панель администратора.') then
-            return false
         end
     end
 end
@@ -2592,10 +2625,14 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				admins[i] = string.gsub(admins[i], '| Выговоры: %d из %d |', "")
 				admins[i] = string.gsub(admins[i], 'Репутация: (.+)', "")
 				admins[i] = string.gsub(admins[i], '| Уровень: (.+)', "")
-				if afk then
-					admins[i] = name .. '(' .. id .. ') ' .. rang .. '('.. lvl..')' .. ' [AFK: ' .. afk ..'] '
+				if rang ~= 'il' then
+					if afk then
+						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' ' .. lvl .. ' AFK: ' .. afk
+					else
+						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' '.. lvl
+					end
 				else
-					admins[i] = name .. '(' .. id .. ') ' .. rang .. '('.. lvl..')'
+					admins[i] = '[ Администратор без префиксa ]'
 				end
 				local name, id, rang, lvl, afk = nil
 			end
@@ -2868,7 +2905,7 @@ function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
 	nick = tostring(nick)
 	local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	if nick == sampGetPlayerNickname(myid) then return myid end
-	for i = 0, 1003 do
+	for i = 0, 301 do
 	  	if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == nick then
 			return i
 	  	end
@@ -2894,7 +2931,7 @@ function checkadmins()
 		if not activeam then
 			sampSendChat('/admins')
 		end
-		wait(10000)
+		wait(20000)
 	end
 end
 ------------- Input Helper -------------
