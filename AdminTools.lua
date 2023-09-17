@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.32
+local version = 2.33
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -125,10 +125,8 @@ local windows = {
 	checkadm_window_state = imgui.ImBool(false),
 	six_window_state = imgui.ImBool(false)
 }
-local answer = { 
-}
-local nakazatreport = {
-}
+local answer = {}
+local nakazatreport = {}
 local style_selected = imgui.ImInt(cfg.settings.style)
 local style_list = {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8"Бирюзовая тема", u8"Розовая тема", u8"Голубая тема"}
 local sw, sh = getScreenResolution()
@@ -151,8 +149,7 @@ local spisokproject = { -- список проектов за который идет автомут
 	[5] = 'евольв',
 	[6] = 'монсер',
 	[7] = 'арз',
-	[8] = 'arizon',
-	[9] = 'arz'
+	[8] = 'arz'
 }
 local spisokoskrod = { -- список оск.род за который идет автомут
 	[1] = 'mq',
@@ -1428,10 +1425,9 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Tooltip('F')
 		imgui.SameLine()
-		if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_N) then
+		if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) then
 			answer.otklon = true
 		end
-		imgui.Tooltip('N')
 		imgui.Separator()
 		if imgui.Checkbox(u8'Добавить ваш текст к ответу ' .. fa.ICON_COMMENTING_O, checkbox.checked_test15) or isKeyJustPressed(VK_X) then
 			cfg.settings.doptext = not cfg.settings.doptext
@@ -2753,13 +2749,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			end	
 			answer.moiotvet = true
 		end
-		if answer.otklon then
-			lua_thread.create(function()
-				sampSendDialogResponse(dialogId, 1, 2, _)
-				setVirtualKeyDown(13, true)
-				setVirtualKeyDown(13, false)
-			end)
-		end
 		if answer.rabotay then
 			peremrep = ('Начал(а) работу по вашей жалобе!')
 		end
@@ -2830,9 +2819,16 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		if answer.uto4 then
 			peremrep = ('Обратитесь с данной проблемой на форум https://forumrds.ru')
 		end
-		if answer.peredamrep or answer.moiotvet or answer.moiotvet or answer.slejy or answer.rabotay or answer.ojid or answer.uto4 or answer.uto4id or answer.nakajy or answer.jb or answer.moiotvet or answer.nakazan or answer.customans then
+		if answer.peredamrep or answer.moiotvet or answer.slejy or answer.rabotay or answer.ojid or answer.uto4 or answer.uto4id or answer.nakajy or answer.jb or answer.moiotvet or answer.nakazan or answer.customans then
 			setVirtualKeyDown(13, true)
 			setVirtualKeyDown(13, false)
+		end
+		if answer.otklon then
+			lua_thread.create(function()
+				sampSendDialogResponse(dialogId, 1, 2, _)
+				setVirtualKeyDown(13, true)
+				setVirtualKeyDown(13, false)
+			end)
 		end
 	end
 	if dialogId == 2351 and peremrep then -- окно с ответом на репорт
@@ -2890,8 +2886,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			else
 				saveplayerrecon = nil
 				ansid = nil
-				answer = {}
 			end
+			answer = {}
 		end)
 	end
 end
