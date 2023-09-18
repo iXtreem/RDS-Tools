@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.33
+local version = 2.34
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -324,22 +324,17 @@ function main() -- основной сценарий скрипта
 			wait(50)
 			if isKeyJustPressed(VK_U) and not sampIsChatInputActive() and not sampIsDialogActive() then
 				if sampIsPlayerConnected(st.idadmin) then
-					sampSendChat('/a Admin Tools: Форму принял.')
+					if st.forumplease then
+						cheater = string.match(forma, '%d[%d.,]*')
+						sampSendChat('/ans ' .. st.cheater .. ' Уважаемый ' .. sampGetPlayerNickname(st.cheater) .. ', Вы нарушали правила сервера.')
+						sampSendChat('/ans ' .. st.cheater .. ' Если Вы не согласны с наказанием, напишите жалобу на https://forumrds.ru')
+					end
 					if not st.styleform then
-						if st.forumplease then
-							st.cheater = string.match(forma, '%d[%d.,]*')
-							sampSendChat('/ans ' .. st.cheater .. ' Уважаемый ' .. sampGetPlayerNickname(st.cheater) .. ', Вы нарушали правила сервера.')
-							sampSendChat('/ans ' .. st.cheater .. ' Если Вы не согласны с наказанием, напишите жалобу на https://forumrds.ru')
-						end
 						sampSendChat(forma .. ' // ' .. st.nicknameform)
 					else
-						if st.forumplease then
-							cheater = string.match(forma, '%d[%d.,]*')
-							sampSendChat('/ans ' .. st.cheater .. ' Уважаемый ' .. sampGetPlayerNickname(st.cheater) .. ', Вы нарушали правила сервера.')
-							sampSendChat('/ans ' .. st.cheater .. ' Если Вы не согласны с наказанием, напишите жалобу на https://forumrds.ru')
-						end
 						sampSendChat(forma)
 					end
+					sampSendChat('/a Admin Tools: Форму принял.')
 				else
 					sampAddChatMessage(tag .. 'Администратор не в сети.', -1)
 				end
@@ -416,6 +411,7 @@ function ao()
 			while sampIsDialogActive() or sampIsChatInputActive() do
 				wait(0)
 			end
+			wait(500)
 			if not activeam then
 				sampSendChat("/online")
 			end
@@ -655,11 +651,11 @@ function imgui.OnDrawFrame()
 		if cfg.settings.keysync then
 			sampSendInputChat('/keysync off')
 		end
+		showCursor(false,false)
+		imgui.Process = false
 		if cfg.settings.checkadmins then
 			sampSendChat('/admins')
 		end
-		showCursor(false,false)
-		imgui.Process = false
 	end
 	if windows.main_window_state.v then -- КНОПКИ ИНТЕРФЕЙСА F3
 		if windows.checkadm_window_state.v then
@@ -1037,12 +1033,12 @@ function imgui.OnDrawFrame()
 					sampSendChat('/mess 15 Выход есть! Вводи /dt [0-999] и дрифти с комфортом.')
 					sampSendChat('/mess 8 --------============ Твой виртуальный мир ===========------------------')
 				end
-				if imgui.Button(u8'Покупка автомобиля', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 3 -------============= Автомобиль ==========-----------------')
-					sampSendChat('/mess 2 Мечтал приобрести суперкар? Мечтал сделать шикарный тюнинг под себя?')
-					sampSendChat('/mess 2 Всё это возможно! Используй /tp - разное - автосалоны и покупай нужное авто.')
-					sampSendChat('/mess 2 В автосалоне нет нужного авто? Договорись с игроком, либо телепортируйся на /autoyartp')
-					sampSendChat('/mess 3 -------============= Автомобиль ==========-----------------')
+				if imgui.Button(u8'Набор на админку', imgui.ImVec2(130, 25)) then
+					sampSendChat('/mess 3 -------============= Набор на пост администратора ==========-----------------')
+					sampSendChat('/mess 2 Мечтал встать на пост администратора? Чистить сервер от читеров и нарушителей?')
+					sampSendChat('/mess 2 Всё это возможно и совершенно бесплатно <3')
+					sampSendChat('/mess 2 На нашем форуме https://forumrds.ru/ открыт набор, успей подать заявку, кол-во мест ограничено.')
+					sampSendChat('/mess 3 -------============= Набор на пост администратора ==========-----------------')
 				end
 				if imgui.Button(u8'О /report', imgui.ImVec2(130, 25)) then
 					sampSendChat('/mess 17 --------========== Связь с администрацией ==========----------')
@@ -1143,7 +1139,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'/tool - открыть меню скрипта\n/wh - вкл/выкл функцию WallHack')
 			imgui.Separator()
 			imgui.CenterText(u8'Вспомогательные команды')
-			imgui.Text(u8'/n - Не наблюдаю нарушений от игрока\n/nak - игрок наказан\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/ur - снять мут репорта\n/uu - снятие мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
+			imgui.Text(u8'/n - Не наблюдаю нарушений от игрока\n/nak - игрок наказан\n/fo - обратитесь на форум\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/ur - снять мут репорта\n/uu - снятие мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
 			imgui.Separator()
 			imgui.CenterText(u8'Выдать мут чата')
 			imgui.Text(u8'/m - /m3 мат\n/ok - /ok3 оскорбление\n/fd - /fd3 флуд\n/nm - неадекватное поведение(600)\n/or - оск/упом родных\n/up - упоминание проекта с очисткой чата\n/oa - оскорбление администрации\n/kl - клевета на администрацию\n/po - /po3 - попрошайничество\n/rekl - реклама\n/zs - злоупотребление символами\n/rz - розжиг\n/ia - выдача себя за администрацию')
@@ -1634,6 +1630,9 @@ function imgui.OnDrawFrame()
 			sampAddChatMessage(tag .. 'Закройте диалог, чтобы продолжить.', -1)
 		end
 		imgui.End()
+	end
+	if windows.four_window_state.v and not sampIsPlayerConnected(playerrecon) then
+		windows.four_window_state.v = false
 	end
 	if windows.four_window_state.v then -- кастом рекон меню
 		if windows.checkadm_window_state.v then
@@ -2285,7 +2284,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 				end
 				local idwh = string.match(text, "%[(%d+)%]")
 				sampSendChat("/iwep " .. idwh)
-				sampAddChatMessage(tag .. "Обнаружен варнинг на чит-оружие! Пробиваю: " .. sampGetPlayerNickname(idwh) .. " [" .. idwh .. "]", -1)
+				sampAddChatMessage('{00FF00} Обнаружен варнинг на чит-оружие! Пробиваю: {DCDCDC}' .. sampGetPlayerNickname(idwh) .. " [" .. idwh .. "]", -1)
 				local idwh = nil
 			end 
 		end
@@ -2315,19 +2314,20 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 									st.bool = true
 									st.timer = os.clock()
 									st.sett = true
-									break
-								end
-								if poiskform:find('off') or poiskform:find('akk') then
-									st.bool = true
-									st.timer = os.clock()
-									if (poiskform.sub(poiskform, 2)):find('/') then
-										st.styleform = true
-									end
-									st.sett = true
+									st.styleform = true
 									break
 								end
 								if v == 'ban' then
 									st.forumplease = true
+								end
+								if poiskform:find('off') or poiskform:find('akk') then
+									st.bool = true
+									st.timer = os.clock()
+									if (poiskform.sub(poiskform, 2)):find('//') then
+										st.styleform = true
+									end
+									st.sett = true
+									break
 								end
 								st.probid = string.match(forma, '%d[%d.,]*')
 								if st.probid and sampIsPlayerConnected(st.probid) then
@@ -2346,7 +2346,9 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 											wait(6000)
 											func10:terminate()
 										end)
+										st = {}
 									else
+										st = {}
 										sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
 									end
 									break
@@ -2735,12 +2737,14 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 	end
 	if dialogId == 2350 then -- окно с возможностью принять или отклонить репорт
 		windows.tree_window_state.v = false
-		if (u8:decode(buffer.text_buffer.v)) and #answer == 0 then
+		if ((u8:decode(buffer.text_buffer.v)) and #answer == 0) or answer.moiotvet then
 			peremrep = (u8:decode(buffer.text_buffer.v))
-			if #buffer.text_buffer.v >= 80 then
+			if #peremrep >= 80 then
+				setClipboardText(peremrep)
 				peremrep = 'Мой ответ не вмещается в окно репорта, я отпишу вам лично'
+				sampAddChatMessage(tag .. 'Ваш ответ сохранен в буффер обмена.', -1)
 			end
-			if #peremrep <= 4 then
+			if #peremrep <= 4 and not cfg.settings.mytextreport then
 				peremrep = (u8:decode(buffer.text_buffer.v) .. '   ')
 			end
 			if cfg.settings.autosave then
@@ -2802,15 +2806,19 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					peremrep = ('Отправляюсь в слежку за игроком ' .. nickreportid .. '['..reportid..']')
 				end
 			end
-			if reportid == myid then
-				peremrep = ('Вы указали мой ID :D')
-				answer.slejy = nil
+			if myid then
+				if reportid == myid then
+					peremrep = ('Вы указали мой ID :D')
+					answer.slejy = nil
+				end
 			end
 		end
 		if answer.customans then
 			peremrep = answer.customans
 			if #peremrep >= 80 then
-				peremrep = ('Мой ответ не вмещается в окно репорта, я отпишу вам лично')
+				setClipboardText(peremrep)
+				peremrep = 'Мой ответ не вмещается в окно репорта, я отпишу вам лично'
+				sampAddChatMessage(tag .. 'Ваш ответ сохранен в буффер обмена.', -1)
 			end
 			if #peremrep <= 4 then
 				peremrep = (answer.customans .. '    ')
@@ -2824,11 +2832,9 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			setVirtualKeyDown(13, false)
 		end
 		if answer.otklon then
-			lua_thread.create(function()
-				sampSendDialogResponse(dialogId, 1, 2, _)
-				setVirtualKeyDown(13, true)
-				setVirtualKeyDown(13, false)
-			end)
+			sampSendDialogResponse(dialogId, 1, 2, _)
+			setVirtualKeyDown(13, true)
+			setVirtualKeyDown(13, false)
 		end
 	end
 	if dialogId == 2351 and peremrep then -- окно с ответом на репорт
@@ -2886,14 +2892,13 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			else
 				saveplayerrecon = nil
 				ansid = nil
+				answer = {}
 			end
-			answer = {}
 		end)
 	end
 end
 function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране.
 	if text:find('RECON') then
-		windows.four_window_state.v = false
 		return false
 	end
 end
@@ -2924,6 +2929,7 @@ function checkadmins()
 		while sampIsDialogActive() or sampIsChatInputActive() do
 			wait(0)
 		end
+		wait(1000)
 		if not activeam then
 			sampSendChat('/admins')
 		end
@@ -3332,7 +3338,7 @@ sampRegisterChatCommand('prfsa', function(param)
 end)
 sampRegisterChatCommand('prfpga', function(param) 
 	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Главный-Администратор " .. color())
+		sampSendChat("/prefix " .. param .. " Помощник.Глав.Администратора " .. color())
 	end
 end)
 sampRegisterChatCommand('prfzga', function(param) 
@@ -3353,6 +3359,13 @@ end)
 sampRegisterChatCommand('stw', function(param) 
 	if #param ~= 0 then
 		sampSendChat("/setweap " .. param .. " 38 5000")
+	else
+		sampAddChatMessage(tag .. 'Вы не указали значение.')
+	end
+end)
+sampRegisterChatCommand('fo', function(param)
+	if #param ~= 0 then
+		sampSendChat('/ans ' .. param .. ' Обратитесь с данной проблемой на форум https://forumrds.ru')
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
@@ -4017,10 +4030,7 @@ sampRegisterChatCommand('ch', function(param)
 	if #param ~= 0 then
 		sampSendChat('/ans ' .. param .. ' Уважаемый игрок, Вы наказаны за нарушение правил сервера.')
 		sampSendChat('/ans ' .. param .. ' Если Вы не согласны с выданным наказанием, напишите жалобу на https://forumrds.ru')
-		sampSendChat('/iban ' .. param .. ' 7 читерский скрипт/ПО')
-		if tonumber(playerrecon) == tonumber(param) then
-			windows.four_window_state.v = false
-		end
+		sampSendChat('/banc ' .. param)
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
