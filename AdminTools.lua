@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.35
+local version = 2.36
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -1158,7 +1158,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'/cafk - Афк на арене\n/jk - ДМ в джайле\n/kk1 - Смените ник 1/3\n/kk2 - Смените ник 2/3\n/kk3 - Смените ник 3/3 (бан)')
 			imgui.Separator()
 			imgui.CenterText(u8'Блокировка аккаунта')
-			imgui.Text(u8'/ch - читы\n/bosk - оскорбление проекта\n/obm - Обман/развод\n/nmb - Неадекватное поведение(3 дня)\n/oskhelper - Нарушение правил хелпера\n/reklama - реклама')
+			imgui.Text(u8'/ch - читы\n/bosk - оскорбление проекта\n/obm - Обман/развод\n/obh - обход бана\n/nmb - Неадекватное поведение(3 дня)\n/oskhelper - Нарушение правил хелпера\n/reklama - реклама')
 			imgui.Separator()
 			imgui.Text(u8'Выдача наказания в оффлайне - /okf /mf /dzf')
 		end
@@ -2485,6 +2485,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 	if id == 2052 then
 		lua_thread.create(function()
 			wait(100)
+			sampTextdrawSetPos(156, 2100, 0)
 			sampTextdrawSetPos(2052, 2000, 0)
 			playerrecon = tonumber(string.match(sampTextdrawGetString(2052), '%((%d+)%)')) -- id нарушителя
 			while not inforeport do
@@ -2497,7 +2498,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			end
 		end)
 	end
-	if (id == 144 or id == 146 or id == 141 or id == 155 or id == 153 or id == 156 or id == 154 or id == 152  or id == 160  or id == 170 or id == 168 or id == 174 or id == 182 or id == 172 or id == 171 or id == 173 or id == 150 or id == 147 or id == 183 or id == 151  or id == 142 or id == 149 or id == 143 or id == 184 or id == 179 or id == 145 or id == 157 or id == 180 or id == 178 or id == 166 or id == 169 or id == 167 or id == 148 or id == 176 or id == 175 or id == 177 or id == 158 or id == 162 or id == 437 or id == 159 or id == 165 or id == 163 or id == 181 or id == 161 or id == 164 or id == 165) then
+	if (id == 144 or id == 146 or id == 141 or id == 155 or id == 153 or id == 154 or id == 152  or id == 160  or id == 170 or id == 168 or id == 174 or id == 182 or id == 172 or id == 171 or id == 173 or id == 150 or id == 147 or id == 183 or id == 151  or id == 142 or id == 149 or id == 143 or id == 184 or id == 179 or id == 145 or id == 157 or id == 180 or id == 178 or id == 166 or id == 169 or id == 167 or id == 148 or id == 176 or id == 175 or id == 177 or id == 158 or id == 162 or id == 437 or id == 159 or id == 165 or id == 163 or id == 181 or id == 161 or id == 164 or id == 165) then
 		return false
 	end
 	if id == 2059 then
@@ -2556,7 +2557,11 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' '.. lvl
 					end
 				else
-					admins[i] = '[ Администратор без префиксa ]'
+					if afk then
+						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' ' .. lvl .. ' AFK: ' .. afk
+					else
+						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' '.. lvl
+					end
 				end
 				local name, id, rang, lvl, afk = nil
 			end
@@ -3979,6 +3984,13 @@ end)
 sampRegisterChatCommand('chf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/banoff ' .. param .. ' 7 читерский скрипт/ПО')
+	else
+		sampAddChatMessage(tag .. 'Вы не указали значение.')
+	end
+end)
+sampRegisterChatCommand('obh', function()
+	if #param ~= 0 then
+		sampSendChat('/iban ' .. param .. ' 7 Обход прошлого бана')
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
