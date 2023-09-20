@@ -2473,7 +2473,6 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampAddChatMessage('mat',-1)
 					sampSendChat('/mute ' .. oskid .. ' 300 Нецензурная лексика')
 					notify.addNotify('<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Запрещенное слово: ' .. tostring(cfg.mat[i]), 2,1,10)
 					return false
