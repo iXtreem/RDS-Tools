@@ -20,6 +20,7 @@ local pryatki_window_state = imgui.ImBool(false)
 local sportzal_window_state = imgui.ImBool(false)
 local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
+local tag = '{2B6CC4}Admin Tools: {F0E68C}'
 local cfg = inicfg.load({
     settings = {
         style = 0
@@ -48,7 +49,7 @@ function main()
 			end
 		end)
     end)
-	sampRegisterChatCommand('update', function()
+	sampRegisterChatCommand('updatemp', function()
 		if update_state then
 			downloadUrlToFile(script_url, script_path, function(id, status)
 				if status == dlstatus.STATUS_ENDDOWNLOADDATA then
