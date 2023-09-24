@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_MP' 
 script_author 'Neon4ik'
 local version = 0.2
-local function recode(u8) return encoding.UTF8:decode(u8) end -- Г¤ГҐГёГЁГґГ°Г®ГўГЄГ  ГЇГ°ГЁ Г ГўГІГ®Г®Г®ГЎГ­Г®ГўГ«ГҐГ­ГЁГЁ
+local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -27,14 +27,14 @@ local cfg = inicfg.load({
     },
 }, 'AdminTools.ini')
 inicfg.save(cfg, 'AdminTools.ini')
-local style_selected = imgui.ImInt(cfg.settings.style) -- ГЃГҐГ°ВёГ¬ Г±ГІГ Г­Г¤Г Г°ГІГ­Г®ГҐ Г§Г­Г Г·ГҐГ­ГЁГҐ Г±ГІГЁГ«Гї ГЁГ§ ГЄГ®Г­ГґГЁГЈГ 
+local style_selected = imgui.ImInt(cfg.settings.style) -- Берём стандартное значение стиля из конфига
 
 function main()
     repeat wait(0) until isSampAvailable()
     local dlstatus = require('moonloader').download_status
-	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.ini" -- Г‘Г±Г»Г«ГЄГ  Г­Г  ГЄГ®Г­ГґГЁГЈ
-	local update_path = getWorkingDirectory() .. "//resource//AT_MP.ini" -- ГЁ ГІГіГІ ГІГі Г¦ГҐ Г±Г Г¬ГіГѕ Г±Г±Г»Г«ГЄГі
-	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua" -- Г‘Г±Г»Г«ГЄГ  Г­Г  Г±Г Г¬ ГґГ Г©Г«
+	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.ini" -- Ссылка на конфиг
+	local update_path = getWorkingDirectory() .. "//resource//AT_MP.ini" -- и тут ту же самую ссылку
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua" -- Ссылка на сам файл
 	local script_path = thisScript().path
     downloadUrlToFile(update_url, update_path, function(id, status)
 		lua_thread.create(function()
@@ -52,13 +52,13 @@ function main()
 		if update_state then
 			downloadUrlToFile(script_url, script_path, function(id, status)
 				if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-					sampAddChatMessage(tag .. 'Г‘ГЄГ°ГЁГЇГІ Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГ© ГіГ±ГЇГҐГёГ­Г® Г®ГЎГ­Г®ГўГ«ГҐГ­.')
+					sampAddChatMessage(tag .. 'Скрипт мероприятий успешно обновлен.')
 					showCursor(false,false)
 					thisScript():reload()
 				end
 			end)
 		else
-			sampAddChatMessage(tag .. 'Г“ ГўГ Г± ГіГ±ГІГ Г­Г®ГўГ«ГҐГ­Г  Г ГЄГІГіГ Г«ГјГ­Г Гї ГўГҐГ°Г±ГЁГї Г¤Г«Гї Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГ©.')
+			sampAddChatMessage(tag .. 'У вас установлена актуальная версия для мероприятий.')
 		end
 	end)
     writeMemory(sampGetBase() + 0x9D9D0, 4, 0x5051FF15, true)
@@ -80,39 +80,39 @@ function imgui.OnDrawFrame()
     end
     if main_window_state.v then
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"ГЊГҐГ°Г®ГЇГ°ГЁГїГІГЁГї", main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Мероприятия", main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-        imgui.Text(u8'ГЏГ®Г¬Г®Г·Гј ГЇГ°Г®ГўГҐГ±ГІГЁ Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ?')
-        if imgui.Button(u8'Г„Г ', imgui.ImVec2(125, 25)) then
+        imgui.Text(u8'Помочь провести мероприятие?')
+        if imgui.Button(u8'Да', imgui.ImVec2(125, 25)) then
             secondary_window_state.v = true
             main_window_state.v = false
         end
         imgui.SameLine()
-        if imgui.Button(u8'ГЌГҐГІ', imgui.ImVec2(125, 25)) then
+        if imgui.Button(u8'Нет', imgui.ImVec2(125, 25)) then
             main_window_state.v = false
         end
         imgui.End()
     end
     if menu_window_state.v then
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2) - 100, (sh/2) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"Г‚Г§Г ГЁГ¬Г®Г¤ГҐГ©Г±ГІГўГЁГҐ Г± ГЁГЈГ°Г®ГЄГ®Г¬", menu_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Взаимодействие с игроком", menu_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-        imgui.Text(u8'Г—ГІГ® Г±Г¤ГҐГ«Г ГІГј Г± ГЁГЈГ°Г®ГЄГ®Г¬\n' .. sampGetPlayerNickname(id) .. '?')
-        if imgui.Button(u8'Г‡Г Г±ГЇГ ГўГ­ГЁГІГј', imgui.ImVec2(200, 30)) then
+        imgui.Text(u8'Что сделать с игроком\n' .. sampGetPlayerNickname(id) .. '?')
+        if imgui.Button(u8'Заспавнить', imgui.ImVec2(200, 30)) then
             sampSendChat('/aspawn ' .. id)
         end
-        if imgui.Button(u8'ГЌГ Г°ГіГёГҐГ­ГЁГҐ ГЇГ°Г ГўГЁГ« Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГ©', imgui.ImVec2(200, 30)) then
-            sampSendChat('/jail ' .. id .. ' 300 ГЌГ Г°ГіГёГҐГ­ГЁГҐ ГЇГ°Г ГўГЁГ« ГЊГЏ')
+        if imgui.Button(u8'Нарушение правил мероприятий', imgui.ImVec2(200, 30)) then
+            sampSendChat('/jail ' .. id .. ' 300 Нарушение правил МП')
             showCursor(false,false)
             menu_window_state.v = false
         end
-        if imgui.Button(u8'Г‘Г°Г»Гў Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГї', imgui.ImVec2(200, 30)) then
-            sampSendChat('/jail ' .. id .. ' 3000 Г‘Г°Г»Гў Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГї')
+        if imgui.Button(u8'Срыв мероприятия', imgui.ImVec2(200, 30)) then
+            sampSendChat('/jail ' .. id .. ' 3000 Срыв мероприятия')
             showCursor(false,false)
             menu_window_state.v = false
         end
-        if imgui.Button(u8'Г‚Г»Г¤Г ГІГј ГЇГ°ГЁГ§', imgui.ImVec2(200, 30)) then
-            sampSendChat('/mess 7 ГЏГ®ГЎГҐГ¤ГЁГІГҐГ«Гј Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГї - ' .. sampGetPlayerNickname(id) .. '[' .. id .. ']' .. ' ГЇГ®Г§Г¤Г°Г ГўГЁГ¬ ГҐГЈГ®!')
+        if imgui.Button(u8'Выдать приз', imgui.ImVec2(200, 30)) then
+            sampSendChat('/mess 7 Победитель мероприятия - ' .. sampGetPlayerNickname(id) .. '[' .. id .. ']' .. ' поздравим его!')
             sampSendChat('/mpwin ' .. id)
             sampSetChatInputText('/spp')
             sampSetChatInputEnabled(true)
@@ -127,14 +127,14 @@ function imgui.OnDrawFrame()
         end
         if corol_window_state.v or sportzal_window_state.v then
             if not player1 then
-                if imgui.Button(u8'Г‘Г®ГµГ°Г Г­ГЁГІГј 1-Г®ГЈГ® ГЁГЈГ°Г®ГЄГ ', imgui.ImVec2(200, 30)) then
+                if imgui.Button(u8'Сохранить 1-ого игрока', imgui.ImVec2(200, 30)) then
                     player1 = id
                     showCursor(false,false)
                     menu_window_state.v = false
                 end
             end
             if not player2 then
-                if imgui.Button(u8'Г‘Г®ГµГ°Г Г­ГЁГІГј 2-Г®ГЈГ® ГЁГЈГ°Г®ГЄГ ', imgui.ImVec2(200, 30)) then
+                if imgui.Button(u8'Сохранить 2-ого игрока', imgui.ImVec2(200, 30)) then
                     player2 = id
                     showCursor(false,false)
                     menu_window_state.v = false
@@ -146,25 +146,25 @@ function imgui.OnDrawFrame()
     if secondary_window_state.v then
      --   imgui.SetNextWindowSize(imgui.ImVec2(250, 170), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"Г‚Г»ГЎГҐГ°ГЁ Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ", secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Выбери мероприятие", secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-        if imgui.Button(u8'ГђГіГ±Г±ГЄГ Гї Г°ГіГ«ГҐГІГЄГ ', imgui.ImVec2(230, 30)) then
+        if imgui.Button(u8'Русская рулетка', imgui.ImVec2(230, 30)) then
             russkaya_window_state.v = true
             secondary_window_state.v = false
         end
-        if imgui.Button(u8'ГЉГ®Г°Г®Г«Гј Г¤ГЁГЈГ«Г ', imgui.ImVec2(230, 30)) then
+        if imgui.Button(u8'Король дигла', imgui.ImVec2(230, 30)) then
             corol_window_state.v = true
             secondary_window_state.v = false
         end
-        if imgui.Button(u8'ГЏГ®Г«ГЁГўГ Г«ГЄГ ', imgui.ImVec2(230, 30)) then
+        if imgui.Button(u8'Поливалка', imgui.ImVec2(230, 30)) then
             poliv_window_state.v = true
             secondary_window_state.v = false
         end
-        if imgui.Button(u8'ГЏГ°ГїГІГЄГЁ', imgui.ImVec2(230, 30)) then
+        if imgui.Button(u8'Прятки', imgui.ImVec2(230, 30)) then
             pryatki_window_state.v = true
             secondary_window_state.v = false
         end
-        if imgui.Button(u8'ГЃГ®ГЄГ±', imgui.ImVec2(230, 30)) then
+        if imgui.Button(u8'Бокс', imgui.ImVec2(230, 30)) then
             sportzal_window_state.v = true
             secondary_window_state.v = false
         end
@@ -173,16 +173,16 @@ function imgui.OnDrawFrame()
     if russkaya_window_state.v then
    --     imgui.SetNextWindowSize(imgui.ImVec2(250, 120), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"ГђГіГ±Г±ГЄГ Гї Г°ГіГ«ГҐГІГЄГ ", russkaya_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Русская рулетка", russkaya_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
-            imgui.Text(u8'ГЂГЄГІГЁГўГ Г¶ГЁГї ГЄГіГ°Г±Г®Г°Г  - F')
-            imgui.Text(u8'Г‚Г§Г ГЁГ¬Г®Г¤ГҐГ©Г±ГІГўГЁГҐ Г± ГЁГЈГ°Г®ГЄГ Г¬ГЁ:')
-            imgui.Text(u8'ГЏГ°Г ГўГ Гї ГЄГ­Г®ГЇГЄГ  Г¬Г»ГёГЁ + 1')
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г±ГЎГ®Г° ГЁГЈГ°Г®ГЄГ®Гў', imgui.ImVec2(230, 30)) then
+            imgui.Text(u8'Активация курсора - F')
+            imgui.Text(u8'Взаимодействие с игроками:')
+            imgui.Text(u8'Правая кнопка мыши + 1')
+            if imgui.Button(u8'Начать сбор игроков', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}: ГЋГ¦ГЁГ¤Г Г©ГІГҐ...', -1)
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Ожидайте...', -1)
                     if not sampIsDialogActive() then
                         sampSendChat('/mp')
                     end
@@ -210,7 +210,7 @@ function imgui.OnDrawFrame()
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendDialogResponse(5344, 1, _, 'ГђГіГ±Г±ГЄГ Гї ГђГіГ«ГҐГІГЄГ ')
+                    sampSendDialogResponse(5344, 1, _, 'Русская Рулетка')
                     wait(400)
                     sampCloseCurrentDialogWithButton(0)
                     wait(400)
@@ -219,22 +219,22 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 ГЌГ Г·ГЁГ­Г ГҐГІГ±Гї Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ ГђГіГ±Г±ГЄГ Гї ГђГіГ«ГҐГІГЄГ , Г¤Г«Гї ГІГҐГ«ГҐГЇГ®Г°ГІГ  ГўГўГ®Г¤ГЁ /tpmp')
-                    sampSendChat('/mess 7 ГЏГ®ГІГ®Г°Г®ГЇГЁГ±Гј, ГІГҐГ«ГҐГЇГ®Г°ГІ Г±ГЄГ®Г°Г® Г§Г ГЄГ°Г®ГҐГІГ±Гї! Г‚ГўГ®Г¤ГЁ /tpmp')
+                    sampSendChat('/mess 7 Начинается мероприятие Русская Рулетка, для телепорта вводи /tpmp')
+                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
                     showCursor(false,false)
                     sbor = true
                 end)
             end
         end
         if sbor then
-            if imgui.Button(u8'ГЌГ ГЇГ®Г¬Г­ГЁГІГј ГЇГ°Г® Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(230, 30)) then
-                sampSendChat('/mess 7 Г’ГҐГ«ГҐГЇГ®Г°ГІ ГўГ±Вё ГҐГ№Вё Г®ГІГЄГ°Г»ГІ, Гі ГІГҐГЎГї ГҐГ±ГІГј ГёГ Г­Г± ГЇГ®ГіГ·Г ГўГ±ГІГўГ®ГўГ ГІГј Г­Г  ГђГіГ±Г±ГЄГ®Г© ГђГіГ«ГҐГІГЄГҐ, ГўГўГ®Г¤ГЁ /tpmp')
+            if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
+                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать на Русской Рулетке, вводи /tpmp')
             end
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(230, 30)) then
+            if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
-                    sampSendChat('/mess 7 ГЏГ°Г ГўГЁГ«Г  Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГї ГђГіГ±Г±ГЄГ Гї ГђГіГ«ГҐГІГЄГ !')
-                    sampSendChat('/mess 7 /try ГіГ¤Г Г·Г­Г® - ГіГЎГЁГІ, /try Г­ГҐГіГ¤Г Г·Г­Г® - Г¦ГЁГў. ГЏГ®ГЎГҐГ¦Г¤Г ГҐГІ Г±Г Г¬Г»Г© ГўГҐГ§ГіГ·ГЁГ©.')
-                    sampSendChat('/mess 7 Г‡Г ГЇГ°ГҐГ№ГҐГ­Г»: /passive, /fly, /gt, DM, /s /r /anim /jp ГЁ Г«ГѕГЎГ Гї Г¤Г°ГіГЈГ Гї ГЇГ®Г¬ГҐГµГ  ГЁГЈГ°Г®ГЄГ Г¬.')
+                    sampSendChat('/mess 7 Правила мероприятия Русская Рулетка!')
+                    sampSendChat('/mess 7 /try удачно - убит, /try неудачно - жив. Побеждает самый везучий.')
+                    sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -255,7 +255,7 @@ function imgui.OnDrawFrame()
         end
         if mp then
             lua_thread.create(function()
-                if imgui.Button(u8'Г‚Г»Г¤Г ГІГј ГўГ±ГҐГ¬ ГµГЇ', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(230, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -266,7 +266,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'ГЋГЎГҐГ§Г§Г Г°ГіГ¦ГЁГІГј ГўГ±ГҐГµ', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(230, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -277,7 +277,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'Г‡Г ГўГҐГ°ГёГЁГІГј ГЊГЏ Г¤Г®Г±Г°Г®Г·Г­Г®', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Завершить МП досрочно', imgui.ImVec2(230, 30)) then
                     showCursor(false,false)
                     showCursor(false,false)
                     thisScript():reload()
@@ -298,18 +298,18 @@ function imgui.OnDrawFrame()
     if corol_window_state.v then
       --  imgui.SetNextWindowSize(imgui.ImVec2(300, 150), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"ГЉГ®Г°Г®Г«Гј Г„ГЁГЈГ«Г ", corol_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Король Дигла", corol_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
-            imgui.Text(u8'Г“Г¤Г®Г±ГІГ®ГўГҐГ°ГјГІГҐГ±Гј, Г·ГІГ® Гі ГўГ Г± ГўГЄГ«ГѕГ·ГҐГ­Г  Г Г¤Г¬ГЁГ­-Г§Г®Г­Г ')
-            imgui.Text(u8'Г‚ГЄГ«ГѕГ·ГЁГІГј ГҐВё Г¬Г®Г¦Г­Г® Гў /mp - Г­Г Г±ГІГ°Г®Г©ГЄГЁ - 1')
-            imgui.Text(u8'ГЂГЄГІГЁГўГ Г¶ГЁГї ГЄГіГ°Г±Г®Г°Г  - F')
-            imgui.Text(u8'Г‚Г§Г ГЁГ¬Г®Г¤ГҐГ©Г±ГІГўГЁГҐ Г± ГЁГЈГ°Г®ГЄГ Г¬ГЁ:')
-            imgui.Text(u8'ГЏГ°Г ГўГ Гї ГЄГ­Г®ГЇГЄГ  Г¬Г»ГёГЁ + 1')
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г±ГЎГ®Г° ГЁГЈГ°Г®ГЄГ®Гў', imgui.ImVec2(280, 30)) then
+            imgui.Text(u8'Удостоверьтесь, что у вас включена админ-зона')
+            imgui.Text(u8'Включить её можно в /mp - настройки - 1')
+            imgui.Text(u8'Активация курсора - F')
+            imgui.Text(u8'Взаимодействие с игроками:')
+            imgui.Text(u8'Правая кнопка мыши + 1')
+            if imgui.Button(u8'Начать сбор игроков', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}: ГЋГ¦ГЁГ¤Г Г©ГІГҐ...', -1)
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Ожидайте...', -1)
                     if not sampIsDialogActive() then
                         sampSendChat('/mp')
                     end
@@ -339,7 +339,7 @@ function imgui.OnDrawFrame()
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendDialogResponse(5344, 1, _, 'ГЉГ®Г°Г®Г«Гј Г¤ГЁГЈГ«Г ')
+                    sampSendDialogResponse(5344, 1, _, 'Король дигла')
                     wait(400)
                     sampCloseCurrentDialogWithButton(0)
                     wait(400)
@@ -348,22 +348,22 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 ГЌГ Г·ГЁГ­Г ГҐГІГ±Гї Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ ГЉГ®Г°Г®Г«Гј Г¤ГЁГЈГ«Г , Г¤Г«Гї ГІГҐГ«ГҐГЇГ®Г°ГІГ  ГўГўГ®Г¤ГЁ /tpmp')
-                    sampSendChat('/mess 7 ГЏГ®ГІГ®Г°Г®ГЇГЁГ±Гј, ГІГҐГ«ГҐГЇГ®Г°ГІ Г±ГЄГ®Г°Г® Г§Г ГЄГ°Г®ГҐГІГ±Гї! Г‚ГўГ®Г¤ГЁ /tpmp')
+                    sampSendChat('/mess 7 Начинается мероприятие Король дигла, для телепорта вводи /tpmp')
+                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
                     showCursor(false,false)
                     sbor = true
                 end)
             end
         end
         if sbor then
-            if imgui.Button(u8'ГЌГ ГЇГ®Г¬Г­ГЁГІГј ГЇГ°Г® Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(280, 30)) then
-                sampSendChat('/mess 7 Г’ГҐГ«ГҐГЇГ®Г°ГІ ГўГ±Вё ГҐГ№Вё Г®ГІГЄГ°Г»ГІ, Гі ГІГҐГЎГї ГҐГ±ГІГј ГёГ Г­Г± ГЇГ®ГіГ·Г ГўГ±ГІГўГ®ГўГ ГІГј Гў Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГЁ ГЉГ®Г°Г®Г«Гј Г„ГЁГЈГ«Г , ГўГўГ®Г¤ГЁ /tpmp')
+            if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(280, 30)) then
+                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Король Дигла, вводи /tpmp')
             end
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(280, 30)) then
+            if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
-                    sampSendChat('/mess 7 ГЏГ°Г ГўГЁГ«Г  Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГї ГЉГ®Г°Г®Г«Гј Г„ГЁГЈГ«Г !')
-                    sampSendChat('/mess 7 Гџ ГўГ»Г§Г»ГўГ Гѕ Г¤ГўГіГµ Г·ГҐГ«Г®ГўГҐГЄ, ГЄГ®ГІГ®Г°Г»ГҐ Г­Г Г·ГЁГ­Г ГѕГІ Г±ГІГ°ГҐГ«ГїГІГјГ±Гї ГЇГ® Г¬Г®ГҐГ© ГЄГ®Г¬Г Г­Г¤ГҐ, ГЇГ®ГЎГҐГ¦Г¤Г ГҐГІ Г±ГЁГ«ГјГ­ГҐГ©ГёГЁГ©')
-                    sampSendChat('/mess 7 Г‡Г ГЇГ°ГҐГ№ГҐГ­Г»: /passive, /fly, /gt, DM, /s /r /anim /jp ГЁ Г«ГѕГЎГ Гї Г¤Г°ГіГЈГ Гї ГЇГ®Г¬ГҐГµГ  ГЁГЈГ°Г®ГЄГ Г¬.')
+                    sampSendChat('/mess 7 Правила мероприятия Король Дигла!')
+                    sampSendChat('/mess 7 Я вызываю двух человек, которые начинают стреляться по моей команде, побеждает сильнейший')
+                    sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -386,7 +386,7 @@ function imgui.OnDrawFrame()
         end
         if mp then
             lua_thread.create(function()
-                if imgui.Button(u8'Г‚Г»Г¤Г ГІГј ГўГ±ГҐГ¬ ГµГЇ', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(280, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -397,7 +397,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'ГЋГЎГҐГ§Г§Г Г°ГіГ¦ГЁГІГј ГўГ±ГҐГµ', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(280, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -408,7 +408,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'ГЏГ®Г¤ГҐГ«ГЁГІГј ГўГ±ГҐГµ Г­Г  ГЄГ®Г¬Г Г­Г¤Г»', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Поделить всех на команды', imgui.ImVec2(280, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -425,33 +425,33 @@ function imgui.OnDrawFrame()
                 end
             end)
             if player1 then
-                if imgui.Button(u8'Г’ГҐГ«ГҐГЇГ®Г°ГІГЁГ°Г®ГўГ ГІГј 1-Г®ГЈГ® ГЁГЈГ°Г®ГЄГ ', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Телепортировать 1-ого игрока', imgui.ImVec2(280, 30)) then
                     sampSendChat('/gethere ' .. player1)
                 end
             end
             if player2 then
-                if imgui.Button(u8'Г’ГҐГ«ГҐГЇГ®Г°ГІГЁГ°Г®ГўГ ГІГј 2-Г®ГЈГ® ГЁГЈГ°Г®ГЄГ ', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Телепортировать 2-ого игрока', imgui.ImVec2(280, 30)) then
                     sampSendChat('/gethere ' .. player2)
                 end
             end
             lua_thread.create(function()
                 if player1 and player2 then
-                    if imgui.Button(u8'ГЌГ Г·Г ГІГј PVP', imgui.ImVec2(280, 30)) then
-                        sampSendChat('/mess 3 ГЌГ  Г Г°ГҐГ­Гі ГўГ»ГµГ®Г¤ГїГІ ГЁГЈГ°Г®ГЄГЁ ' .. sampGetPlayerNickname(player1) .. ' ГЁ ' .. sampGetPlayerNickname(player2))
-                        sampSendChat('/mess 3 ГЌГ Г·ГЁГ­Г Гѕ Г®ГІГ±Г·ГҐГІ Гў 10 Г±ГҐГЄГіГ­Г¤, ГЇГ®Г±Г«ГҐ Г­ГҐГЈГ® Г¬Г®Г¦Г­Г® Г­Г Г·ГЁГ­Г ГІГј Г®ГЈГ®Г­Гј!')
+                    if imgui.Button(u8'Начать PVP', imgui.ImVec2(280, 30)) then
+                        sampSendChat('/mess 3 На арену выходят игроки ' .. sampGetPlayerNickname(player1) .. ' и ' .. sampGetPlayerNickname(player2))
+                        sampSendChat('/mess 3 Начинаю отсчет в 10 секунд, после него можно начинать огонь!')
                         sampSendChat('/dmcount 10')
                         player1 = nil
                         player2 = nil
                     end
                 else
-                    if imgui.Button(u8'ГЌГ Г·Г ГІГј PVP', imgui.ImVec2(280, 30)) then
-                        sampAddChatMessage('{FF0000}MP{FFFFFF}: ГЌГ Г¦Г¬ГЁ ГЇГ°Г ГўГ®Г© ГЄГ­Г®ГЇГЄГ®Г© Г¬Г»ГёГЁ + 1 Г­Г  Г¦ГҐГ«Г ГҐГ¬Г®ГЈГ® ГЁГЈГ°Г®ГЄГ  ГЁ Г¤Г®ГЎГ ГўГј ГҐГЈГ® Гў Г±ГЄГ°ГЁГЇГІ', -1)
-                        sampAddChatMessage('{FF0000}MP{FFFFFF}: Г‘Г¤ГҐГ«Г Г© ГІГ ГЄГ¦ГҐ Г±Г® ГўГІГ®Г°Г»Г¬ ГЁГЈГ°Г®ГЄГ®Г¬, ГІГ®Г«ГјГЄГ® ГЇГ®Г±Г«ГҐ ГЅГІГ®ГЈГ® Г­Г Г¦ГЁГ¬Г Г© ГЄГ­Г®ГЇГЄГі.', -1)
+                    if imgui.Button(u8'Начать PVP', imgui.ImVec2(280, 30)) then
+                        sampAddChatMessage('{FF0000}MP{FFFFFF}: Нажми правой кнопкой мыши + 1 на желаемого игрока и добавь его в скрипт', -1)
+                        sampAddChatMessage('{FF0000}MP{FFFFFF}: Сделай также со вторым игроком, только после этого нажимай кнопку.', -1)
                     end
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'Г‡Г ГўГҐГ°ГёГЁГІГј ГЊГЏ Г¤Г®Г±Г°Г®Г·Г­Г®', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Завершить МП досрочно', imgui.ImVec2(280, 30)) then
                     showCursor(false,false)
                     thisScript():reload()
                 end
@@ -471,17 +471,17 @@ function imgui.OnDrawFrame()
     if poliv_window_state.v then
         imgui.SetNextWindowSize(imgui.ImVec2(250, 120), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"ГЏГ®Г«ГЁГўГ Г«ГЄГ ", poliv_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Поливалка", poliv_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
-            imgui.Text(u8'ГЂГЄГІГЁГўГ Г¶ГЁГї ГЄГіГ°Г±Г®Г°Г  - F')
-            imgui.Text(u8'ГЌГ ГЄГ Г§Г ГІГј ГЁГЈГ°Г®ГЄГ  - ГЄГ®Г¬Г Г­Г¤Г  /jm')
-            imgui.Text(u8'Г‘ГЄГ°ГЁГЇГІ Г±Г¤ГҐГ«Г ГҐГІ ГўГ±ГҐ Г±Г Г¬, ГўГ Г¬ ГІГ®Г«ГјГЄГ® Г¦Г ГІГј ГЄГ­Г®ГЇГЄГЁ.')
-            imgui.Text(u8'Г‡Г ГЄГ°Г®Г©ГІГҐ Г¤ГЁГ Г«Г®ГЈГЁ Г·ГІГ®ГЎГ» Г±ГЄГ°ГЁГЇГІ Г±Г Г¬ Г±Г¤ГҐГ«Г Г« ГІГҐГ«ГҐГЇГ®Г°ГІ.')
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г±ГЎГ®Г° ГЁГЈГ°Г®ГЄГ®Гў', imgui.ImVec2(230, 30)) then
+            imgui.Text(u8'Активация курсора - F')
+            imgui.Text(u8'Наказать игрока - команда /jm')
+            imgui.Text(u8'Скрипт сделает все сам, вам только жать кнопки.')
+            imgui.Text(u8'Закройте диалоги чтобы скрипт сам сделал телепорт.')
+            if imgui.Button(u8'Начать сбор игроков', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}: ГЋГ¦ГЁГ¤Г Г©ГІГҐ...', -1)
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Ожидайте...', -1)
                     while sampIsDialogActive() do
                         wait(0)
                         sampCloseCurrentDialogWithButton(0)
@@ -510,7 +510,7 @@ function imgui.OnDrawFrame()
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendDialogResponse(5344, 1, _, 'ГЏГ®Г«ГЁГўГ Г«ГЄГ ')
+                    sampSendDialogResponse(5344, 1, _, 'Поливалка')
                     wait(400)
                     sampCloseCurrentDialogWithButton(0)
                     wait(400)
@@ -519,34 +519,34 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 ГЌГ Г·ГЁГ­Г ГҐГІГ±Гї Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ ГЏГ®Г«ГЁГўГ Г«ГЄГ , Г¤Г«Гї ГІГҐГ«ГҐГЇГ®Г°ГІГ  ГўГўГ®Г¤ГЁ /tpmp')
-                    sampSendChat('/mess 7 ГЏГ®ГІГ®Г°Г®ГЇГЁГ±Гј, ГІГҐГ«ГҐГЇГ®Г°ГІ Г±ГЄГ®Г°Г® Г§Г ГЄГ°Г®ГҐГІГ±Гї! Г‚ГўГ®Г¤ГЁ /tpmp')
+                    sampSendChat('/mess 7 Начинается мероприятие Поливалка, для телепорта вводи /tpmp')
+                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
                     showCursor(false,false)
                     sbor = true
                 end)
             end
         end
         if sbor then
-            if imgui.Button(u8'ГЌГ ГЇГ®Г¬Г­ГЁГІГј ГЇГ°Г® Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(230, 30)) then
-                sampSendChat('/mess 7 Г’ГҐГ«ГҐГЇГ®Г°ГІ ГўГ±Вё ГҐГ№Вё Г®ГІГЄГ°Г»ГІ, Гі ГІГҐГЎГї ГҐГ±ГІГј ГёГ Г­Г± ГЇГ®ГіГ·Г ГўГ±ГІГўГ®ГўГ ГІГј Гў Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГЁ ГЏГ®Г«ГЁГўГ Г«ГЄГ , ГўГўГ®Г¤ГЁ /tpmp')
+            if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
+                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Поливалка, вводи /tpmp')
             end
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(230, 30)) then
+            if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
-                    sampSendChat('/mess 7 ГЏГ°Г ГўГЁГ«Г  Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГї ГЏГ®Г«ГЁГўГ Г«ГЄГ !')
-                    sampSendChat('/mess 7 Г‚Г» Г°Г Г§ГЎГҐГЈГ ГҐГІГҐГ±Гј ГЇГ® ГўГ±ГҐГ© ГЄГ°Г»ГёГҐ, Гї ГЇГ»ГІГ ГѕГ±Гј ГўГ Г± Г±ГЎГЁГІГј, ГЇГ®Г±Г«ГҐГ¤Г­ГЁГ© ГўГ»Г¦ГЁГўГёГЁГ© - ГЇГ®ГЎГҐГ¦Г¤Г ГҐГІ')
-                    sampSendChat('/mess 7 Г‡Г ГЇГ°ГҐГ№ГҐГ­Г»: /passive, /fly, /gt, DM, /s /r /anim /jp ГЁ Г«ГѕГЎГ Гї Г¤Г°ГіГЈГ Гї ГЇГ®Г¬ГҐГµГ  ГЁГЈГ°Г®ГЄГ Г¬.')
+                    sampSendChat('/mess 7 Правила мероприятия Поливалка!')
+                    sampSendChat('/mess 7 Вы разбегаетесь по всей крыше, я пытаюсь вас сбить, последний выживший - побеждает')
+                    sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/veh 601 1 1')
                     while getClosestCarId() == '-1' do
                         wait(0)
                     end
                     wait(2000)
                     sampSendChat('/entercar ' .. getClosestCarId())
-                    sampSendChat('/mess 7 ГђГ Г§ГЎГҐГЈГ ГҐГ¬Г±Гї!')
+                    sampSendChat('/mess 7 Разбегаемся!')
                     sampSendChat('/dmcount 5')
                     sampSendChat('/s')
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}:ГЏГЋГ‡Г€Г–Г€Гџ ГЃГ›Г‹ГЂ Г‘ГЋГ•ГђГЂГЌГ…ГЌГЂ, Г…Г‘Г‹Г€ Г“ГЏГЂГ„ВЁГ’Г… Г€Г‘ГЏГЋГ‹ГњГ‡Г“Г‰Г’Г… /r', -1)
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}:ГЏГЋГ‡Г€Г–Г€Гџ ГЃГ›Г‹ГЂ Г‘ГЋГ•ГђГЂГЌГ…ГЌГЂ, Г…Г‘Г‹Г€ Г“ГЏГЂГ„ВЁГ’Г… Г€Г‘ГЏГЋГ‹ГњГ‡Г“Г‰Г’Г… /r', -1)
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}:ГЏГЋГ‡Г€Г–Г€Гџ ГЃГ›Г‹ГЂ Г‘ГЋГ•ГђГЂГЌГ…ГЌГЂ, Г…Г‘Г‹Г€ Г“ГЏГЂГ„ВЁГ’Г… Г€Г‘ГЏГЋГ‹ГњГ‡Г“Г‰Г’Г… /r', -1)
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}:ПОЗИЦИЯ БЫЛА СОХРАНЕНА, ЕСЛИ УПАДЁТЕ ИСПОЛЬЗУЙТЕ /r', -1)
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}:ПОЗИЦИЯ БЫЛА СОХРАНЕНА, ЕСЛИ УПАДЁТЕ ИСПОЛЬЗУЙТЕ /r', -1)
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}:ПОЗИЦИЯ БЫЛА СОХРАНЕНА, ЕСЛИ УПАДЁТЕ ИСПОЛЬЗУЙТЕ /r', -1)
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -564,7 +564,7 @@ function imgui.OnDrawFrame()
         end
         if mp then
             lua_thread.create(function()
-                if imgui.Button(u8'Г‚Г»Г¤Г ГІГј ГўГ±ГҐГ¬ ГµГЇ', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(230, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -575,7 +575,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'ГЋГЎГҐГ§Г§Г Г°ГіГ¦ГЁГІГј ГўГ±ГҐГµ', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(230, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -586,7 +586,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'Г‡Г ГўГҐГ°ГёГЁГІГј ГЊГЏ Г¤Г®Г±Г°Г®Г·Г­Г®', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Завершить МП досрочно', imgui.ImVec2(230, 30)) then
                     showCursor(false,false)
                     thisScript():reload()
                 end
@@ -606,16 +606,16 @@ function imgui.OnDrawFrame()
     if pryatki_window_state.v then
         --     imgui.SetNextWindowSize(imgui.ImVec2(250, 120), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"ГЏГ°ГїГІГЄГЁ", pryatki_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Прятки", pryatki_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
-            imgui.Text(u8'ГЂГЄГІГЁГўГ Г¶ГЁГї ГЄГіГ°Г±Г®Г°Г  - F')
-            imgui.Text(u8'Г‚Г§Г ГЁГ¬Г®Г¤ГҐГ©Г±ГІГўГЁГҐ Г± ГЁГЈГ°Г®ГЄГ Г¬ГЁ:')
-            imgui.Text(u8'ГЏГ°Г ГўГ Гї ГЄГ­Г®ГЇГЄГ  Г¬Г»ГёГЁ + 1')
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г±ГЎГ®Г° ГЁГЈГ°Г®ГЄГ®Гў', imgui.ImVec2(230, 30)) then
+            imgui.Text(u8'Активация курсора - F')
+            imgui.Text(u8'Взаимодействие с игроками:')
+            imgui.Text(u8'Правая кнопка мыши + 1')
+            if imgui.Button(u8'Начать сбор игроков', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}: ГЋГ¦ГЁГ¤Г Г©ГІГҐ...', -1)
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Ожидайте...', -1)
                     if not sampIsDialogActive() then
                         sampSendChat('/mp')
                     end
@@ -645,7 +645,7 @@ function imgui.OnDrawFrame()
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendDialogResponse(5344, 1, _, 'ГЏГ°ГїГІГЄГЁ')
+                    sampSendDialogResponse(5344, 1, _, 'Прятки')
                     wait(400)
                     sampCloseCurrentDialogWithButton(0)
                     wait(400)
@@ -654,22 +654,22 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 ГЌГ Г·ГЁГ­Г ГҐГІГ±Гї Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ ГЏГ°ГїГІГЄГЁ, Г¤Г«Гї ГІГҐГ«ГҐГЇГ®Г°ГІГ  ГўГўГ®Г¤ГЁ /tpmp')
-                    sampSendChat('/mess 7 ГЏГ®ГІГ®Г°Г®ГЇГЁГ±Гј, ГІГҐГ«ГҐГЇГ®Г°ГІ Г±ГЄГ®Г°Г® Г§Г ГЄГ°Г®ГҐГІГ±Гї! Г‚ГўГ®Г¤ГЁ /tpmp')
+                    sampSendChat('/mess 7 Начинается мероприятие Прятки, для телепорта вводи /tpmp')
+                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
                     showCursor(false,false)
                     sbor = true
                 end)
             end
         end
         if sbor then
-            if imgui.Button(u8'ГЌГ ГЇГ®Г¬Г­ГЁГІГј ГЇГ°Г® Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(230, 30)) then
-                sampSendChat('/mess 7 Г’ГҐГ«ГҐГЇГ®Г°ГІ ГўГ±Вё ГҐГ№Вё Г®ГІГЄГ°Г»ГІ, Гі ГІГҐГЎГї ГҐГ±ГІГј ГёГ Г­Г± ГЇГ®ГіГ·Г ГўГ±ГІГўГ®ГўГ ГІГј Гў ГЏГ°ГїГІГЄГ Гµ, ГўГўГ®Г¤ГЁ /tpmp')
+            if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
+                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в Прятках, вводи /tpmp')
             end
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(230, 30)) then
+            if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
-                    sampSendChat('/mess 7 ГЏГ°Г ГўГЁГ«Г  Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГї ГЏГ°ГїГІГЄГЁ!')
-                    sampSendChat('/mess 7 Г‚Г» Г°Г Г§ГЎГҐГЈГ ГҐГІГҐГ±Гј ГЇГ® ГўГ±ГҐГ¬Гі ГЄГ®Г°Г ГЎГ«Гѕ, Гї Г®ГІГЇГ°Г ГўГ«ГїГѕГ±Гј Г­Г  ГўГ ГёГЁ ГЇГ®ГЁГ±ГЄГЁ, ГЇГ®ГЎГҐГ¦Г¤Г ГҐГІ ГЇГ®Г±Г«ГҐГ¤Г­ГЁГ© ГўГ»Г¦ГЁГўГёГЁГ©.')
-                    sampSendChat('/mess 7 Г‡Г ГЇГ°ГҐГ№ГҐГ­Г»: /passive, /fly, /gt, DM, /s /r /anim /jp ГЁ Г«ГѕГЎГ Гї Г¤Г°ГіГЈГ Гї ГЇГ®Г¬ГҐГµГ  ГЁГЈГ°Г®ГЄГ Г¬.')
+                    sampSendChat('/mess 7 Правила мероприятия Прятки!')
+                    sampSendChat('/mess 7 Вы разбегаетесь по всему кораблю, я отправляюсь на ваши поиски, побеждает последний выживший.')
+                    sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -692,7 +692,7 @@ function imgui.OnDrawFrame()
         end
         if mp then
             lua_thread.create(function()
-                if imgui.Button(u8'Г‚Г»Г¤Г ГІГј ГўГ±ГҐГ¬ ГµГЇ', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(230, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -703,7 +703,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'ГЋГЎГҐГ§Г§Г Г°ГіГ¦ГЁГІГј ГўГ±ГҐГµ', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(230, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -714,7 +714,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'Г‡Г ГўГҐГ°ГёГЁГІГј ГЊГЏ Г¤Г®Г±Г°Г®Г·Г­Г®', imgui.ImVec2(230, 30)) then
+                if imgui.Button(u8'Завершить МП досрочно', imgui.ImVec2(230, 30)) then
                     showCursor(false,false)
                     thisScript():reload()
                 end
@@ -734,18 +734,18 @@ function imgui.OnDrawFrame()
     if sportzal_window_state.v then
             --  imgui.SetNextWindowSize(imgui.ImVec2(300, 150), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"ГЃГ®ГЄГ±", sportzal_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Бокс", sportzal_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
-            imgui.Text(u8'Г“Г¤Г®Г±ГІГ®ГўГҐГ°ГјГІГҐГ±Гј, Г·ГІГ® Гі ГўГ Г± ГўГЄГ«ГѕГ·ГҐГ­Г  Г Г¤Г¬ГЁГ­-Г§Г®Г­Г ')
-            imgui.Text(u8'Г‚ГЄГ«ГѕГ·ГЁГІГј ГҐВё Г¬Г®Г¦Г­Г® Гў /mp - Г­Г Г±ГІГ°Г®Г©ГЄГЁ - 1')
-            imgui.Text(u8'ГЂГЄГІГЁГўГ Г¶ГЁГї ГЄГіГ°Г±Г®Г°Г  - F')
-            imgui.Text(u8'Г‚Г§Г ГЁГ¬Г®Г¤ГҐГ©Г±ГІГўГЁГҐ Г± ГЁГЈГ°Г®ГЄГ Г¬ГЁ:')
-            imgui.Text(u8'ГЏГ°Г ГўГ Гї ГЄГ­Г®ГЇГЄГ  Г¬Г»ГёГЁ + 1')
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г±ГЎГ®Г° ГЁГЈГ°Г®ГЄГ®Гў', imgui.ImVec2(280, 30)) then
+            imgui.Text(u8'Удостоверьтесь, что у вас включена админ-зона')
+            imgui.Text(u8'Включить её можно в /mp - настройки - 1')
+            imgui.Text(u8'Активация курсора - F')
+            imgui.Text(u8'Взаимодействие с игроками:')
+            imgui.Text(u8'Правая кнопка мыши + 1')
+            if imgui.Button(u8'Начать сбор игроков', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}: ГЋГ¦ГЁГ¤Г Г©ГІГҐ...', -1)
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Ожидайте...', -1)
                     while sampIsDialogActive() do
                         wait(0)
                         sampCloseCurrentDialogWithButton(0)
@@ -777,7 +777,7 @@ function imgui.OnDrawFrame()
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendDialogResponse(5344, 1, _, 'ГЃГ®ГЄГ±')
+                    sampSendDialogResponse(5344, 1, _, 'Бокс')
                     wait(400)
                     sampCloseCurrentDialogWithButton(0)
                     wait(400)
@@ -786,22 +786,22 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 ГЌГ Г·ГЁГ­Г ГҐГІГ±Гї Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ ГЃГ®ГЄГ±, Г¤Г«Гї ГІГҐГ«ГҐГЇГ®Г°ГІГ  ГўГўГ®Г¤ГЁ /tpmp')
-                    sampSendChat('/mess 7 ГЏГ®ГІГ®Г°Г®ГЇГЁГ±Гј, ГІГҐГ«ГҐГЇГ®Г°ГІ Г±ГЄГ®Г°Г® Г§Г ГЄГ°Г®ГҐГІГ±Гї! Г‚ГўГ®Г¤ГЁ /tpmp')
+                    sampSendChat('/mess 7 Начинается мероприятие Бокс, для телепорта вводи /tpmp')
+                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
                     showCursor(false,false)
                     sbor = true
                 end)
             end
         end
         if sbor then
-            if imgui.Button(u8'ГЌГ ГЇГ®Г¬Г­ГЁГІГј ГЇГ°Г® Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(280, 30)) then
-                sampSendChat('/mess 7 Г’ГҐГ«ГҐГЇГ®Г°ГІ ГўГ±Вё ГҐГ№Вё Г®ГІГЄГ°Г»ГІ, Гі ГІГҐГЎГї ГҐГ±ГІГј ГёГ Г­Г± ГЇГ®ГіГ·Г ГўГ±ГІГўГ®ГўГ ГІГј Гў Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГЁ ГЃГ®ГЄГ±, ГўГўГ®Г¤ГЁ /tpmp')
+            if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(280, 30)) then
+                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Бокс, вводи /tpmp')
             end
-            if imgui.Button(u8'ГЌГ Г·Г ГІГј Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГҐ', imgui.ImVec2(280, 30)) then
+            if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
-                    sampSendChat('/mess 7 ГЏГ°Г ГўГЁГ«Г  Г¬ГҐГ°Г®ГЇГ°ГЁГїГІГЁГї ГЃГ®ГЄГ±!')
-                    sampSendChat('/mess 7 Гџ ГўГ»ГЎГЁГ°Г Гѕ 2 Г·ГҐГ«Г®ГўГҐГЄ, ГЄГ®ГІГ®Г°Г»ГҐ Г±Г°Г Г¦Г ГѕГІГ±Гї Г­Г  Г°ГЁГ­ГЈГҐ, ГЇГ®ГЎГҐГ¦Г¤Г ГҐГІ Г±ГЁГ«ГјГ­ГҐГ©ГёГЁГ©.')
-                    sampSendChat('/mess 7 Г‡Г ГЇГ°ГҐГ№ГҐГ­Г»: /passive, /fly, /gt, DM, /s /r /anim /jp ГЁ Г«ГѕГЎГ Гї Г¤Г°ГіГЈГ Гї ГЇГ®Г¬ГҐГµГ  ГЁГЈГ°Г®ГЄГ Г¬.')
+                    sampSendChat('/mess 7 Правила мероприятия Бокс!')
+                    sampSendChat('/mess 7 Я выбираю 2 человек, которые сражаются на ринге, побеждает сильнейший.')
+                    sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -824,7 +824,7 @@ function imgui.OnDrawFrame()
         end
         if mp then
             lua_thread.create(function()
-                if imgui.Button(u8'Г‚Г»Г¤Г ГІГј ГўГ±ГҐГ¬ ГµГЇ', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(280, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -835,7 +835,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'ГЋГЎГҐГ§Г§Г Г°ГіГ¦ГЁГІГј ГўГ±ГҐГµ', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(280, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -846,7 +846,7 @@ function imgui.OnDrawFrame()
                 end
             end)
             lua_thread.create(function()
-                if imgui.Button(u8'ГЏГ®Г¤ГҐГ«ГЁГІГј ГўГ±ГҐГµ Г­Г  ГЄГ®Г¬Г Г­Г¤Г»', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Поделить всех на команды', imgui.ImVec2(280, 30)) then
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
                         wait(0)
@@ -863,47 +863,47 @@ function imgui.OnDrawFrame()
                 end
             end)
             if player1 then
-                if imgui.Button(u8'Г’ГҐГ«ГҐГЇГ®Г°ГІГЁГ°Г®ГўГ ГІГј 1-Г®ГЈГ® ГЁГЈГ°Г®ГЄГ ', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Телепортировать 1-ого игрока', imgui.ImVec2(280, 30)) then
                     sampSendChat('/gethere ' .. player1)
                 end
             end
             if player2 then
-                if imgui.Button(u8'Г’ГҐГ«ГҐГЇГ®Г°ГІГЁГ°Г®ГўГ ГІГј 2-Г®ГЈГ® ГЁГЈГ°Г®ГЄГ ', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Телепортировать 2-ого игрока', imgui.ImVec2(280, 30)) then
                     sampSendChat('/gethere ' .. player2)
                 end
             end
             lua_thread.create(function()
                 if player1 and player2 then
-                    if imgui.Button(u8'ГЌГ Г·Г ГІГј PVP', imgui.ImVec2(280, 30)) then
-                        sampSendChat('/mess 3 ГЌГ  Г Г°ГҐГ­Гі ГўГ»ГµГ®Г¤ГїГІ ГЁГЈГ°Г®ГЄГЁ ' .. sampGetPlayerNickname(player1) .. ' ГЁ ' .. sampGetPlayerNickname(player2))
-                        sampSendChat('/mess 3 ГЌГ Г·ГЁГ­Г Гѕ Г®ГІГ±Г·ГҐГІ Гў 10 Г±ГҐГЄГіГ­Г¤, ГЇГ®Г±Г«ГҐ Г­ГҐГЈГ® Г¬Г®Г¦Г­Г® Г­Г Г·ГЁГ­Г ГІГј.')
+                    if imgui.Button(u8'Начать PVP', imgui.ImVec2(280, 30)) then
+                        sampSendChat('/mess 3 На арену выходят игроки ' .. sampGetPlayerNickname(player1) .. ' и ' .. sampGetPlayerNickname(player2))
+                        sampSendChat('/mess 3 Начинаю отсчет в 10 секунд, после него можно начинать.')
                         sampSendChat('/dmcount 10')
                         player1 = nil
                         player2 = nil
                     end
                 else
-                    if imgui.Button(u8'ГЌГ Г·Г ГІГј PVP', imgui.ImVec2(280, 30)) then
-                        sampAddChatMessage('{FF0000}MP{FFFFFF}: ГЌГ Г¦Г¬ГЁ ГЇГ°Г ГўГ®Г© ГЄГ­Г®ГЇГЄГ®Г© Г¬Г»ГёГЁ + 1 Г­Г  Г¦ГҐГ«Г ГҐГ¬Г®ГЈГ® ГЁГЈГ°Г®ГЄГ  ГЁ Г¤Г®ГЎГ ГўГј ГҐГЈГ® Гў Г±ГЄГ°ГЁГЇГІ', -1)
-                        sampAddChatMessage('{FF0000}MP{FFFFFF}: Г‘Г¤ГҐГ«Г Г© ГІГ ГЄГ¦ГҐ Г±Г® ГўГІГ®Г°Г»Г¬ ГЁГЈГ°Г®ГЄГ®Г¬, ГІГ®Г«ГјГЄГ® ГЇГ®Г±Г«ГҐ ГЅГІГ®ГЈГ® Г­Г Г¦ГЁГ¬Г Г© ГЄГ­Г®ГЇГЄГі.', -1)
+                    if imgui.Button(u8'Начать PVP', imgui.ImVec2(280, 30)) then
+                        sampAddChatMessage('{FF0000}MP{FFFFFF}: Нажми правой кнопкой мыши + 1 на желаемого игрока и добавь его в скрипт', -1)
+                        sampAddChatMessage('{FF0000}MP{FFFFFF}: Сделай также со вторым игроком, только после этого нажимай кнопку.', -1)
                     end
                 end
             end)
-            if imgui.Button(u8'Г’ГҐГ«ГҐГЇГ®Г°ГІГЁГ°Г®ГўГ ГІГјГ±Гї Г­Г  Г°ГЁГ­ГЈ', imgui.ImVec2(280, 30)) then
+            if imgui.Button(u8'Телепортироваться на ринг', imgui.ImVec2(280, 30)) then
                 if not sampIsDialogActive() then
                     sampSendChat('/tpcor 759.23474121094 12.783633232117 1001.1639404297 5 990')
                 else
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Г‡Г ГЄГ°Г®Г©ГІГҐ Г¤ГЁГ Г«Г®ГЈ')
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Закройте диалог')
                 end
             end
-            if imgui.Button(u8'Г’ГҐГ«ГҐГЇГ®Г°ГІГЁГ°Г®ГўГ ГІГјГ±Гї ГўГ­ГҐ Г°ГЁГ­ГЈГ ', imgui.ImVec2(280, 30)) then
+            if imgui.Button(u8'Телепортироваться вне ринга', imgui.ImVec2(280, 30)) then
                 if not sampIsDialogActive() then
                     sampSendChat('/tpcor 772.14721679688 5.5412063598633 1000.7802124023 5 990')
                 else
-                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Г‡Г ГЄГ°Г®Г©ГІГҐ Г¤ГЁГ Г«Г®ГЈ')
+                    sampAddChatMessage('{FF0000}MP{FFFFFF}: Закройте диалог')
                 end
             end
             lua_thread.create(function()
-                if imgui.Button(u8'Г‡Г ГўГҐГ°ГёГЁГІГј ГЊГЏ Г¤Г®Г±Г°Г®Г·Г­Г®', imgui.ImVec2(280, 30)) then
+                if imgui.Button(u8'Завершить МП досрочно', imgui.ImVec2(280, 30)) then
                     showCursor(false,false)
                     thisScript():reload()
                 end
@@ -937,8 +937,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
     end)
 end
 
-function getClosestCarId() -- ГіГ§Г­Г ГІГј ГЁГ¤ ГЎГ«ГЁГ¦Г Г№ГҐГЈГ® Г ГўГІГ®
-    local minDist = 200 -- Г¤ГЁГ±ГІГ Г­Г¶ГЁГї
+function getClosestCarId() -- узнать ид ближащего авто
+    local minDist = 200 -- дистанция
     local closestId = -1
     local x, y, z = getCharCoordinates(PLAYER_PED)
     for i = 0, 1800 do
@@ -955,7 +955,7 @@ function getClosestCarId() -- ГіГ§Г­Г ГІГј ГЁГ¤ ГЎГ«ГЁГ¦Г Г№ГҐГЈГ® Г ГўГІГ®
     return closestId
 end
 
-function style(id) -- Г’Г…ГЊГ›
+function style(id) -- ТЕМЫ
     imgui.SwitchContext()
     local style = imgui.GetStyle()
     local colors = style.Colors
@@ -971,7 +971,7 @@ function style(id) -- Г’Г…ГЊГ›
     style.ScrollbarRounding = 0
     style.GrabMinSize = 8.0
     style.GrabRounding = 1.0
-    if id == 0 then -- Г’ГҐГ¬Г­Г®-Г‘ГЁГ­ГїГї
+    if id == 0 then -- Темно-Синяя
 		colors[clr.Text]                 = ImVec4(1.00, 1.00, 1.00, 1.00)
 		colors[clr.TextDisabled]         = ImVec4(0.73, 0.75, 0.74, 1.00)
 		colors[clr.WindowBg]             = ImVec4(0.00, 0.00, 0.00, 0.94)
@@ -1015,7 +1015,7 @@ function style(id) -- Г’Г…ГЊГ›
 		colors[clr.PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00)
 		colors[clr.TextSelectedBg]       = ImVec4(0.26, 0.59, 0.98, 0.35)
 		colors[clr.ModalWindowDarkening] = ImVec4(0.80, 0.80, 0.80, 0.35)
-    elseif id == 1 then -- ГЉГ°Г Г±Г­Г Гї
+    elseif id == 1 then -- Красная
 		colors[clr.Text]                 = ImVec4(1.00, 1.00, 1.00, 0.78)
 		colors[clr.TextDisabled]         = ImVec4(1.00, 1.00, 1.00, 1.00)
 		colors[clr.WindowBg]             = ImVec4(0.11, 0.15, 0.17, 1.00)
@@ -1059,7 +1059,7 @@ function style(id) -- Г’Г…ГЊГ›
 		colors[clr.PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00)
 		colors[clr.TextSelectedBg]       = ImVec4(0.25, 1.00, 0.00, 0.43)
 		colors[clr.ModalWindowDarkening] = ImVec4(1.00, 0.98, 0.95, 0.73)
-    elseif id == 2 then -- Г§ГҐГ«ГҐГ­Г Гї ГІГҐГ¬Г 
+    elseif id == 2 then -- зеленая тема
 		colors[clr.Text]                 = ImVec4(1.00, 1.00, 1.00, 0.78)
 		colors[clr.TextDisabled]         = ImVec4(0.36, 0.42, 0.47, 1.00)
 		colors[clr.WindowBg]             = ImVec4(0.11, 0.15, 0.17, 1.00)
@@ -1103,7 +1103,7 @@ function style(id) -- Г’Г…ГЊГ›
 		colors[clr.PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00)
 		colors[clr.TextSelectedBg]       = ImVec4(0.25, 1.00, 0.00, 0.43)
 		colors[clr.ModalWindowDarkening] = ImVec4(1.00, 0.98, 0.95, 0.73)
-    elseif id == 3 then -- ГЎГЁГ°ГѕГ§Г®ГўГ Гї
+    elseif id == 3 then -- бирюзовая
         colors[clr.Text]                 = ImVec4(0.86, 0.93, 0.89, 0.78)
 		colors[clr.TextDisabled]         = ImVec4(0.36, 0.42, 0.47, 1.00)
 		colors[clr.WindowBg]             = ImVec4(0.11, 0.15, 0.17, 1.00)
@@ -1202,7 +1202,7 @@ function style(id) -- Г’Г…ГЊГ›
 		colors[clr.PlotHistogramHovered]  = ImVec4(0.41, 0.19, 0.63, 1.00);
 		colors[clr.TextSelectedBg]        = ImVec4(0.41, 0.19, 0.63, 0.43);
 		colors[clr.ModalWindowDarkening]  = ImVec4(0.20, 0.20, 0.20, 0.35);
-    elseif id == 5 then -- ГЏГ°Г®Г±ГІГ® ГЇГ°ГЁГїГІГ­Г Гї ГІГҐГ¬Г 
+    elseif id == 5 then -- Просто приятная тема
         imgui.SwitchContext()
 		local style = imgui.GetStyle()
 		local colors = style.Colors
