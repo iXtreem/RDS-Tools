@@ -31,17 +31,17 @@ local style_selected = imgui.ImInt(cfg.settings.style) -- ЅерЄм стандартное знач
 function main()
     repeat wait(0) until isSampAvailable()
     local dlstatus = require('moonloader').download_status
-	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini" -- —сылка на конфиг
-	local update_path = getWorkingDirectory() .. "/AdminTools.ini" -- и тут ту же самую ссылку
-	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua" -- —сылка на сам файл
+	local update_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.ini" -- —сылка на конфиг
+	local update_path = getWorkingDirectory() .. "//resource//AT_MP.ini" -- и тут ту же самую ссылку
+	local script_url = "https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua" -- —сылка на сам файл
 	local script_path = thisScript().path
     downloadUrlToFile(update_url, update_path, function(id, status)
 		lua_thread.create(function()
 			wait(1000)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-				AdminTools = inicfg.load(nil, update_path)
+				AT_MP = inicfg.load(nil, update_path)
 				wait(1000)
-				if tonumber(AdminTools.script.version) > version then
+				if tonumber(AT_MP.script.version) > version then
 					update_state = true
 				end
 				os.remove(update_path)
