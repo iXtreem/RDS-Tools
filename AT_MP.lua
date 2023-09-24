@@ -26,7 +26,7 @@ local cfg = inicfg.load({
         style = 0
     },
 }, 'AdminTools.ini')
-inicfg.save(cfg,directIni)
+inicfg.save(cfg, 'AdminTools.ini')
 local style_selected = imgui.ImInt(cfg.settings.style) -- Берём стандартное значение стиля из конфига
 
 function main()
@@ -41,7 +41,6 @@ function main()
 			wait(1000)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 				AT_MP = inicfg.load(nil, update_path)
-				wait(1000)
 				if tonumber(AT_MP.script.version) > version then
 					update_state = true
 				end
@@ -53,13 +52,13 @@ function main()
 		if update_state then
 			downloadUrlToFile(script_url, script_path, function(id, status)
 				if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-					sampAddChatMessage(tag .. 'Скрипт успешно обновлен.')
+					sampAddChatMessage(tag .. 'Скрипт мероприятий успешно обновлен.')
 					showCursor(false,false)
 					thisScript():reload()
 				end
 			end)
 		else
-			sampAddChatMessage(tag .. 'У вас установлена актуальная версия.')
+			sampAddChatMessage(tag .. 'У вас установлена актуальная версия для мероприятий.')
 		end
 	end)
     writeMemory(sampGetBase() + 0x9D9D0, 4, 0x5051FF15, true)
@@ -70,7 +69,7 @@ function main()
             if result and imgui.Process then
                 _, id = sampGetPlayerIdByCharHandle(ped)
                 menu_window_state.v = true
-                showCursor(true,true)
+                showCursor(true,false)
             end
         end
     end
