@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
-local version = 1.0
+local version = 0.2
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -28,7 +28,7 @@ local cfg = inicfg.load({
 	},
 }, directIni)
 inicfg.save(cfg,directIni)
-
+local tag = '{2B6CC4}Admin Tools: {F0E68C}'
 local buffer = {}
 local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(4096)
