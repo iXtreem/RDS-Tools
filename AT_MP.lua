@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 script_name 'AT_MP' 
 script_author 'Neon4ik'
-local version = 1.0
+local version = 0.1
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
 local sampev = require 'lib.samp.events'
@@ -20,12 +20,11 @@ local pryatki_window_state = imgui.ImBool(false)
 local sportzal_window_state = imgui.ImBool(false)
 local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
-local directIni = 'AdminTools.ini'
 local cfg = inicfg.load({
     settings = {
         style = 0
     },
-}, directIni)
+}, 'AdminTools.ini')
 inicfg.save(cfg,directIni)
 local style_selected = imgui.ImInt(cfg.settings.style) -- Берём стандартное значение стиля из конфига
 
@@ -45,7 +44,6 @@ function main()
 				if tonumber(AdminTools.script.version) > version then
 					update_state = true
 				end
-				wait(1000)
 				os.remove(update_path)
 			end
 		end)
