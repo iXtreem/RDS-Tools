@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
-local version = 0.2
+local version = 0.1
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
@@ -102,14 +102,14 @@ function main()
 		if update_state then
 			downloadUrlToFile(script_url, script_path, function(id, status)
 				if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-					sampAddChatMessage(tag .. 'Скрипт мероприятий успешно обновлен.')
+					sampAddChatMessage(tag .. 'Скрипт для быстрого спавна успешно обновлен.')
 					showCursor(false,false)
                     os.remove(update_path)
 					thisScript():reload()
 				end
 			end)
 		else
-			sampAddChatMessage(tag .. 'У вас установлена актуальная версия для мероприятий.')
+			sampAddChatMessage(tag .. 'У вас установлена актуальная версия для быстрого спавна')
 		end
 	end)
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
