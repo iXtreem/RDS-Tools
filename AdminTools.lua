@@ -3,14 +3,13 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.36
+local version = 2.5
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local mimgui = require "mimgui"
 local inicfg = require 'inicfg'
 local directIni = 'AdminTools.ini'
-local notify = import("\\lib\\lib_imgui_notf.lua")
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
 u8 = encoding.UTF8 
@@ -19,11 +18,13 @@ local ffi = require "ffi"
 local mem = require "memory"
 local font = require ("moonloader").font_flag
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local trassera = import ("\\resource\\trassera.lua") -- подгрузка трассеров
-local mp = import ("\\resource\\AdminToolsMP.lua") -- подгрузка плагина для мероприятий
-local fastspawn = import ('\\resource\\AT_FastSpawn.lua')
+local AT_Trassera = import ("\\resource\\AT_Trassera.lua") -- подгрузка трассеров
+local AT_MP = import ("\\resource\\AT_MP.lua") -- подгрузка плагина для мероприятий
+local AT_FastSpawn = import ('\\resource\\AT_FastSpawn.lua') -- подгрузка быстрого спавна
+local notify = import("\\resource\\lib_imgui_notf.lua") -- подгрузка уведомлений
 local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
+local sw, sh = getScreenResolution()
 local cfg = inicfg.load({ -- базовые настройки скрипта
 	settings = {
 		style = 0,
@@ -32,15 +33,17 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		prefixma = '2E8B57',
 		prefixa = '87CEEB',
 		prefixsa = 'FF4500',
-		weaponhack = false,
 		doptext = true,
+		notify = false,
+		weaponhack = false,
 		automute = false,
-		renderadminx = 20,
-		renderadminy = 500,
+		automuteoption = false,
+		renderadminx = sw - 300,
+		renderadminy = sh - 300,
 		checkadmins = false,
 		mytextreport = ' // Приятной игры на RDS <3',
-		customposx = false,
-		customposy = false,
+		customposx = sw - 270,
+		customposy = 0,
 		keysync = true,
 		ans = 'None',
 		tr = 'None',
@@ -64,15 +67,9 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
         kick = false,
         prefix = false
 	},
-	customotvet = {
-
-	},
-	osk = {
-		[1] = 'лох'	
-	},
-	mat = {
-		[1] = 'хуй'
-	}
+	customotvet = {},
+	osk = {},
+	mat = {},
 }, directIni)
 inicfg.save(cfg,directIni)
 local checkbox = {
@@ -92,7 +89,9 @@ local checkbox = {
 	checked_test14 = imgui.ImBool(cfg.settings.wallhack),
 	checked_test15 = imgui.ImBool(cfg.settings.doptext),
 	checked_test16 = imgui.ImBool(cfg.settings.prefix),
-	checked_test17 = imgui.ImBool(cfg.settings.weaponhack)
+	checked_test17 = imgui.ImBool(cfg.settings.notify),
+	checked_test18 = imgui.ImBool(cfg.settings.weaponhack),
+	checked_test19 = imgui.ImBool(cfg.settings.automuteoption)
 }
 local buffer = {
 	text_buffer = imgui.ImBuffer(256),
@@ -125,14 +124,12 @@ local windows = {
 	checkadm_window_state = imgui.ImBool(false),
 	six_window_state = imgui.ImBool(false)
 }
-local answer = {}
-local nakazatreport = {}
 local style_selected = imgui.ImInt(cfg.settings.style)
 local style_list = {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8"Бирюзовая тема", u8"Розовая тема", u8"Голубая тема"}
-local sw, sh = getScreenResolution()
 local selected_item = imgui.ImInt(cfg.settings.size)
-local st = { -- таймер для автоформ
-}
+local st = {}
+local nakazatreport = {}
+local answer = {}
 local spisok = { -- список для автоформ
 	'ban',
 	'jail',
@@ -149,17 +146,25 @@ local spisokproject = { -- список проектов за который идет автомут
 	'евольв',
 	'монсер',
 	'арз',
-	'arz'
+	'arz',
+	'радмир',
+	'родина рп'
 }
 local spisokoskrod = { -- список оск.род за который идет автомут
 	'mq',
 	'rnq'
 }
-local spisokrz = {
+local spisokrz = { -- список примерного розжига
 	'слава укр',
-	'слава рос',
+	'слава росс',
 }
-local target = -1
+local spisokor = { -- список возможных вариаций оскорбления родни (мат + что-то из этого списка, или что-то из списка и оск)
+	'сын',
+	'мать',
+	'мам',
+	'выблядок',
+	'mam'
+}
 local keys = {
 	["onfoot"] = {},
 	["vehicle"] = {}
@@ -232,9 +237,6 @@ function main() -- основной сценарий скрипта
 	if cfg.settings.autoonline then
 		func:run()
 	end
-	if not cfg.settings.renderadminx then
-		cfg.settings.renderadminx, cfg.settings.renderadminy = (100), (100)
-	end
 	font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 	lua_thread.create(function()
 		while true do 
@@ -254,51 +256,38 @@ function main() -- основной сценарий скрипта
 			wait(1000)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 				AdminTools = inicfg.load(nil, update_path)
-				wait(1000)
 				if tonumber(AdminTools.script.version) > version then
 					update_state = true
 				end
-				wait(1000)
 				os.remove(update_path)
 			end
 		end)
     end)
-	sampRegisterChatCommand('update', function()
+	sampRegisterChatCommand('updateat', function()
 		if update_state then
 			downloadUrlToFile(script_url, script_path, function(id, status)
 				if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-					sampAddChatMessage(tag .. 'Скрипт успешно обновлен.')
+					sampAddChatMessage(tag .. 'Скрипт основного скрипта успешно обновлен.')
 					showCursor(false,false)
+					os.remove(update_path)
 					thisScript():reload()
 				end
 			end)
 		else
-			sampAddChatMessage(tag .. 'У вас установлена актуальная версия.')
+			sampAddChatMessage(tag .. 'У вас установлена актуальная версия основного скрипта.')
 		end
 	end)
 	imgui.Process = false
 	lua_thread.create(inputChat)
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
-	wait(2000)
 	if sampGetCurrentServerAddress() == '46.174.52.246' then
 		sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1)
 	elseif sampGetCurrentServerAddress() == '46.174.49.170' then
 		sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1)
 		server03 = true
-	elseif sampGetCurrentServerAddress() == '46.174.49.47' then
-		sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1)
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		if cfg.settings.wallhack then
-			sampSendInputChat('/wh ')
-		end
-		wait(100)
-		sampSendInputChat('/trasoff ')
-		wait(100)
-		sampSendInputChat('/fsoff ')
-		showCursor(false,false)
-		imgui.Process = false
-		thisScript():unload()
+		ScriptExport()
 	end
 	if cfg.settings.checkadmins then
 		funcadm:run()
@@ -316,10 +305,10 @@ function main() -- основной сценарий скрипта
 	while true do
         wait(0)
 		if isPauseMenuActive() or isGamePaused() then
-			activeam = true
+			AFK = true
 		end
-		if activeam and not (isPauseMenuActive() or isGamePaused()) then
-			activeam = nil
+		if AFK and not (isPauseMenuActive() or isGamePaused()) then
+			AFK = nil
 		end
 		if isKeyJustPressed(0x54 --[[VK_T]]) and not windows.tree_window_state.v and not sampIsDialogActive() and not sampIsScoreboardOpen() and not isSampfuncsConsoleActive() then
 			sampSetChatInputEnabled(true)
@@ -356,7 +345,7 @@ function main() -- основной сценарий скрипта
 			imgui.Process = true
 			showCursor(true,false)
 		end
-		if cfg.settings.wallhack and not activeam then
+		if cfg.settings.wallhack and not AFK then
 			for i = 0, sampGetMaxPlayerId() do
 				if sampIsPlayerConnected(i) then
 					local result, cped = sampGetCharHandleBySampPlayerId(i)
@@ -416,7 +405,7 @@ function ao()
 				wait(0)
 			end
 			wait(500)
-			if not activeam then
+			if not AFK then
 				sampSendChat("/online")
 			end
 		end
@@ -649,7 +638,6 @@ local menu2 = {true, -- рекон меню
 	false,
 	false,
 }
-
 function imgui.OnDrawFrame()
 	if not windows.checkadm_window_state.v and not windows.main_window_state.v and not windows.tree_window_state.v and not windows.four_window_state.v and not windows.helperma_window_state.v and not windows.fourtwo_window_state.v and not windows.five_window_state.v and not windows.ac_window_state.v and not windows.ansreport_window_state.v and not windows.dopcustomreport_window_state.v then
 		if cfg.settings.keysync then
@@ -666,11 +654,13 @@ function imgui.OnDrawFrame()
 			windows.checkadm_window_state.v = false
 		end
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.SetNextWindowSize(imgui.ImVec2(315, 355), imgui.Cond.FirstUseEver)
+		imgui.SetNextWindowSize(imgui.ImVec2(420, 400), imgui.Cond.FirstUseEver)
 		imgui.Begin('xX   ' .. " Admin Tools " .. '  Xx', windows.main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
+		imgui.Text('           ')
+		imgui.SameLine()
 		if imgui.Button(fa.ICON_ADDRESS_BOOK, imgui.ImVec2(30, 30)) then uu2() menu2[1] = true end imgui.SameLine()
 		if imgui.Button(fa.ICON_COGS, imgui.ImVec2(30, 30)) then uu2() menu2[3] = true end imgui.SameLine()
 		if imgui.Button(fa.ICON_PENCIL_SQUARE, imgui.ImVec2(30, 30)) then uu2() menu2[4] = true end imgui.SameLine()
@@ -684,13 +674,13 @@ function imgui.OnDrawFrame()
         imgui.SameLine(2)
 		if menu2[1] then
 			imgui.SetCursorPosX(8)
-			if imgui.Checkbox(u8'Вирт.клавиши', checkbox.checked_test2) then
+			if imgui.Checkbox(u8'Вирт. клавиши', checkbox.checked_test2) then
 				cfg.settings.keysync = not cfg.settings.keysync
 				inicfg.save(cfg,directIni)
 			end
 			imgui.SameLine()
-			imgui.SetCursorPosX(160)
-			if imgui.Checkbox(u8"autoonline", checkbox.checked_test3) then
+			imgui.SetCursorPosX(190)
+			if imgui.Checkbox("autoonline", checkbox.checked_test3) then
 				if cfg.settings.autoonline then
 					cfg.settings.autoonline = not cfg.settings.autoonline
 					inicfg.save(cfg, directIni)
@@ -701,20 +691,16 @@ function imgui.OnDrawFrame()
 					func:run()
 				end
 			end
-			if imgui.Checkbox(u8"input helper", checkbox.checked_test13) then
+			if imgui.Checkbox("input helper", checkbox.checked_test13) then
 				cfg.settings.inputhelper = not cfg.settings.inputhelper
 				inicfg.save(cfg,directIni)
 			end
 			imgui.SameLine()
-			imgui.SetCursorPosX(160)
-			if imgui.Checkbox(u8"WallHack", checkbox.checked_test14) then
-				if cfg.settings.wallhack == true then
-					sampSendInputChat('/wh ')
-				else
-					sampSendInputChat('/wh ')
-				end
+			imgui.SetCursorPosX(190)
+			if imgui.Checkbox("WallHack", checkbox.checked_test14) then
+				sampSendInputChat('/wh ')
 			end
-			if imgui.Checkbox(u8"AdminChat", checkbox.checked_test8) then
+			if imgui.Checkbox("AdminChat", checkbox.checked_test8) then
 				if cfg.settings.acon then
 					cfg.settings.acon = not cfg.settings.acon
 					inicfg.save(cfg,directIni)
@@ -730,8 +716,8 @@ function imgui.OnDrawFrame()
 				end
 			end
 			imgui.SameLine()
-			imgui.SetCursorPosX(160)
-			if imgui.Checkbox(u8'Формы', checkbox.checked_test4) then
+			imgui.SetCursorPosX(190)
+			if imgui.Checkbox(u8'Реакция на формы', checkbox.checked_test4) then
 				if not server03 then
 					cfg.settings.slejkaform  = not cfg.settings.slejkaform
 					inicfg.save(cfg,directIni)
@@ -740,20 +726,36 @@ function imgui.OnDrawFrame()
 				end
 			end
 			if imgui.Checkbox(u8'Автомут', checkbox.checked_test1) then
-				if cfg.settings.automute then
-					cfg.settings.automute  = not cfg.settings.automute
-					inicfg.save(cfg,directIni)
-				else
-					cfg.settings.automute  = not cfg.settings.automute
-					inicfg.save(cfg,directIni)
-				end
+				cfg.settings.automute  = not cfg.settings.automute
+				inicfg.save(cfg,directIni)
 			end
 			imgui.SameLine()
-			imgui.SetCursorPosX(160)
-			if imgui.Checkbox(u8"Уведомл.игрока", checkbox.checked_test7) then
+			imgui.SetCursorPosX(190)
+			if imgui.Checkbox(u8"Уведомление игрока", checkbox.checked_test7) then
 				cfg.settings.ansreport = not cfg.settings.ansreport
 				inicfg.save(cfg,directIni)
 			end
+			if imgui.Checkbox(u8"Умный автомут", checkbox.checked_test19) then
+				if not cfg.settings.automute then
+					cfg.settings.automute  = not cfg.settings.automute
+					inicfg.save(cfg,directIni)
+					checkbox.checked_test1 = imgui.ImBool(true)
+				end
+				cfg.settings.automuteoption = not cfg.settings.automuteoption
+				inicfg.save(cfg,directIni)
+			end
+			imgui.SameLine()
+			imgui.SetCursorPosX(190)
+			if imgui.Checkbox(u8"Уведомление о репорте", checkbox.checked_test17) then
+				cfg.settings.notify = not cfg.settings.notify
+				inicfg.save(cfg,directIni)
+			end
+			if imgui.Checkbox(u8"Реакция на варнинги", checkbox.checked_test18) then
+				cfg.settings.weaponhack = not cfg.settings.weaponhack
+				inicfg.save(cfg,directIni)
+			end
+			imgui.SameLine()
+			imgui.SetCursorPosX(190)
 			if imgui.Checkbox(u8"Рендер /admins", checkbox.checked_test6) then
 				if cfg.settings.checkadmins then
 					cfg.settings.checkadmins = not cfg.settings.checkadmins
@@ -767,12 +769,6 @@ function imgui.OnDrawFrame()
 					funcadm:run()
 				end
 			end
-			imgui.SameLine()
-			imgui.SetCursorPosX(160)
-			if imgui.Checkbox(u8"Weapon Hack", checkbox.checked_test17) then
-				cfg.settings.weaponhack = not cfg.settings.weaponhack
-				inicfg.save(cfg,directIni)
-			end
 			if update_state then
 				if imgui.Button(u8'Обновить скрипт', imgui.ImVec2(300, 24)) then
 					windows.main_window_state.v = false
@@ -780,51 +776,40 @@ function imgui.OnDrawFrame()
 					sampSendInputChat('/update')
 				end
 			end
+			imgui.Text('\n\n\n\n')
 			imgui.Separator()
-			imgui.Text(u8'Разработчик скрипта - N.E.O.N [RDS 01]\nОбратная связь указана ниже\n')
+			imgui.Text(u8'Разработчик скрипта - N.E.O.N [RDS 01].\nОбратная связь ниже\n')
+			imgui.Text('VK:')
+			imgui.SameLine()
 			if imgui.Link("https://vk.com/alexandrkob", u8"Нажми, чтобы открыть ссылку в браузере") then
 				os.execute(('explorer.exe "%s"'):format("https://vk.com/alexandrkob"))
 			end
+			imgui.Text(u8'Группа в VK:')
+			imgui.SameLine()
+			if imgui.Link("https://vk.com/club222702914", u8"Нажми, чтобы открыть ссылку в браузере") then
+				os.execute(('explorer.exe "%s"'):format("https://vk.com/club222702914"))
+			end
 		end
 		if menu2[3] then
-			imgui.SetCursorPosX(10)
-			imgui.Text(u8'Мл.Администратор')
-			imgui.SameLine()
-			imgui.SetCursorPosX(150)
-			imgui.PushItemWidth(100)
-			if imgui.InputText('   ', buffer.PrefixMa) then
-				cfg.settings.prefixma = buffer.PrefixMa.v
-				inicfg.save(cfg,directIni)	
+			imgui.SetCursorPosX(8)
+			if imgui.Button(u8'Автоматическая отправка форм', imgui.ImVec2(410, 24)) and not server03 then
+				windows.helperma_window_state.v = not windows.helperma_window_state.v
 			end
-			imgui.PopItemWidth()
-			imgui.SetCursorPosX(10)
-			imgui.Text(u8'Администратор')
-			imgui.SameLine()
-			imgui.SetCursorPosX(150)
-			imgui.PushItemWidth(100)
-			if imgui.InputText(' ', buffer.PrefixA) then
-				cfg.settings.prefixa = buffer.PrefixA.v
-				inicfg.save(cfg,directIni)	
+			if imgui.Button(u8'Открыть настройки спавна', imgui.ImVec2(410, 24)) then
+				sampSendInputChat('/fs')
 			end
-			imgui.PopItemWidth()
-			imgui.Text(u8'Ст.Администратор')
-			imgui.SameLine()
-			imgui.SetCursorPosX(150)
-			imgui.PushItemWidth(100)
-			if imgui.InputText('  ', buffer.PrefixSa) then
-				cfg.settings.prefixsa = buffer.PrefixSa.v
-				inicfg.save(cfg,directIni)	
+			if imgui.Button(u8'Открыть настройки трассеров', imgui.ImVec2(410, 24)) then
+				sampSendInputChat('/trassera')
 			end
-			imgui.PopItemWidth()
-			imgui.Text(u8'\n')
+			imgui.Text('\n\n\n')
 			imgui.CenterText(u8'Дополнительный текст команд')
-			imgui.PushItemWidth(300)
+			imgui.PushItemWidth(410)
 			if imgui.InputText('', buffer.doptexts) then
 				cfg.settings.mytextreport = u8:decode(buffer.doptexts.v)
 				inicfg.save(cfg,directIni)	
 			end
 			imgui.PopItemWidth()
-			if imgui.Button(u8'Сохранить позицию Recon Menu', imgui.ImVec2(300, 24)) then
+			if imgui.Button(u8'Сохранить позицию Recon Menu', imgui.ImVec2(410, 24)) then
 				if windows.four_window_state.v then
 					windows.four_window_state.v = not windows.four_window_state.v
 					windows.fourtwo_window_state.v = not windows.fourtwo_window_state.v
@@ -833,81 +818,73 @@ function imgui.OnDrawFrame()
 				end
 			end
 			if cfg.settings.checkadmins then
-				if imgui.Button(u8'Сохранить позицию рендера /admins', imgui.ImVec2(300, 24)) then
+				if imgui.Button(u8'Сохранить позицию рендера /admins', imgui.ImVec2(410, 24)) then
 					windows.six_window_state.v = true
 				end
 			end
 			if cfg.settings.acon then
-				if imgui.Button(u8'Сохранить позицию админ-чата', imgui.ImVec2(300, 24)) then
+				if imgui.Button(u8'Сохранить позицию админ-чата', imgui.ImVec2(410, 24)) then
 					windows.ac_window_state.v = not windows.ac_window_state.v
 				end
 			end
 			if cfg.settings.keysync then
-				if imgui.Button(u8'Сохранить позицию вирт.клавиш', imgui.ImVec2(300, 23)) then
+				if imgui.Button(u8'Сохранить позицию вирт.клавиш', imgui.ImVec2(410, 23)) then
 					windows.five_window_state.v = not windows.five_window_state.v 
 				end
 			end
-			if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(300, 23)) then
-				lua_thread.create(function()
-					windows.main_window_state.v = false
-					if cfg.settings.wallhack then
-						sampSendInputChat('/wh ')
-					end
-					wait(100)
-					sampSendInputChat('/trasoff ')
-					showCursor(false,false)
-					imgui.Process = false
-					thisScript():unload()
-				end)
+			if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(410, 23)) then
+				ScriptExport()
 			end
 		end
 		if menu2[4] then
 			buffer.bloknotik.v = string.gsub(buffer.bloknotik.v, "\\n", "\n")
-			if imgui.InputTextMultiline("#1", buffer.bloknotik, imgui.ImVec2(310, 280)) then
+			if imgui.InputTextMultiline("#1", buffer.bloknotik, imgui.ImVec2(410, 390)) then
 				buffer.bloknotik.v = string.gsub(buffer.bloknotik.v, "\n", "\\n")
 				cfg.settings.bloknotik = buffer.bloknotik.v
 				inicfg.save(cfg,directIni)	
 			end
 		end
 		if menu2[5] then
+			imgui.CenterText(u8'Зажми клавишу и нажми сохранить')
+			imgui.Text('\n\n')
 			imgui.SetCursorPosX(10)
 			imgui.CenterText(u8'Открытие репорта:')
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.ans))
-			if imgui.Button(u8"Сoxрaнить.", imgui.ImVec2(300, 24)) then
+			if imgui.Button(u8"Сoxрaнить.", imgui.ImVec2(410, 24)) then
 				cfg.settings.ans = getDownKeysText()
 				inicfg.save(cfg,directIni)
 			end
 			imgui.CenterText(u8'Вкл/выкл быстрого репорта')
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.tr))
-			if imgui.Button(u8"Соxрaнить.", imgui.ImVec2(300, 24)) then
+			if imgui.Button(u8"Соxрaнить.", imgui.ImVec2(410, 24)) then
 				cfg.settings.tr = getDownKeysText()
 				inicfg.save(cfg,directIni)
 			end
 			imgui.CenterText(u8"Очистка транспорта: ")
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.wh))
-			if imgui.Button(u8"Cоxрaнить.", imgui.ImVec2(300, 24)) then
+			if imgui.Button(u8"Cоxрaнить.", imgui.ImVec2(410, 24)) then
 				cfg.settings.wh = getDownKeysText()
 				inicfg.save(cfg,directIni)
 			end
 			imgui.CenterText(u8"Отправка в чат доп.текста")
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.agm))
-			if imgui.Button(u8"Coxрaнить.", imgui.ImVec2(300, 24)) then
+			if imgui.Button(u8"Coxрaнить.", imgui.ImVec2(410, 24)) then
 				cfg.settings.agm = getDownKeysText()
 				inicfg.save(cfg,directIni)
 			end
 			imgui.CenterText(u8"Вкл/выкл WallHack ")
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.rep))
-			if imgui.Button(u8"Соxpaнить.", imgui.ImVec2(300, 24)) then
+			if imgui.Button(u8"Соxpaнить.", imgui.ImVec2(410, 24)) then
 				cfg.settings.rep = getDownKeysText()
 				inicfg.save(cfg,directIni)
 			end
 			imgui.Separator()
-			if imgui.Button(u8"Сбросить все значения.", imgui.ImVec2(300, 24)) then
+			if imgui.Button(u8"Сбросить все значения.", imgui.ImVec2(410, 24)) then
 				cfg.settings.rep = 'None'
 				cfg.settings.ans = 'None'
 				cfg.settings.wh = 'None'
@@ -917,221 +894,233 @@ function imgui.OnDrawFrame()
 			end
 		end
 		if menu2[7] then
-			imgui.Columns(2)
-				imgui.SetColumnWidth(-1, w.second)
-				imgui.Text(u8'      Флуды об /gw')
-				if imgui.Button(u8'Aztecas vs Ballas', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Varios Los Aztecas vs Ballas Gang ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				if imgui.Button(u8'Aztecas vs Grove', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Varios Los Aztecas vs Grove Street Gang ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				if imgui.Button(u8'Aztecas vs Vagos', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Varios Los Aztecas vs Vagos Gang ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				if imgui.Button(u8'Aztecas vs Rifa', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Varios Los Aztecas vs The Rifa ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				if imgui.Button(u8'Ballas vs Grove', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Ballas Gang vs Grove Street Gang ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				if imgui.Button(u8'Ballas vs Vagos', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Ballas Gang vs Vagos Gang ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				if imgui.Button(u8'Ballas vs Rifa', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Ballas Gang vs The Rifa ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				if imgui.Button(u8'Grove vs Vagos', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Grove Street Gang vs Vagos Gang ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				if imgui.Button(u8'Vagos vs Rifa', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
-					sampSendChat('/mess 14 ## Vagos Gang vs The Rifa ##')
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
-					sampSendChat('/mess 11 --------=================== GangWar ================-----------')
-				end
-				imgui.NextColumn()
-				imgui.SetColumnWidth(-1, w.second)
-				imgui.Text(u8'       Общие флуды')
-				if imgui.Button(u8'Спавн авто', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 10 --------=================== Spawn Auto ================-----------')
-					sampSendChat('/mess 15 Многоуважаемые дрифтеры и дрифтерши')
-					sampSendChat('/mess 15 Через 15 секунд пройдёт респавн всего транспорта на сервере.')
-					sampSendChat('/mess 15 Займите свои супер кары во избежания потери :3')
-					sampSendChat('/mess 10 --------=================== Spawn Auto ================-----------')
-					sampSendChat('/delcarall')
-					sampSendChat('/spawncars 15')
-				end
-				if imgui.Button(u8'/trade', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 3 -----========================= Рынок =====================-------')
-					sampSendChat('/mess 0 Мечтал приобрести акксессуары на свой скин?')
-					sampSendChat('/mess 0 Бегать с ручным попугайчиком на плече и светится как боженька?')
-					sampSendChat('/mess 0 Скорей вводи /trade, большой выбор ассортимента, как от сервера, так и от игроков!')
-					sampSendChat('/mess 3 -----========================= Рынок =====================-------')
-				end
-				if imgui.Button(u8'Автомастерская', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 16 --------=================== Автомастерская ================-----------')
-					sampSendChat('/mess 17 Всегда мечтал приобрести ковш на свой кибертрак? Не проблема!')
-					sampSendChat('/mess 17 В автомастерских из /tp - разное - автомастерские найдется и не такое.')
-					sampSendChat('/mess 17 Сделай апгрейд своего любимчика под свой вкус и цвет')
-					sampSendChat('/mess 16 --------=================== Автомастерская ================-----------')
-				end
-				if imgui.Button(u8'Группа/Форум', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 11 -------============= Сторонние площадки ==========-----------------')
-					sampSendChat('/mess 7 У нашего проекта имеется группа vk.сom/teamadmrds ...')
-					sampSendChat('/mess 7 ... и даже форум, на котором игроки могут оставить жалобу на администрацию или игроков.')
-					sampSendChat('/mess 7 Следи за новостями и будь вкурсе событий.')
-					sampSendChat('/mess 11 -------============= Автомобиль ==========-----------------')
-				end
-				if imgui.Button(u8'VIP', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 13 --------============ Преимущества VIP ===========------------------')
-					sampSendChat('/mess 7 Хочешь играть с друзьями без дискомфорта?')
-					sampSendChat('/mess 7 Хочешь всегда телепортироваться по карте и к друзьям, чтобы быть всегда вместе?')
-					sampSendChat('/mess 7 Хочешь получать каждый PayDay плюшки на свой аккаунт? Обзаведись VIP-статусом!')
-					sampSendChat('/mess 13 --------============ Преимущества VIP ===========------------------')
-				end
-				if imgui.Button(u8'Арене', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 12 -------============= PVP Arena ==========-----------------')
-					sampSendChat('/mess 10 Не знаешь чем заняться? Хочется экшена и быстрой реакции?')
-					sampSendChat('/mess 10 Вводи /arena и покажи на что ты способен!')
-					sampSendChat('/mess 10 Набей максимальное количество киллов, добейся идеала в своем +C')
-					sampSendChat('/mess 12 -------============= PVP Arena ==========-----------------')
-				end
-				if imgui.Button(u8'Виртуальный мир', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------============ Твой виртуальный мир ===========------------------')
-					sampSendChat('/mess 15 Мешают играть? Постоянно преследуют танки и самолёты?')
-					sampSendChat('/mess 15 Обычный пассив режим не спасает во время дрифта?')
-					sampSendChat('/mess 15 Выход есть! Вводи /dt [0-999] и дрифти с комфортом.')
-					sampSendChat('/mess 8 --------============ Твой виртуальный мир ===========------------------')
-				end
-				if imgui.Button(u8'Набор на админку', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 3 -------============= Набор на пост администратора ==========-----------------')
-					sampSendChat('/mess 2 Мечтал встать на пост администратора? Чистить сервер от читеров и нарушителей?')
-					sampSendChat('/mess 2 Всё это возможно и совершенно бесплатно <3')
-					sampSendChat('/mess 2 На нашем форуме https://forumrds.ru/ открыт набор, успей подать заявку, кол-во мест ограничено.')
-					sampSendChat('/mess 3 -------============= Набор на пост администратора ==========-----------------')
-				end
-				if imgui.Button(u8'О /report', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 17 --------========== Связь с администрацией ==========----------')
-					sampSendChat('/mess 13 Нашел читера, злостного нарушителя, ДМера, или просто мешают играть?')
-					sampSendChat('/mess 13 Появился вопрос о возможностях сервера или его ньансах?')
-					sampSendChat('/mess 13 Администрация поможет! Пиши /report и свою жалобу/вопрос')
-					sampSendChat('/mess 17 --------========== Связь с администрацией ==========----------')
-				end
-				imgui.Separator()
-				imgui.Text(u8'Мероприятия /join')
-				if imgui.Button(u8'Дерби', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Мероприятие Дерби ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Дерби')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 1')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Мероприятие Дерби ================-----------')
-				end
-				if imgui.Button(u8'Паркур', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Мероприятие /parkour ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Паркур')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /parkour либо /join - 2')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Мероприятие /parkour ================-----------')
-				end
-				if imgui.Button(u8'PUBG', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Мероприятие /pubg ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Pubg')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /pubg либо /join - 3')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Мероприятие /pubg ================-----------')
-				end
-				if imgui.Button(u8'DAMAGE DEATHMATCH', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Мероприятие /damagegm ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие DAMAGE DEATHMATCH')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /damagegm либо /join - 4')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Мероприятие /damagegm ================-----------')
-				end
-				if imgui.Button(u8'KILL DEATHMATCH', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Мероприятие KILL DEATHMATCH ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие DAMAGE DEATHMATCH')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 5')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Мероприятие KILL DEATHMATCH ================-----------')
-				end
-				if imgui.Button(u8'Paint Ball', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Мероприятие Paint Ball ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Paint Ball')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 7')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Мероприятие Paint Ball ================-----------')
-				end
-				if imgui.Button(u8'Зомби vs Людей', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Зомби против людей ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Зомби против людей')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 8')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Зомби против людей ================-----------')
-				end
-				if imgui.Button(u8'Прятки', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Мероприятие Прятки ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Прятки')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 10')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Мероприятие Прятки ================-----------')
-				end
-				if imgui.Button(u8'Догонялки', imgui.ImVec2(130, 25)) then
-					sampSendChat('/mess 8 --------=================== Мероприятие Догонялки ================-----------')
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Догонялки')
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 11')
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
-					sampSendChat('/mess 8 --------=================== Мероприятие Догонялки ================-----------')
-				end
+			imgui.CenterText(u8'Флуды об /gw')
+			if imgui.Button(u8'Aztecas vs Ballas', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Varios Los Aztecas vs Ballas Gang ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Aztecas vs Grove', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Varios Los Aztecas vs Grove Street Gang ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Aztecas vs Vagos', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Varios Los Aztecas vs Vagos Gang ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			if imgui.Button(u8'Aztecas vs Rifa', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Varios Los Aztecas vs The Rifa ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Ballas vs Grove', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Ballas Gang vs Grove Street Gang ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Ballas vs Vagos', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Ballas Gang vs Vagos Gang ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			if imgui.Button(u8'Ballas vs Rifa', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Ballas Gang vs The Rifa ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Grove vs Vagos', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Grove Street Gang vs Vagos Gang ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Vagos vs Rifa', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+				sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+				sampSendChat('/mess 14 ## Vagos Gang vs The Rifa ##')
+				sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+				sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+			end
+			imgui.CenterText(u8'Общие флуды')
+			if imgui.Button(u8'Спавн авто', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
+				sampSendChat('/mess 15 Многоуважаемые дрифтеры и дрифтерши')
+				sampSendChat('/mess 15 Через 15 секунд пройдёт респавн всего транспорта на сервере.')
+				sampSendChat('/mess 15 Займите свои супер кары во избежания потери :3')
+				sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
+				sampSendChat('/delcarall')
+				sampSendChat('/spawncars 15')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'/trade', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 3 --------===================| Рынок |================-----------')
+				sampSendChat('/mess 0 Мечтал приобрести акксессуары на свой скин?')
+				sampSendChat('/mess 0 Бегать с ручным попугайчиком на плече и светится как боженька?')
+				sampSendChat('/mess 0 Скорей вводи /trade, большой выбор ассортимента, как от сервера, так и от игроков!')
+				sampSendChat('/mess 3 --------===================| Рынок |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Автомастерская', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 16 --------===================| Автомастерская |================-----------')
+				sampSendChat('/mess 17 Всегда мечтал приобрести ковш на свой кибертрак? Не проблема!')
+				sampSendChat('/mess 17 В автомастерских из /tp - разное - автомастерские найдется и не такое.')
+				sampSendChat('/mess 17 Сделай апгрейд своего любимчика под свой вкус и цвет')
+				sampSendChat('/mess 16 --------===================| Автомастерская |================-----------')
+			end
+			if imgui.Button(u8'Группа/Форум', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 11 --------===================| Сторонние площадки |================-----------')
+				sampSendChat('/mess 7 У нашего проекта имеется группа vk.сom/teamadmrds ...')
+				sampSendChat('/mess 7 ... и даже форум, на котором игроки могут оставить жалобу на администрацию или игроков.')
+				sampSendChat('/mess 7 Следи за новостями и будь вкурсе событий.')
+				sampSendChat('/mess 11 --------===================| Сторонние площадки |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'VIP', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 13 --------===================| Преимущества VIP |================-----------')
+				sampSendChat('/mess 7 Хочешь играть с друзьями без дискомфорта?')
+				sampSendChat('/mess 7 Хочешь всегда телепортироваться по карте и к друзьям, чтобы быть всегда вместе?')
+				sampSendChat('/mess 7 Хочешь получать каждый PayDay плюшки на свой аккаунт? Обзаведись VIP-статусом!')
+				sampSendChat('/mess 13 --------===================| Преимущества VIP |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Арене', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 12 --------===================| PVP Arena |================-----------')
+				sampSendChat('/mess 10 Не знаешь чем заняться? Хочется экшена и быстрой реакции?')
+				sampSendChat('/mess 10 Вводи /arena и покажи на что ты способен!')
+				sampSendChat('/mess 10 Набей максимальное количество киллов, добейся идеала в своем +C')
+				sampSendChat('/mess 12 --------===================| PVP Arena |================-----------')
+			end
+			if imgui.Button(u8'Виртуальный мир', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Твой виртуальный мир |================-----------')
+				sampSendChat('/mess 15 Мешают играть? Постоянно преследуют танки и самолёты?')
+				sampSendChat('/mess 15 Обычный пассив режим не спасает во время дрифта?')
+				sampSendChat('/mess 15 Выход есть! Вводи /dt [0-999] и дрифти с комфортом.')
+				sampSendChat('/mess 8 --------===================| Твой виртуальный мир |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Набор на админку', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 3 --------===================| Набор на пост администратора |================-----------')
+				sampSendChat('/mess 2 Мечтал встать на пост администратора? Чистить сервер от читеров и нарушителей?')
+				sampSendChat('/mess 2 Всё это возможно и совершенно бесплатно <3')
+				sampSendChat('/mess 2 На нашем форуме https://forumrds.ru/ открыт набор, успей подать заявку, кол-во мест ограничено.')
+				sampSendChat('/mess 3 --------===================| Набор на пост администратора |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'О /report', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 17 --------===================| Связь с администрацией |================-----------')
+				sampSendChat('/mess 13 Нашел читера, злостного нарушителя, ДМера, или просто мешают играть?')
+				sampSendChat('/mess 13 Появился вопрос о возможностях сервера или его ньансах?')
+				sampSendChat('/mess 13 Администрация поможет! Пиши /report и свою жалобу/вопрос')
+				sampSendChat('/mess 17 --------===================| Связь с администрацией |================-----------')
+			end
+			imgui.CenterText(u8'Мероприятия /join')
+			if imgui.Button(u8'Дерби', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Мероприятие Дерби |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Дерби')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /join - 1')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Мероприятие Дерби |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Паркур', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Мероприятие /parkour |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Паркур')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /parkour либо /join - 2')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Мероприятие /parkour |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'PUBG', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Мероприятие /pubg |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Pubg')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /pubg либо /join - 3')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Мероприятие /pubg |================-----------')
+			end
+			if imgui.Button(u8'DAMAGE DEATHMATCH', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Мероприятие /damagegm |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие DAMAGE DEATHMATCH')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /damagegm либо /join - 4')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Мероприятие /damagegm |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'KILL DEATHMATCH', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Мероприятие KILL DEATHMATCH |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие DAMAGE DEATHMATCH')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /join - 5')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Мероприятие KILL DEATHMATCH |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Paint Ball', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Мероприятие Paint Ball |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Paint Ball')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /join - 7')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Мероприятие Paint Ball |================-----------')
+			end
+			if imgui.Button(u8'Зомби vs Людей', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Зомби против людей |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Зомби против людей')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /join - 8')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Зомби против людей |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Прятки', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Мероприятие Прятки |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Прятки')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /join - 10')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Мероприятие Прятки |================-----------')
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Догонялки', imgui.ImVec2(130, 25)) then
+				sampSendChat('/mess 8 --------===================| Мероприятие Догонялки |================-----------')
+				sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Догонялки')
+				sampSendChat('/mess 0 Чтобы принять участие вводи /join - 11')
+				sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+				sampSendChat('/mess 8 --------===================| Мероприятие Догонялки |================-----------')
+			end
 		end
-		imgui.PopFont()
 		if menu2[2] then
 			imgui.SetCursorPosX(10)
-			if imgui.Button(u8'Добавить свой ответ', imgui.ImVec2(300, 24)) and #buffer.customotv.v~=0 then
+			if imgui.Button(u8'Добавить свой ответ', imgui.ImVec2(410, 24)) and #buffer.customotv.v~=0 then
 				key = #cfg.customotvet + 1
 				cfg.customotvet[key] = u8:decode(buffer.customotv.v)
 				inicfg.save(cfg,directIni)
 				buffer.customotv.v = ''
 				imgui.SetKeyboardFocusHere(-1)
 			end
-			imgui.NewInputText('##SearchBar2', buffer.customotv, 300, u8'Введите ваш ответ.', 2)
+			imgui.NewInputText('##SearchBar2', buffer.customotv, 410, u8'Введите ваш ответ.', 2)
 			imgui.Separator()
 			imgui.CenterText(u8'Сохраненные ответы')
 			for k,v in pairs(cfg.customotvet) do
-				if imgui.Button(u8(v), imgui.ImVec2(300, 24)) then
+				if imgui.Button(u8(v), imgui.ImVec2(405, 24)) then
 					cfg.customotvet[k] = nil
 					cfg.customotvet[v] = nil
 					inicfg.save(cfg,directIni)
@@ -1143,7 +1132,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'/tool - открыть меню скрипта\n/wh - вкл/выкл функцию WallHack')
 			imgui.Separator()
 			imgui.CenterText(u8'Вспомогательные команды')
-			imgui.Text(u8'/n - Не наблюдаю нарушений от игрока\n/nak - игрок наказан\n/fo - обратитесь на форум\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/prfma - выдать префикса Мл.Админу\n/prfa - Выдать префикс Админу\n/prfsa - выдать префикс Ст.Админу\n/prfpga - выдать префикс ПГА\n/prfzga - выдать префикс ЗГА\n/prfga - выдать префикс ГА\n/prfcpec - Выдать префикс Спецу\n/stw - выдать миниган\n/ur - снять мут репорта\n/uu - снятие мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
+			imgui.Text(u8'/n - Не наблюдаю нарушений от игрока\n/nak - игрок наказан\n/fo - обратитесь на форум\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/stw - выдать миниган\n/ur - снять мут репорта\n/uu - снятие мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
 			imgui.Separator()
 			imgui.CenterText(u8'Выдать мут чата')
 			imgui.Text(u8'/m - /m3 мат\n/ok - /ok3 оскорбление\n/fd - /fd3 флуд\n/nm - неадекватное поведение(600)\n/or - оск/упом родных\n/up - упоминание проекта с очисткой чата\n/oa - оскорбление администрации\n/kl - клевета на администрацию\n/po - /po3 - попрошайничество\n/rekl - реклама\n/zs - злоупотребление символами\n/rz - розжиг\n/ia - выдача себя за администрацию')
@@ -1152,7 +1141,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'/oft - /oft3 оффтоп\n/cp - /cp3 капс\n/roa - оскорбление администрации\n/ror - оск/упом род\n/rzs - злоупотребление символами\n/rrz - розжиг\n/rpo - попрошайничество\n/rm - мат\n/rok - оскорбление')
 			imgui.Separator()
 			imgui.CenterText(u8'Посадить в тюрьму')
-			imgui.Text(u8'/dz-/dz3 - ДМ/ДБ в зеленой зоне\n/zv - Злоупотребление VIP статусом\n/sk - Спавн-Килл\n/dmp - серьезная помеха на мероприятии\n/td - Car in /trade\n/jm - нарушение правил мп\n/jcb - вредительские читы(вместо бана)\n/jc - безвредные читы\n/baguse - багоюз\n/dk - ДБ Ковш в зеленой зоне')
+			imgui.Text(u8'/dz-/dz3 - ДМ/ДБ в зеленой зоне\n/zv - Злоупотребление VIP статусом\n/sk - Спавн-Килл\n/dmp - серьезная помеха на мероприятии\n/td - Car in /trade\n/jm - нарушение правил мп\n/jcb - вредительские читы(вместо бана)\n/jc - безвредные читы\n/bg - багоюз\n/dk - ДБ Ковш в зеленой зоне')
 			imgui.Separator()
 			imgui.CenterText(u8'Кикнуть игрока')
 			imgui.Text(u8'/cafk - Афк на арене\n/jk - ДМ в джайле\n/kk1 - Смените ник 1/3\n/kk2 - Смените ник 2/3\n/kk3 - Смените ник 3/3 (бан)')
@@ -1164,12 +1153,11 @@ function imgui.OnDrawFrame()
 		end
 		if menu2[8] then
 			imgui.CenterText(u8'Добавить мат (Enter или кнопкой)')
-			imgui.PushFont(fontsize)
-			imgui.PushItemWidth(240)
+			imgui.PushItemWidth(350)
 			imgui.InputText('                      . ', buffer.newmat)
 			imgui.PopItemWidth()
 			imgui.SameLine()
-			imgui.SetCursorPosX(250)
+			imgui.SetCursorPosX(360)
 			if (imgui.Button(fa.ICON_CHECK, imgui.ImVec2(24,24)) and (string.len(u8:decode(buffer.newmat.v))>=2)) or (isKeyJustPressed(VK_RETURN) and (string.len(u8:decode(buffer.newmat.v))>=2)) then
 				buffer.newmat.v = u8:decode(buffer.newmat.v)
 				buffer.newmat.v = buffer.newmat.v:lower()
@@ -1193,7 +1181,7 @@ function imgui.OnDrawFrame()
 				imgui.SetKeyboardFocusHere(-1)
 			end
 			imgui.SameLine()
-			imgui.SetCursorPosX(275)
+			imgui.SetCursorPosX(385)
 			if imgui.Button(fa.ICON_BAN, imgui.ImVec2(24,24)) and string.len(u8:decode(buffer.newmat.v)) >= 2 then
 				buffer.newmat.v = u8:decode(buffer.newmat.v)
 				buffer.newmat.v = buffer.newmat.v:lower()
@@ -1216,14 +1204,12 @@ function imgui.OnDrawFrame()
 				buffer.newmat.v = ''
 				imgui.SetKeyboardFocusHere(-1)
 			end
-			imgui.PopFont()
 			imgui.CenterText(u8'Добавить оскорбление (Enter или кнопкой)')
-			imgui.PushFont(fontsize)
-			imgui.PushItemWidth(240)
+			imgui.PushItemWidth(350)
 			imgui.InputText('                  , ', buffer.newosk)
 			imgui.PopItemWidth()
 			imgui.SameLine()
-			imgui.SetCursorPosX(250)
+			imgui.SetCursorPosX(360)
 			if (imgui.Button(fa.ICON_CHECK .. ' ', imgui.ImVec2(24,24)) and (string.len(u8:decode(buffer.newosk.v))>=2)) or (isKeyJustPressed(VK_RETURN) and (string.len(u8:decode(buffer.newosk.v))>=2)) then
 				buffer.newosk.v = u8:decode(buffer.newosk.v)
 				buffer.newosk.v = buffer.newosk.v:lower()
@@ -1241,13 +1227,13 @@ function imgui.OnDrawFrame()
 					cfg.osk[#cfg.osk + 1] = buffer.newosk.v
 					inicfg.save(cfg,directIni)
 					sampAddChatMessage('{DDA0DD}[AutoMute]:{F0E68C} Слово{008000} ' .. buffer.newosk.v .. ' {F0E68C}было успешно добавлено в список оскорблений', -1)
-					a = false
+					a = nil
 				end
 				buffer.newosk.v = u8(buffer.newosk.v)
 				imgui.SetKeyboardFocusHere(-1)
 			end
 			imgui.SameLine()
-			imgui.SetCursorPosX(275)
+			imgui.SetCursorPosX(385)
 			if imgui.Button(fa.ICON_BAN .. ' ', imgui.ImVec2(24,24)) and string.len(u8:decode(buffer.newosk.v)) >= 2 then
 				buffer.newosk.v = u8:decode(buffer.newosk.v)
 				buffer.newosk.v = buffer.newosk.v:lower()
@@ -1271,25 +1257,16 @@ function imgui.OnDrawFrame()
 				imgui.SetKeyboardFocusHere(-1)
 			end
 			imgui.CenterText(u8'Выберите тему оформления')
-			imgui.PushItemWidth(290)
+			imgui.PushItemWidth(400)
 			if imgui.Combo(u8"", style_selected, style_list, style_selected) then
 				style(style_selected.v) -- Применяем сразу же выбранный стиль
 				cfg.settings.style = style_selected.v 
 				inicfg.save(cfg, directIni) 
 			end
 			imgui.PopItemWidth()
-			imgui.PopFont()
-			imgui.Text(u8'Автомут работает по принципу Слово(Дополнение).\nЕсли вам надо мутить за целое слово тогда\nдобавляйте в конец строки без пробела %s')
-			if imgui.Button(u8'Автоматическая отправка форм', imgui.ImVec2(300, 24)) and not server03 then
-				windows.helperma_window_state.v = not windows.helperma_window_state.v
-			end
-			if imgui.Button(u8'Открыть настройки спавна', imgui.ImVec2(300, 24)) then
-				sampSendInputChat('/fs')
-			end
-			if imgui.Button(u8'Открыть настройки трассеров', imgui.ImVec2(300, 24)) then
-				sampSendInputChat('/trassera')
-			end
+			imgui.Text(u8'Автомут работает по принципу Слово(Дополнение).\nЕсли вам надо мутить исключительно за целое слово\nДобавляйте в конец строки без пробела %s')
 		end
+		imgui.PopFont()
  		imgui.End()
 	end
 	if windows.ac_window_state.v then -- сохранение позиции админ чата
@@ -1449,30 +1426,37 @@ function imgui.OnDrawFrame()
 		if imgui.Button(u8'Читы', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/ch ' .. playerrecon)
 			windows.four_window_state.v = false
+			windows.ban_window_state.v = false
 		end
 		if imgui.Button(u8'Многочисленные нарушения (3)', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/iban ' .. playerrecon .. ' 3 Неадекватное поведение')
 			windows.four_window_state.v = false
+			windows.ban_window_state.v = false
 		end
 		if imgui.Button(u8'Нарушение правил хелпера', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/oskhelper ' .. playerrecon)
 			windows.four_window_state.v = false
+			windows.ban_window_state.v = false
 		end
 		if imgui.Button(u8'Оскорбление проекта', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/bosk ' .. playerrecon)
 			windows.four_window_state.v = false
+			windows.ban_window_state.v = false
 		end
 		if imgui.Button(u8'Реклама', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/reklama ' .. playerrecon)
 			windows.four_window_state.v = false
+			windows.ban_window_state.v = false
 		end
 		if imgui.Button(u8'Обман', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/obm ' .. playerrecon)
 			windows.four_window_state.v = false
+			windows.ban_window_state.v = false
 		end
 		if imgui.Button(u8'Название банды', imgui.ImVec2(250, 25)) then
 			sampSendChat('/ban ' .. playerrecon .. ' 7 Название банды')
 			windows.four_window_state.v = false
+			windows.ban_window_state.v = false
 		end
 		imgui.End()
 	end
@@ -1484,6 +1468,7 @@ function imgui.OnDrawFrame()
 		imgui.CenterText(u8'Выберите причину')
 		if imgui.Button(u8'DM/DB in ZZ', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/dz ' .. playerrecon)
+			windows.jail_window_state.v = false
 		end
 		if imgui.Button(u8"Злоупотребление VIP'ом", imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/zv ' .. playerrecon)
@@ -1583,19 +1568,19 @@ function imgui.OnDrawFrame()
 		imgui.CenterText(u8'Выберите причину')
 		if imgui.Button(u8'AFK /arena', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/cafk ' .. playerrecon)
-			four_window_state.v = false
+			windows.four_window_state.v = false
 		end
 		if imgui.Button(u8"Nick 1/3", imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/kk1 ' .. playerrecon)
-			four_window_state.v = false
+			windows.four_window_state.v = false
 		end
 		if imgui.Button(u8"Nick 2/3", imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/kk2 ' .. playerrecon)
-			four_window_state.v = false
+			windows.four_window_state.v = false
 		end
 		if imgui.Button(u8'Nick 3/3', imgui.ImVec2(250, 25)) then
 			sampSendInputChat('/kk3 ' .. playerrecon)
-			four_window_state.v = false
+			windows.four_window_state.v = false
 		end
 		imgui.End()
 	end
@@ -1606,11 +1591,7 @@ function imgui.OnDrawFrame()
 		if windows.checkadm_window_state.v then
 			windows.checkadm_window_state.v = false
 		end
-		if cfg.settings.customposx then
-			imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.customposx, cfg.settings.customposy))
-		else
-			imgui.SetNextWindowPos(imgui.ImVec2(sw-270, 0))
-		end
+		imgui.SetNextWindowPos(imgui.ImVec2(tonumber(cfg.settings.customposx), tonumber(cfg.settings.customposy)))
 		if sw <= 1400 then
 			imgui.SetNextWindowSize(imgui.ImVec2(265, 283), imgui.Cond.FirstUseEver)
 			imgui.Begin(u8"Рекон", windows.four_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -1715,19 +1696,19 @@ function imgui.OnDrawFrame()
 				end
 			end
 			if imgui.Button(u8'Заблокировать игрока', imgui.ImVec2(250, 25)) then
-				windows.ban_window_state.v = true
+				windows.ban_window_state.v = not windows.ban_window_state.v
 			end
 			if imgui.Button(u8'Посадить в джайл', imgui.ImVec2(250, 25)) then
-				windows.jail_window_state.v = true
+				windows.jail_window_state.v = not windows.jail_window_state.v
 			end
 			if imgui.Button(u8'Выдать мут', imgui.ImVec2(250, 25)) then
-				windows.mute_window_state.v = true
+				windows.mute_window_state.v = not windows.mute_window_state.v
 			end
 			if imgui.Button(u8'Кикнуть игрока', imgui.ImVec2(250, 25)) then
-				windows.kick_window_state.v = true
+				windows.kick_window_state.v = not windows.kick_window_state.v
 			end
 			if imgui.Button(u8'Дополнительные действия', imgui.ImVec2(250, 25)) then
-				windows.dopcustomreport_window_state.v = true
+				windows.dopcustomreport_window_state.v = not windows.dopcustomreport_window_state.v
 			end
 			if ansid ~= playerrecon then
 				ansid = nil
@@ -1735,22 +1716,19 @@ function imgui.OnDrawFrame()
 			end
 			if isKeyJustPressed(VK_R) and not sampIsChatInputActive() and not sampIsDialogActive() then
 				sampSendClickTextdraw(156)
-				lua_thread.create(function()
-					if cfg.settings.keysync then
+				if cfg.settings.keysync then
+					lua_thread.create(function()
 						wait(1000)
 						while sampIsDialogActive() or sampIsChatInputActive() do
 							wait(0)
 						end
 						sampSendInputChat('/keysync ' .. playerrecon)
-					end
-				end)
+					end)
+				end
 			end
 			if isKeyJustPressed(VK_Q) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				sampSendClickTextdraw(177)
-				windows.four_window_state.v = false
-				if cfg.settings.keysync then
-					sampSendInputChat('/keysync off')
-				end
+				--sampSendClickTextdraw(177) (удаляется с остальными текстрдравами)
+				sampSendChat('/reoff')
 			end
 			if isKeyJustPressed(VK_RBUTTON) and not sampIsChatInputActive() and not sampIsDialogActive() then
 				lua_thread.create(function()
@@ -1824,7 +1802,6 @@ function imgui.OnDrawFrame()
 			inicfg.save(cfg,directIni)
 			windows.five_window_state.v = false
 			windows.main_window_state.v = false
-			showCursor(false,false)
 		end
 		imgui.PopFont()
 		imgui.End()
@@ -1927,6 +1904,7 @@ function imgui.OnDrawFrame()
 					if imgui.Button(u8(v), imgui.ImVec2(480, 24)) then
 						answer.customans = v
 						windows.custom_otvet_state.v = false
+						buffer.findcustomotv.v = ''
 					end
 				end
 			end
@@ -1935,6 +1913,7 @@ function imgui.OnDrawFrame()
 				if imgui.Button(u8(v), imgui.ImVec2(480, 24)) then
 					answer.customans = v
 					windows.custom_otvet_state.v = false
+					buffer.findcustomotv.v = ''
 				end
 			end
 		end
@@ -2037,10 +2016,60 @@ function imgui.OnDrawFrame()
 		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.renderadminx, cfg.settings.renderadminy), imgui.Cond.FirstUseEver)
 		imgui.Begin(u8"Администраторы", windows.checkadm_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoInputs + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		for i = 1, #admins - 1 do
-			imgui.Text(u8(admins[i]))
+			imgui.TextColoredRGB(admins[i])
 		end
         imgui.End()
 	end
+end
+function imgui.TextColoredRGB(text) -- цветной рендер админс
+    local style = imgui.GetStyle()
+    local colors = style.Colors
+    local ImVec4 = imgui.ImVec4
+
+    local explode_argb = function(argb)
+        local a = bit.band(bit.rshift(argb, 24), 0xFF)
+        local r = bit.band(bit.rshift(argb, 16), 0xFF)
+        local g = bit.band(bit.rshift(argb, 8), 0xFF)
+        local b = bit.band(argb, 0xFF)
+        return a, r, g, b
+    end
+
+    local getcolor = function(color)
+        if color:sub(1, 6):upper() == 'SSSSSS' then
+            local r, g, b = colors[1].x, colors[1].y, colors[1].z
+            local a = tonumber(color:sub(7, 8), 16) or colors[1].w * 255
+            return ImVec4(r, g, b, a / 255)
+        end
+        local color = type(color) == 'string' and tonumber(color, 16) or color
+        if type(color) ~= 'number' then return end
+        local r, g, b, a = explode_argb(color)
+        return imgui.ImColor(r, g, b, a):GetVec4()
+    end
+
+    local render_text = function(text_)
+        for w in text_:gmatch('[^\r\n]+') do
+            local text, colors_, m = {}, {}, 1
+            w = w:gsub('{(......)}', '{%1FF}')
+            while w:find('{........}') do
+                local n, k = w:find('{........}')
+                local color = getcolor(w:sub(n + 1, k - 1))
+                if color then
+                    text[#text], text[#text + 1] = w:sub(m, n - 1), w:sub(k + 1, #w)
+                    colors_[#colors_ + 1] = color
+                    m = n
+                end
+                w = w:sub(1, n - 1) .. w:sub(k + 1, #w)
+            end
+            if text[0] then
+                for i = 0, #text do
+                    imgui.TextColored(colors_[i] or colors[1], u8(text[i]))
+                    imgui.SameLine(nil, 0)
+                end
+                imgui.NewLine()
+            else imgui.Text(u8(w)) end
+        end
+    end
+    render_text(text)
 end
 function imgui.Tooltip(text)
     if imgui.IsItemHovered() then
@@ -2144,6 +2173,7 @@ function timerans()
 		end
 		if saveplayerrecon then
 			if sampIsPlayerConnected(saveplayerrecon) then
+				imgui.Process = true
 				windows.ansreport_window_state.v = true
 				showCursor(false,false)
 				wait(5500)
@@ -2151,6 +2181,8 @@ function timerans()
 					windows.ansreport_window_state.v = false
 					saveplayerrecon = nil
 				end
+			else
+				sampAddChatMessage(tag .. 'Игрок, написавший репорт, находится вне сети.', -1)
 			end
 		end
 	end
@@ -2243,7 +2275,7 @@ function ac5()
 end
 function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 	if cfg.settings.weaponhack then
-		if not activeam then
+		if not AFK then
 			if text:match('Weapon hack .code. 015.') then
 				if sampIsDialogActive() or sampIsChatInputActive() then
 					lua_thread.create(function()
@@ -2265,7 +2297,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 		end
 	end
 	if cfg.settings.slejkaform then
-		if not activeam then
+		if not AFK then
 			if text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") then
 				local poiskform = string.sub(text, 7)
 				for i = 0, #spisok do
@@ -2286,7 +2318,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 									st.styleform = true
 									break
 								end
-								if v == 'ban' then
+								if spisok[i] == 'ban' then
 									st.forumplease = true
 								end
 								if poiskform:find('off') or poiskform:find('akk') then
@@ -2309,17 +2341,8 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 									st.sett = true
 									break
 								else
-									if cfg.settings.acon then
-										func10:run()
-										lua_thread.create(function()
-											wait(6000)
-											func10:terminate()
-										end)
-										st = {}
-									else
-										st = {}
-										sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
-									end
+									st = {}
+									sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
 									break
 								end
 							end
@@ -2387,7 +2410,7 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
 			    func5:run()
 			end
 		end
-		messange = nil
+		local messange = nil
 		count = count + 1
 		return false --
 	end
@@ -2396,29 +2419,31 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
             return false
         end
     end
-	if cfg.settings.automute and not activeam then 
+	if cfg.settings.automute and not AFK then 
 		text = text:lower()
         text = text:rlower() .. ' '
-		if text:match('жалоба') then
-			oskid = tonumber(text:match('%[(%d+)%]'))
-			for i = 0, #spisokoskrod do
-				if text:match('}'..tostring(spisokoskrod[i])) or text:match('%s'..tostring(spisokoskrod[i])) then
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampSendChat('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-					notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
-					return false
+		if cfg.settings.automuteoption then
+			if text:match('жалоба') then
+				oskid = tonumber(text:match('%[(%d+)%]'))
+				for i = 0, #spisokoskrod do
+					if text:match('}'..tostring(spisokoskrod[i])) or text:match('%s'..tostring(spisokoskrod[i])) then
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampSendChat('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
+						notify.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+						return false
+					end
 				end
-			end
-			for i = 0, #spisokrz do
-				if text:match('}'..tostring(spisokrz[i])) or text:match('%s'..tostring(spisokrz[i])) then
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampSendChat('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
-					notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
-					return false
+				for i = 0, #spisokrz do
+					if text:match('}'..tostring(spisokrz[i])) or text:match('%s'..tostring(spisokrz[i])) then
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampSendChat('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
+						notify.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+						return false
+					end
 				end
 			end
 		end
@@ -2428,53 +2453,79 @@ function sampev.onServerMessage(color,text) -- поиск сообщений из чата
             else
                 oskid = text:match('%[(%d+)%]')
             end
-			for i = 0, #spisokoskrod do
-				if text:match('%s'.. tostring(spisokoskrod[i])) or text:match('}'..tostring(spisokoskrod[i])) then
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-					notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
-					return false
+			if cfg.settings.automuteoption then
+				for i = 0, #spisokoskrod do
+					if text:match('%s'.. tostring(spisokoskrod[i])) or text:match('}'..tostring(spisokoskrod[i])) then
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
+						notify.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+						return false
+					end
 				end
-			end
-			for i = 0, #spisokrz do
-				if text:match('}'..tostring(spisokrz[i])) or text:match('%s'..tostring(spisokrz[i])) then
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampSendChat('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
-					notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
-					return false
+				for i = 0, #spisokrz do
+					if text:match('}'..tostring(spisokrz[i])) or text:match('%s'..tostring(spisokrz[i])) then
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampSendChat('/mute ' .. oskid .. ' 5000 Розжиг межнац.розни')
+						notify.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+						return false
+					end
 				end
-			end
-			for i = 0, #spisokproject do
-				if text:match('%s' .. tostring(spisokproject[i])) or text:match('}' .. tostring(spisokproject[i])) then
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampSendInputChat('/up ' .. oskid)
-					notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Запрещенное слово: ' .. tostring(spisokproject[i]), 2,1,10)
-					return false
+				for i = 0, #spisokproject do
+					if text:match('%s' .. tostring(spisokproject[i])) or text:match('}' .. tostring(spisokproject[i])) then
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampSendInputChat('/up ' .. oskid)
+						notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(spisokproject[i]), 2,1,10)
+						return false
+					end
 				end
 			end
             for i = 0, #cfg.osk do
-                if text:match('%s'..tostring(cfg.osk[i])) or text:match('}'..tostring(cfg.osk[i])) and not text:match('я ') then
+                if text:match('%s'..tostring(cfg.osk[i])) or text:match('}'..tostring(cfg.osk[i])) and not text:match('я ' .. tostring(cfg.osk[i])) then
+					if cfg.settings.automuteoption then
+						for d = 0, #spisokor do
+							if text:match('%s'.. tostring(spisokor[d])) or text:match('}'..tostring(spisokor[d])) then
+								sampAddChatMessage('=======================================================', 0x00FF00)
+								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+								sampAddChatMessage('=======================================================', 0x00FF00)
+								sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
+								notify.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+								return false
+							end
+						end
+					end
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampSendChat('/mute ' .. oskid .. ' 400 Оскорбление/Унижение')
-					notify.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Запрещенное слово: ' .. tostring(cfg.osk[i]), 2,1,10)
+					notify.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]), 2,1,10)
 					return false
                 end
             end
             for i = 0, #cfg.mat do
                 if text:match('%s'.. tostring(cfg.mat[i])) or text:match('}'..tostring(cfg.mat[i])) then
+					if cfg.settings.automuteoption then
+						for d = 0, #spisokor do
+							if text:match('%s'.. tostring(spisokor[d])) or text:match('}'..tostring(spisokor[d])) then
+								sampAddChatMessage('=======================================================', 0x00FF00)
+								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+								sampAddChatMessage('=======================================================', 0x00FF00)
+								sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
+								notify.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+								return false
+							end
+						end
+					end
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampSendChat('/mute ' .. oskid .. ' 300 Нецензурная лексика')
-					notify.addNotify('<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Запрещенное слово: ' .. tostring(cfg.mat[i]), 2,1,10)
+					notify.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]), 2,1,10)
 					return false
                 end
             end
@@ -2484,10 +2535,11 @@ end
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 	if id == 2052 then
 		lua_thread.create(function()
-			wait(100)
-			sampTextdrawSetPos(156, 2100, 0)
-			sampTextdrawSetPos(2052, 2000, 0)
+			wait(250)
 			playerrecon = tonumber(string.match(sampTextdrawGetString(2052), '%((%d+)%)')) -- id нарушителя
+			sampTextdrawSetPos(156, 2100, 0) -- кнопка обновить рекон
+			sampTextdrawSetPos(2052, 2000, 0) -- информация о никнейме игрока
+			sampTextdrawSetPos(2059, 2000, 0) -- информация
 			while not inforeport do
 				wait(0)
 			end
@@ -2498,17 +2550,13 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			end
 		end)
 	end
-	if (id == 144 or id == 146 or id == 141 or id == 155 or id == 153 or id == 154 or id == 152  or id == 160  or id == 170 or id == 168 or id == 174 or id == 182 or id == 172 or id == 171 or id == 173 or id == 150 or id == 147 or id == 183 or id == 151  or id == 142 or id == 149 or id == 143 or id == 184 or id == 179 or id == 145 or id == 157 or id == 180 or id == 178 or id == 166 or id == 169 or id == 167 or id == 148 or id == 176 or id == 175 or id == 177 or id == 158 or id == 162 or id == 437 or id == 159 or id == 165 or id == 163 or id == 181 or id == 161 or id == 164 or id == 165) then
-		return false
-	end
 	if id == 2059 then
 		lua_thread.create(function()
 			while id == 2059 do
-				sampTextdrawSetPos(2059, 2000, 0)
-				inforeport = textSplit(sampTextdrawGetString(2059), "~n~")
+				inforeport = textSplit(sampTextdrawGetString(2059), "~n~") -- информация о игроке, считывание с текстрдрава
 				for i = 4, #inforeport do
 					if i == 4 then
-						if inforeport[i] == '-1' then
+						if inforeport[i] == '-1' then -- хп авто
 							inforeport[i] = '-'
 						end
 					end
@@ -2537,33 +2585,30 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			end
 		end)
 	end
+	if (id == 144 or id == 177 or id == 146 or id == 141 or id == 155 or id == 153 or id == 154 or id == 152  or id == 160  or id == 170 or id == 168 or id == 174 or id == 182 or id == 172 or id == 171 or id == 173 or id == 150 or id == 147 or id == 183 or id == 151  or id == 142 or id == 149 or id == 143 or id == 184 or id == 179 or id == 145 or id == 157 or id == 180 or id == 178 or id == 166 or id == 169 or id == 167 or id == 148 or id == 176 or id == 175 or id == 158 or id == 162 or id == 437 or id == 159 or id == 165 or id == 163 or id == 181 or id == 161 or id == 164 or id == 165) then
+		return false -- удаление лишних текстравов в реконе
+	end
 end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- Работа с открытими ДИАЛОГАМИ
 	if cfg.settings.checkadmins then
 		if title:find('Администрация проекта') then
 			admins = textSplit(text, '\n') 
 			for i = 1, #admins - 1 do -- {FFFFFF}N.E.O.N(0) ({2E8B57}Мл.Администратор{FFFFFF}) | Уровень: {ff8587}6{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}
+				local rang = string.sub(string.gsub(string.match(admins[i], '(%(.+)%)'), '(%(%d+)%)', ''), 3) --{FFFFFF}N.E.O.N(0) | Уровень: {ff8587}18{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}60
 				admins[i] = string.gsub(admins[i], '{%w%w%w%w%w%w}', "")
 				local afk = string.match(admins[i], 'AFK: (.+)')
-				local name, id, rang, lvl, _, _ = string.match(admins[i], '(.+)%((%d+)%) (%(.+)%) | Уровень: (.+) | Выговоры: %d из %d | Репутация: (.+)')
-				local name, id, rang, lvl = tostring(name), tostring(id), string.sub(tostring(rang), 2), tostring(lvl)
+				local name, id, _, lvl, _, _ = string.match(admins[i], '(.+)%((%d+)%) (%(.+)%) | Уровень: (%d+) | Выговоры: (%d+) из (%d+) | Репутация: (%d+)')
+				local name, id, lvl = tostring(name), tostring(id), tostring(lvl)
 				admins[i] = string.gsub(admins[i], '| Выговоры: %d из %d |', "")
 				admins[i] = string.gsub(admins[i], 'Репутация: (.+)', "")
-				admins[i] = string.gsub(admins[i], '| Уровень: (.+)', "")
-				if rang ~= 'il' then
-					if afk then
-						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' ' .. lvl .. ' AFK: ' .. afk
-					else
-						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' '.. lvl
-					end
-				else
+				if #rang>2 then
 					if afk then
 						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' ' .. lvl .. ' AFK: ' .. afk
 					else
 						admins[i] = name .. '(' .. id .. ') ' .. rang .. ' '.. lvl
 					end
 				end
-				local name, id, rang, lvl, afk = nil
+				local name, id, rang, lvl, afk, rang = nil
 			end
 			imgui.Process = true
 			windows.checkadm_window_state.v = true
@@ -2571,7 +2616,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			return false
 		end
 	end
-	if dialogId == 1098 and cfg.settings.autoonline then
+	if dialogId == 1098 and cfg.settings.autoonline then -- автоонлайн
 		local c = math.floor(sampGetPlayerCount(false) / 10)
 		sampSendDialogResponse(dialogId, 1, c - 1)
 		local c = nil
@@ -2644,7 +2689,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			if lineIndex == tonumber(3) - 1 then 
 				don = string.sub(line, 1, 1)
 				if don == '{' then
-					textreport = string.sub(line, 9) -- текст репорта
+					textreport = string.gsub(string.sub(line, 9), '{%w%w%w%w%w%w}', "") -- text report
 					if string.match(line, '%d[%d.,]*') then
 						reportid = tonumber(string.match(textreport, '%d[%d.,]*'))
 						if sampIsPlayerConnected(reportid) then
@@ -2663,7 +2708,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				wait(200)
 			end
 			sampSendDialogResponse(dialogId,1,0)
-			return false
 		end)
 	end
 	if dialogId == 2350 then -- окно с возможностью принять или отклонить репорт
@@ -2672,17 +2716,18 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			peremrep = (u8:decode(buffer.text_buffer.v))
 			if #peremrep >= 80 then
 				setClipboardText(peremrep)
-				peremrep = 'Мой ответ не вмещается в окно репорта, я отпишу вам лично'
-				sampAddChatMessage(tag .. 'Ваш ответ сохранен в буффер обмена.', -1)
-			end
-			if #peremrep <= 4 and not cfg.settings.mytextreport then
+				--peremrep = 'Мой ответ не вмещается в окно репорта, я отпишу вам лично'
+				sampAddChatMessage(tag .. 'Ваш ответ оказался слишком длинным и сохранен в буффер обмена.', -1)
+			elseif #peremrep <= 4 and not cfg.settings.mytextreport then
 				peremrep = (u8:decode(buffer.text_buffer.v) .. '   ')
 			end
-			if cfg.settings.autosave then
-				cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_buffer.v)
-				inicfg.save(cfg,directIni)
-			end	
-			answer.moiotvet = true
+			if peremrep then
+				if cfg.settings.autosave then
+					cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_buffer.v)
+					inicfg.save(cfg,directIni)
+				end	
+				answer.moiotvet = true
+			end
 		end
 		if answer.rabotay then
 			peremrep = ('Начал(а) работу по вашей жалобе!')
@@ -2751,19 +2796,20 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				peremrep = 'Мой ответ не вмещается в окно репорта, я отпишу вам лично'
 				sampAddChatMessage(tag .. 'Ваш ответ сохранен в буффер обмена.', -1)
 			end
-			if #peremrep <= 4 then
+			if #peremrep < 4 then
 				peremrep = (answer.customans .. '    ')
 			end
 		end
 		if answer.uto4 then
 			peremrep = ('Обратитесь с данной проблемой на форум https://forumrds.ru')
 		end
-		if answer.peredamrep or answer.moiotvet or answer.slejy or answer.rabotay or answer.ojid or answer.uto4 or answer.uto4id or answer.nakajy or answer.jb or answer.moiotvet or answer.nakazan or answer.customans then
-			setVirtualKeyDown(13, true)
-			setVirtualKeyDown(13, false)
-		end
 		if answer.otklon then
 			sampSendDialogResponse(dialogId, 1, 2, _)
+			setVirtualKeyDown(13, true)
+			setVirtualKeyDown(13, false)
+			answer = {}
+		end
+		if (answer.rabotay or answer.uto4 or answer.nakajy or answer.customans or answer.slejy or answer.jb or answer.ojid or answer.moiotvet or answer.uto4id or answer.nakazan or answer.otklon or answer.peredamrep) then -- ждем нажатия клавиши
 			setVirtualKeyDown(13, true)
 			setVirtualKeyDown(13, false)
 		end
@@ -2780,6 +2826,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			while sampIsDialogActive() do
 				wait(0)
 			end
+			wait(200)
 			if answer.slejy then
 				sampSendChat('/re ' .. reportid)
 			end
@@ -2833,6 +2880,12 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 		windows.four_window_state.v = false
 		return false
 	end
+	if text:find('REPORT') then
+		if cfg.settings.notify and not AFK then
+			notify.addNotify('{FF0000}AT Уведомление', '------------------------------------------------------\nПоступил новый репорт.', 2,2,8)
+		end
+		return false
+	end
 end
 function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
 	nick = tostring(nick)
@@ -2844,25 +2897,13 @@ function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
 	  	end
 	end
 end
-function warnings_form()
-	while func10:status() ~= 'yielded' do
-		wait(0)
-		if not isPauseMenuActive() and cfg.settings.chatposx then
-			renderFontDrawText(font_adminchat, tag .. 'ID не обнаружен, либо находится вне сети.', cfg.settings.chatposx, cfg.settings.chatposy-17, 0xCCFFFFFF)
-		elseif not isPauseMenuActive() then
-			cfg.settings.chatposx = -2
-			cfg.settings.chatposy = ((sh*0.5)-100)
-			renderFontDrawText(font_adminchat, tag .. 'ID не обнаружен, либо находится вне сети.', cfg.settings.chatposx, cfg.settings.chatposy-17, 0xCCFFFFFF)
-		end
-	end
-end
 function checkadmins()
 	while true do
 		while sampIsDialogActive() or sampIsChatInputActive() do
 			wait(0)
 		end
 		wait(1000)
-		if not activeam then
+		if not AFK then
 			sampSendChat('/admins')
 		end
 		wait(20000)
@@ -2899,6 +2940,7 @@ function inputChat()
 end
 ------------- Input Helper -------------
  ------------- KEYSYNC ----------------
+ local target = -1
 function sampev.onPlayerSync(playerId, data)
 	local result, id = sampGetPlayerIdByCharHandle(target)
 	if result and id == playerId then
@@ -3006,6 +3048,9 @@ mimgui.OnFrame(
 				end
 			else
 				mimgui.Text(u8"Игрок не зафиксирован. Обновите рекон нажав клавишу R")
+				if not windows.four_window_state.v then
+					sampSendInputChat('/keysync off')
+				end
 			end
 		mimgui.End()
     end
@@ -3078,6 +3123,29 @@ function bringVec4To(from, dest, start_time, duration)
     end
     return (timer > duration) and dest or from, false
 end
+function imgui.Hint(text, delay, action) -- подсказки
+    if imgui.IsItemHovered() then
+        if go_hint == nil then go_hint = os.clock() + (delay and delay or 0.0) end
+        local alpha = (os.clock() - go_hint) * 5
+        if os.clock() >= go_hint then
+            imgui.PushStyleVar(imgui.StyleVar.WindowPadding, imgui.ImVec2(10, 10))
+            imgui.PushStyleVar(imgui.StyleVar.Alpha, (alpha <= 1.0 and alpha or 1.0))
+                imgui.PushStyleColor(imgui.Col.PopupBg, imgui.ImVec4(0.11, 0.11, 0.11, 1.00))
+                    imgui.BeginTooltip()
+                    imgui.PushTextWrapPos(450)
+                    imgui.TextColored(imgui.GetStyle().Colors[imgui.Col.ButtonHovered], u8' Подсказка:')
+                    imgui.TextUnformatted(text)
+                    if action ~= nil then
+                        imgui.TextColored(imgui.GetStyle().Colors[imgui.Col.TextDisabled], '\n '..action)
+                    end
+                    if not imgui.IsItemVisible() and imgui.GetStyle().Alpha == 1.0 then go_hint = nil end
+                    imgui.PopTextWrapPos()
+                    imgui.EndTooltip()
+                imgui.PopStyleColor()
+            imgui.PopStyleVar(2)
+        end
+    end
+end
  ------------- KEYSYNC ----------------
 function imgui.NewInputText(lable, val, width, hint, hintpos) -- Поле ввода с подсказкой
     local hint = hint and hint or ''
@@ -3110,6 +3178,20 @@ function playersToStreamZone() -- игроки в радиусе
 	end
 	return streaming_player
 end
+function ScriptExport()
+	lua_thread.create(function()
+		if cfg.settings.wallhack then
+			sampSendInputChat('/wh ')
+		end
+		wait(200)
+		sampSendInputChat('/trasoff')
+		wait(200)
+		sampSendInputChat('/fsoff')
+		imgui.Process = false
+		showCursor(false,false)
+		thisScript():unload()
+	end)
+end
 ----======================= Исключительно для скрипта ===============------------------
 sampRegisterChatCommand('wh' , function()
 	if not cfg.settings.wallhack then
@@ -3131,7 +3213,7 @@ sampRegisterChatCommand('wh' , function()
 		sampAddChatMessage(tag .. 'WallHack выключен', -1)
 		inicfg.save(cfg,directIni)
 		local pStSet = sampGetServerSettingsPtr();
-		mem.setfloat(pStSet + 39, 50)
+		mem.setfloat(pStSet + 39, 40)
 		mem.setint8(pStSet + 47, 0)
 		mem.setint8(pStSet + 56, 1)
 		nameTag = false
@@ -3157,7 +3239,16 @@ sampRegisterChatCommand('tool', function()
 	windows.main_window_state.v = not windows.main_window_state.v
 	imgui.Process = windows.main_window_state.v
 end)
-
+sampRegisterChatCommand('update', function()
+	lua_thread.create(function()
+		wait(500)
+		sampSendInputChat('/updateat')
+		wait(500)
+		sampSendInputChat('/updatefs')
+		wait(500)
+		sampSendInputChat('/updatemp')
+	end)
+end)
 ----======================= Исключительно вспомогательные ===============------------------
 sampRegisterChatCommand('spp', function()
 	local playerid_to_stream = playersToStreamZone()
@@ -3251,41 +3342,6 @@ sampRegisterChatCommand('nv', function(param)
 		end
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
-	end
-end)
-sampRegisterChatCommand('prfma', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Мл.Администратор " .. cfg.settings.prefixma)
-	end
-end)
-sampRegisterChatCommand('prfa', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Администратор " .. cfg.settings.prefixa)
-	end
-end)
-sampRegisterChatCommand('prfsa', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Ст.Администратор " .. cfg.settings.prefixsa)
-	end
-end)
-sampRegisterChatCommand('prfpga', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Помощник.Глав.Администратора " .. color())
-	end
-end)
-sampRegisterChatCommand('prfzga', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Зам.Глав.Администратора " .. color())
-	end
-end)
-sampRegisterChatCommand('prfga', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Главный-Администратор " .. color())
-	end
-end)
-sampRegisterChatCommand('prfcpec', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Спец.Администратор " .. color())
 	end
 end)
 sampRegisterChatCommand('stw', function(param) 
@@ -3901,14 +3957,14 @@ sampRegisterChatCommand('jcf', function(param)
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
 end)
-sampRegisterChatCommand('baguse', function(param) 
+sampRegisterChatCommand('bg', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 300 Багоюз')
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
 end)
-sampRegisterChatCommand('bagusef', function(param) 
+sampRegisterChatCommand('bgf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jailakk ' .. param .. ' 300 Багоюз')
 	else
