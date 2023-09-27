@@ -770,7 +770,7 @@ function imgui.OnDrawFrame()
 				end
 			end
 			if update_state then
-				if imgui.Button(u8'Обновить скрипт', imgui.ImVec2(300, 24)) then
+				if imgui.Button(u8'Обновить скрипт', imgui.ImVec2(410, 24)) then
 					windows.main_window_state.v = false
 					imgui.Process = false
 					sampSendInputChat('/update')
