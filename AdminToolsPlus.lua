@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AdminTools Plus+' 
 script_author 'Neon4ik'
 local imgui = require 'imgui' 
-local version = 0.2
+local version = 0.3
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -246,7 +246,7 @@ function imgui.OnDrawFrame()
 						if tonumber(text_buffer2.v) <= tonumber(countball) and  tonumber(text_buffer3.v) >= tonumber(countball) then
 							for k,v in pairs(offadmins) do
 								peremlvl = tonumber(string.match(string.sub(v,-3), '%d[%d.,]*'))
-								v = string.gsub(v, '=(%d+)', '') --v - Tenso_Nightcore
+								v = string.gsub(v, '=(%d+)', '')
 								checkalw = nil
 								nick = string.gsub(nick, '=(%d+)', '')
 								if string.sub(nick,1,-2) == ' ' then
@@ -261,6 +261,16 @@ function imgui.OnDrawFrame()
 								end
 								if v then
 									if v:find(nick) or v:find(string.sub(nick,1,-2)) then -- записываем в конфиг информацию о  ае
+										for d,s in pairs(kai) do -- защита от повторного открыти€ списка, удал€ем повтор€шек
+											if s:find(nick) then
+												kai[d], kai[s] = nil, nil
+											end
+										end
+										for d,s in pairs(makeadmin) do -- защита от повторного открыти€ списка, удал€ем повтор€шек
+											if s:find(nick) then
+												makeadmin[d], makeadmin[s] = nil, nil
+											end
+										end
 										if SendKai == 0 then
 											kai[#kai + 1] = ' ай кик ' .. nick
 										elseif SendKai == 1 then
@@ -378,9 +388,9 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 					lvl = lvl1
 				end
 				v = string.sub(v, 1, -3) 
-				for _,s in pairs(offadmins) do -- защита от повторного открыти€ списка, удал€ем повтор€шек
+				for d,s in pairs(offadmins) do -- защита от повторного открыти€ списка, удал€ем повтор€шек
 					if s == (v .. '=' .. lvl) then
-						offadmins[#offadmins] = nil
+						offadmins[d], offadmins[s] = nil, nil
 					end
 				end
 				offadmins[#offadmins + 1] =  (v .. '=' .. lvl) -- записываем информацию о админе в конфиг
@@ -410,6 +420,62 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 			end
 		end
 	end
+end
+function color() -- рандом префикс
+    mcolor = ""
+    math.randomseed( os.time() )
+    for i = 1, 6 do
+        local b = math.random(1, 16)
+        if b == 1 then
+            mcolor = mcolor .. "A"
+        end
+        if b == 2 then
+            mcolor = mcolor .. "B"
+        end
+        if b == 3 then
+            mcolor = mcolor .. "C"
+        end
+        if b == 4 then
+            mcolor = mcolor .. "D"
+        end
+        if b == 5 then
+            mcolor = mcolor .. "E"
+        end
+        if b == 6 then
+            mcolor = mcolor .. "F"
+        end
+        if b == 7 then
+            mcolor = mcolor .. "0"
+        end
+        if b == 8 then
+            mcolor = mcolor .. "1"
+        end
+        if b == 9 then
+            mcolor = mcolor .. "2"
+        end
+        if b == 10 then
+            mcolor = mcolor .. "3"
+        end
+        if b == 11 then
+            mcolor = mcolor .. "4"
+        end
+        if b == 12 then
+            mcolor = mcolor .. "5"
+        end
+        if b == 13 then
+            mcolor = mcolor .. "6"
+        end
+        if b == 14 then
+            mcolor = mcolor .. "7"
+        end
+        if b == 15 then
+            mcolor = mcolor .. "8"
+        end
+        if b == 16 then
+            mcolor = mcolor .. "9"
+        end
+    end
+    return mcolor
 end
 sampRegisterChatCommand('deladm', function(param)
 	if #param >= 3 then
