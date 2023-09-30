@@ -143,6 +143,12 @@ function imgui.OnDrawFrame()
         imgui.ShowCursor = true
         imgui.SetNextWindowPos(imgui.ImVec2(sw*0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.Begin(u8"Статистика", static_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        if imadd.ToggleButton('##activerstate', checkbox.check_1) then
+            cfg.settings.adminstate = not cfg.settings.adminstate
+			inicfg.save(cfg,directIni)
+        end
+        imgui.SameLine()
+        imgui.Text(u8'Вкл/Выкл')
         imgui.Text(u8'Выберите пункты')
         if imadd.ToggleButton('##mynick', checkbox.check_2) then
             cfg.settings.mynick = not cfg.settings.mynick
