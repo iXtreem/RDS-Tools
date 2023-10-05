@@ -49,7 +49,7 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		position_recon_menu_x = sw - 270,
 		position_recon_menu_y = 0,
 		keysync = true,
-		ans = 'None',
+		fast_key_ans = 'None',
 		fast_key_takereport = 'None',
 		fast_key_wallhack = 'None',
 		fast_key_addText = 'None',
@@ -265,12 +265,11 @@ function main() -- основной сценарий скрипта
 	funcadm = lua_thread.create_suspended(render_admins)
 	funct = lua_thread.create_suspended(timer)
 	funct:run()
-	func10 = lua_thread.create_suspended(warnings_form)
 	if cfg.settings.autoonline then
 		func:run()
 	end
-	font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 	lua_thread.create(function()
+		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(1)
 			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. version .. ']', 10, sh-20, 0xCCFFFFFF)
@@ -279,14 +278,14 @@ function main() -- основной сценарий скрипта
 	dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", getWorkingDirectory() .. '//AdminTools.ini', function(id, status)
 		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			AdminTools = inicfg.load(nil, getWorkingDirectory() .. '//AdminTools.ini')
-			if tonumber(AdminTools.script.version) > version then
+			local AdminTools = inicfg.load(nil, getWorkingDirectory() .. '//AdminTools.ini')
+			if AdminTools.script.version > version then
 				update_state_main = true
 			end
-			if tonumber(AdminTools.script.versionMP) > cfg.settings.versionMP then
+			if AdminTools.script.versionMP > cfg.settings.versionMP then
 				update_state = true
 			end
-			if tonumber(AdminTools.script.versionFS) > cfg.settings.versionFS then
+			if AdminTools.script.versionFS > cfg.settings.versionFS then
 				update_state = true
 			end
 			os.remove(getWorkingDirectory() .. "/AdminTools.ini" )
@@ -581,7 +580,7 @@ function imgui.OnDrawFrame()
 					end)
 				end
 			end
-			imgui.Text('\n\n\n')
+			imgui.Text('\n\n')
 			imgui.Separator()
 			imgui.Text(u8'Разработчик скрипта - N.E.O.N [RDS 01].\nОбратная связь ниже\n')
 			imgui.Text('VK:')
