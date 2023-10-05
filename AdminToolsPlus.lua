@@ -81,7 +81,6 @@ function main()
 		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 			AdminToolsPlus = inicfg.load(nil, getWorkingDirectory() .. "//AdminToolsPlus.ini")
 			if tonumber(AdminToolsPlus.script.version) > version then
-				sampAddChatMessage(tag .. 'Найдено обновление. Рекомендуется обновится /updateplus', -1)
 				update_state = true
 			end
 			os.remove(getWorkingDirectory() .. "//AdminToolsPlus.ini")
