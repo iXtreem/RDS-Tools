@@ -3,6 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
+local version = 0.4
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -23,8 +24,9 @@ local stata_window_state = imgui.ImBool(false)
 local static_window_state = imgui.ImBool(false)
 local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
+local text_myprize = imgui.ImBuffer(256)
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
-local directIni = directIni
+local directIni = 'AT_MP.json'
 
 local cfg = inicfg.load({
     settings = {
@@ -75,7 +77,7 @@ local checkbox = {
 
 function main()
     while not isSampAvailable() do wait(0) end
-    tools.settings.versionMP = 0.3
+    tools.settings.versionMP = version
     inicfg.save(tools, 'AdminTools.ini')
     while not sampIsLocalPlayerSpawned() do wait(1000) end
     font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
@@ -125,12 +127,6 @@ function sampev.onServerMessage(color,text)
         cfg.info[4] = cfg.info[4] + 1
     end
 end
-
-sampRegisterChatCommand('state', function()
-    static_window_state.v = not static_window_state.v
-    imgui.Process = static_window_state.v
-end) 
-
 function imgui.OnDrawFrame()
     if not main_window_state.v and not static_window_state.v and not secondary_window_state.v and not russkaya_window_state.v and not stata_window_state.v and not menu_window_state.v and not corol_window_state.v and not poliv_window_state.v and not pryatki_window_state.v and not sportzal_window_state.v then
         if cfg.settings.adminstate then
@@ -140,7 +136,6 @@ function imgui.OnDrawFrame()
         end
     end
     if static_window_state.v then
-        imgui.ShowCursor = true
         imgui.SetNextWindowPos(imgui.ImVec2(sw*0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.Begin(u8"Статистика", static_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         if imadd.ToggleButton('##activerstate', checkbox.check_1) then
@@ -282,18 +277,29 @@ function imgui.OnDrawFrame()
             menu_window_state.v = false
         end
         if imgui.Button(u8'Выдать приз', imgui.ImVec2(200, 30)) then
+            menu_window_state.v = false
             sampSendChat('/mess 7 Победитель мероприятия - ' .. sampGetPlayerNickname(id) .. '[' .. id .. ']' .. ' поздравим его!')
             sampSendChat('/mpwin ' .. id)
-            sampSetChatInputText('/spp')
-            sampSetChatInputEnabled(true)
-            setVirtualKeyDown(13, true)
-            setVirtualKeyDown(13, false)
+            sampSendInputChat('/spp')
             _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
             sampSendChat('/tweap ' .. myid)
             sampSendChat('/az')
             sampSendChat('/delcarall')
             showCursor(false,false)
-            thisScript():reload()
+            if u8:decode(text_myprize.v) then
+                lua_thread.create(function()
+                    wait(2000)
+                    sampShowDialog(6405, "Выдать вознаграждение", "Пример: /giverub id 300\n/givescore 24 500000", "Выдать", nil, DIALOG_STYLE_INPUT) -- сам диалог
+                    while sampIsDialogActive(6405) do wait(300) end -- ждёт пока вы ответите на диалог
+                    local result, button, _, input = sampHasDialogRespond(6405)
+                    if input then
+                        sampSendChat(input)
+                    end
+                    thisScript():reload()
+                end)
+            else
+                thisScript():reload()
+            end
         end
         if corol_window_state.v or sportzal_window_state.v then
             if not player1 then
@@ -338,6 +344,8 @@ function imgui.OnDrawFrame()
             sportzal_window_state.v = true
             secondary_window_state.v = false
         end
+        imgui.InputTextMultiline("##Текст оглашения приза", text_myprize, imgui.ImVec2(230,25))
+        imgui.Tooltip(u8('Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp'))
         imgui.End()
     end
     if russkaya_window_state.v then
@@ -389,7 +397,9 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Русская Рулетка, для телепорта вводи /tpmp')
-                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
+                    if #(u8:decode(text_myprize.v)) ~= 0 then
+                        sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                    end
                     showCursor(false,false)
                     sbor = true
                 end)
@@ -397,12 +407,18 @@ function imgui.OnDrawFrame()
         end
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
-                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать на Русской Рулетке, вводи /tpmp')
+                if #(u8:decode(text_myprize.v)) ~= 0 then
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. Вводи /tpmp!')
+                else
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать на Русской Рулетке, вводи /tpmp')
+                end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Русская Рулетка!')
+                    wait(400)
                     sampSendChat('/mess 7 /try удачно - убит, /try неудачно - жив. Побеждает самый везучий.')
+                    wait(400)
                     sampSendChat('/mess 7 Запрещено: /passive, /fly, /gt, DM, /s /r /anim /jp, выходить из строя и любая другая помеха игрокам.')
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
@@ -412,10 +428,7 @@ function imgui.OnDrawFrame()
                     wait(500)
                     sampCloseCurrentDialogWithButton(0)
                     _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-                    sampSetChatInputText('/stw ' .. myid)
-                    sampSetChatInputEnabled(true)
-                    setVirtualKeyDown(13, true)
-                    setVirtualKeyDown(13, false)
+                    sampSendInputChat('/stw ' .. myid)
                     mp = true
                     showCursor(false,false)
                     sbor = false
@@ -516,7 +529,9 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Король дигла, для телепорта вводи /tpmp')
-                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
+                    if #(u8:decode(text_myprize.v)) ~= 0 then
+                        sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                    end
                     showCursor(false,false)
                     sbor = true
                 end)
@@ -524,12 +539,18 @@ function imgui.OnDrawFrame()
         end
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(280, 30)) then
-                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Король Дигла, вводи /tpmp')
+                if #(u8:decode(text_myprize.v)) ~= 0 then
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. Вводи /tpmp!')
+                else
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Король Дигла, вводи /tpmp')
+                end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Король Дигла!')
+                    wait(400)
                     sampSendChat('/mess 7 Я вызываю двух человек, которые начинают стреляться по моей команде, побеждает сильнейший')
+                    wait(400)
                     sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
@@ -680,7 +701,9 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Поливалка, для телепорта вводи /tpmp')
-                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
+                    if #(u8:decode(text_myprize.v)) ~= 0 then
+                        sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                    end
                     showCursor(false,false)
                     sbor = true
                 end)
@@ -688,12 +711,18 @@ function imgui.OnDrawFrame()
         end
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
-                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Поливалка, вводи /tpmp')
+                if #(u8:decode(text_myprize.v)) ~= 0 then
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. Вводи /tpmp!')
+                else
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Поливалка, вводи /tpmp')
+                end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Поливалка!')
+                    wait(400)
                     sampSendChat('/mess 7 Вы разбегаетесь по всей крыше, я пытаюсь вас сбить, последний выживший - побеждает')
+                    wait(400)
                     sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/veh 601 1 1')
                     while getClosestCarId() == '-1' do
@@ -813,7 +842,9 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Прятки, для телепорта вводи /tpmp')
-                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
+                    if #(u8:decode(text_myprize.v)) ~= 0 then
+                        sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                     end
                     showCursor(false,false)
                     sbor = true
                 end)
@@ -821,7 +852,11 @@ function imgui.OnDrawFrame()
         end
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
-                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в Прятках, вводи /tpmp')
+                if #(u8:decode(text_myprize.v)) ~= 0 then
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. Вводи /tpmp!')
+                else
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в Прятках, вводи /tpmp')
+                end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
                 if tools.settings.wallhack then
@@ -829,7 +864,9 @@ function imgui.OnDrawFrame()
                 end
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Прятки!')
+                    wait(400)
                     sampSendChat('/mess 7 Вы разбегаетесь по всему кораблю, я отправляюсь на ваши поиски, побеждает последний выживший.')
+                    wait(400)
                     sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
@@ -841,10 +878,7 @@ function imgui.OnDrawFrame()
                     wait(500)
                     sampCloseCurrentDialogWithButton(0)
                     _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-                    sampSetChatInputText('/stw ' .. myid)
-                    sampSetChatInputEnabled(true)
-                    setVirtualKeyDown(13, true)
-                    setVirtualKeyDown(13, false)
+                    sampSendInputChat('/stw ' .. myid)
                     mp = true
                     sampSendChat('/dmcount 3')
                     sampAddChatMessage(tag .. 'ВЫКЛЮЧИТЕ ХУД, НАЖАВ F7')
@@ -948,7 +982,9 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Бокс, для телепорта вводи /tpmp')
-                    sampSendChat('/mess 7 Поторопись, телепорт скоро закроется! Вводи /tpmp')
+                    if #(u8:decode(text_myprize.v)) ~= 0 then
+                        sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                    end
                     showCursor(false,false)
                     sbor = true
                 end)
@@ -956,12 +992,18 @@ function imgui.OnDrawFrame()
         end
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(280, 30)) then
-                sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Бокс, вводи /tpmp')
+                if #(u8:decode(text_myprize.v)) ~= 0 then
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. Вводи /tpmp!')
+                else
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Бокс, вводи /tpmp')
+                end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Бокс!')
+                    wait(400)
                     sampSendChat('/mess 7 Я выбираю 2 человек, которые сражаются на ринге, побеждает сильнейший.')
+                    wait(400)
                     sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     sampSendChat('/mp')
                     while not sampIsDialogActive() do
@@ -973,10 +1015,7 @@ function imgui.OnDrawFrame()
                     wait(500)
                     sampCloseCurrentDialogWithButton(0)
                     _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-                    sampSetChatInputText('/stw ' .. myid)
-                    sampSetChatInputEnabled(true)
-                    setVirtualKeyDown(13, true)
-                    setVirtualKeyDown(13, false)
+                    sampSendInputChat('/stw ' .. myid)
                     mp = true
                     showCursor(false,false)
                     sbor = false
@@ -1089,6 +1128,14 @@ function imgui.OnDrawFrame()
     end
 end
 
+function imgui.Tooltip(text)
+    if imgui.IsItemHovered() then
+       imgui.BeginTooltip() -- подсказка при наведении на кнопку
+       imgui.Text(text)
+       imgui.EndTooltip()
+    end
+end
+
 function time()
     while true do
         wait(60000)
@@ -1114,7 +1161,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
         sampSendDialogResponse(dialogId, 1, _, tonumber('0'))
     end
 end
-
 function getClosestCarId() -- узнать ид ближащего авто
     local minDist = 200 -- дистанция
     local closestId = -1
@@ -1131,6 +1177,23 @@ function getClosestCarId() -- узнать ид ближащего авто
         end
     end
     return closestId
+end
+
+function imgui.NewInputText(lable, val, width, hint, hintpos) -- Поле ввода с подсказкой
+    local hint = hint and hint or ''
+    local hintpos = tonumber(hintpos) and tonumber(hintpos) or 1
+    local cPos = imgui.GetCursorPos()
+    imgui.PushItemWidth(width)
+    local result = imgui.InputText(lable, val)
+    if #val.v == 0 then
+        local hintSize = imgui.CalcTextSize(hint)
+        if hintpos == 2 then imgui.SameLine(cPos.x + (width - hintSize.x) / 2)
+        elseif hintpos == 3 then imgui.SameLine(cPos.x + (width - hintSize.x - 5))
+        else imgui.SameLine(cPos.x + 5) end
+        imgui.TextColored(imgui.ImVec4(1.00, 1.00, 1.00, 0.40), tostring(hint))
+    end
+    imgui.PopItemWidth()
+    return result
 end
 
 function playersToStreamZone() -- игроки в радиусе
