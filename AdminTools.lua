@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.7 -- Версия скрипта
+local version = 2.71 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -21,10 +21,10 @@ local mem = require "memory"
 local font = require ("moonloader").font_flag
 ------=================== Подгрузка библиотек ===================----------------------
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local AT_Trassera = import ("\\resource\\AT_Trassera.lua") -- подгрузка трассеров
 local AT_MP = import ("\\resource\\AT_MP.lua") -- подгрузка плагина для мероприятий
-local AT_FastSpawn = import ('\\resource\\AT_FastSpawn.lua') -- подгрузка быстрого спавна
-local notify_report = import("\\resource\\lib_imgui_notf.lua") -- подгрузка уведомлений
+local AT_FastSpawn = script.load('\\resource\\AT_FastSpawn.lua') -- подгрузка быстрого спавна
+local AT_Trassera = script.load('\\resource\\AT_Trassera.lua') -- подгрузка трассеров
+local notify_report = import("\\resource\\lib_imgui_notf.lua") -- импорт уведомлений
 local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
 local sw, sh = getScreenResolution()
@@ -78,6 +78,27 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 }, directIni)
 inicfg.save(cfg,directIni) -- Если файла, или определенных настроек нет, добавляем их в файл AdminTools.ini
 
+local windows = {
+	menu_tools = imgui.ImBool(false),
+	fast_report = imgui.ImBool(false),
+	fast_rmute = imgui.ImBool(false),
+	recon_menu = imgui.ImBool(false),
+	recon_ban_menu = imgui.ImBool(false),
+	recon_mute_menu = imgui.ImBool(false),
+	recon_jail_menu = imgui.ImBool(false),
+	recon_kick_menu = imgui.ImBool(false),
+	actions_in_recon_menu = imgui.ImBool(false),
+	help_young_admin = imgui.ImBool(false),
+	answer_player_report = imgui.ImBool(false),
+	custom_ans = imgui.ImBool(false),
+	render_admins = imgui.ImBool(false),
+	new_flood_mess = imgui.ImBool(false),
+	new_position_recon_menu = imgui.ImBool(false),
+	new_position_keylogger = imgui.ImBool(false),
+	new_position_render_admins = imgui.ImBool(false),
+	new_position_adminchat = imgui.ImBool(false),
+}
+
 local checkbox = {
 	check_automute = imgui.ImBool(cfg.settings.automute),
 	check_keysync = imgui.ImBool(cfg.settings.keysync),
@@ -114,26 +135,6 @@ local buffer = {
 	bloknotik = imgui.ImBuffer(cfg.settings.bloknotik, 4096),
 	new_flood_mess = imgui.ImBuffer(4096),
 	title_flood_mess = imgui.ImBuffer(256)
-}
-local windows = {
-	menu_tools = imgui.ImBool(false),
-	fast_report = imgui.ImBool(false),
-	fast_rmute = imgui.ImBool(false),
-	recon_menu = imgui.ImBool(false),
-	recon_ban_menu = imgui.ImBool(false),
-	recon_mute_menu = imgui.ImBool(false),
-	recon_jail_menu = imgui.ImBool(false),
-	recon_kick_menu = imgui.ImBool(false),
-	actions_in_recon_menu = imgui.ImBool(false),
-	help_young_admin = imgui.ImBool(false),
-	answer_player_report = imgui.ImBool(false),
-	custom_ans = imgui.ImBool(false),
-	render_admins = imgui.ImBool(false),
-	new_flood_mess = imgui.ImBool(false),
-	new_position_recon_menu = imgui.ImBool(false),
-	new_position_keylogger = imgui.ImBool(false),
-	new_position_render_admins = imgui.ImBool(false),
-	new_position_adminchat = imgui.ImBool(false),
 }
 local menu = {true, -- рекон меню
     false,
@@ -1693,7 +1694,7 @@ function imgui.OnDrawFrame()
 				saveplayerrecon = nil
 			end
 			if isKeyJustPressed(VK_R) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				sampSendClickTextdraw(165)
+				sampSendClickTextdraw(163)
 				if cfg.settings.keysync then
 					lua_thread.create(function()
 						wait(1000)
@@ -2284,7 +2285,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendChat('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-						notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+						if notify_report then
+							notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+						end
 						return false
 					end
 				end
@@ -2294,7 +2297,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendChat('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
-						notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+						if notify_report then
+							notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+						end
 						return false
 					end
 				end
@@ -2313,7 +2318,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-						notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+						if notify_report then
+							notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+						end
 						return false
 					end
 				end
@@ -2323,7 +2330,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendChat('/mute ' .. oskid .. ' 5000 Розжиг межнац.розни')
-						notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+						if notify_report then
+							notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+						end
 						return false
 					end
 				end
@@ -2333,7 +2342,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendInputChat('/up ' .. oskid)
-						notify_report.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(spisokproject[i]), 2,1,10)
+						if notify_report then
+							notify_report.addNotify('<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(spisokproject[i]), 2,1,10)
+						end
 						return false
 					end
 				end
@@ -2347,7 +2358,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 								sampAddChatMessage('=======================================================', 0x00FF00)
 								sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
-								notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+								if notify_report then
+									notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+								end
 								return false
 							end
 						end
@@ -2356,7 +2369,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampSendChat('/mute ' .. oskid .. ' 400 Оскорбление/Унижение')
-					notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]), 2,1,10)
+					if notify_report then
+						notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\nВыявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]), 2,1,10)
+					end
 					return false
                 end
             end
@@ -2369,7 +2384,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 								sampAddChatMessage('=======================================================', 0x00FF00)
 								sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
-								notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+								if notify_report then
+									notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+								end
 								return false
 							end
 						end
@@ -2378,7 +2395,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampSendChat('/mute ' .. oskid .. ' 300 Нецензурная лексика')
-					notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]), 2,1,10)
+					if notify_report then
+						notify_report.addNotify('{FF7F50}<Автомут>', '------------------------------------------------------\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]), 2,1,10)
+					end						
 					return false
                 end
             end
@@ -2387,16 +2406,16 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 end
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 	if cfg.settings.on_custom_recon_menu then
-		if id == 2054 then
+		if id == 2052 then
 			lua_thread.create(function()
 				wait(300)
-				playerrecon = tonumber(string.match(sampTextdrawGetString(2054), '%((%d+)%)')) -- id нарушителя
+				playerrecon = tonumber(string.match(sampTextdrawGetString(2052), '%((%d+)%)')) -- id нарушителя
 				while not inforeport do
 					wait(0)
 				end
-				sampTextdrawSetPos(2061, 2000, 0) -- информация
-				sampTextdrawSetPos(165,2000,0) -- кнопка Refresh в реконе
-				sampTextdrawSetPos(2054, 2000, 0) -- информация о никнейме игрока
+				sampTextdrawSetPos(2058, 2000, 0) -- информация
+				sampTextdrawSetPos(163,2000,0) -- кнопка Refresh в реконе
+				sampTextdrawSetPos(2052, 2000, 0) -- информация о никнейме игрока
 				windows.recon_menu.v = true
 				imgui.Process = true
 				if cfg.settings.keysync then
@@ -2404,10 +2423,10 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				end
 			end)
 		end
-		if id == 2061 then
+		if id == 2058 then
 			lua_thread.create(function()
-				while id == 2061 do
-					inforeport = textSplit(sampTextdrawGetString(2061), "~n~") -- информация о игроке, считывание с текстрдрава
+				while id == 2058 do
+					inforeport = textSplit(sampTextdrawGetString(2058), "~n~") -- информация о игроке, считывание с текстрдрава
 					for i = 4, #inforeport do
 						if i == 4 then
 							if inforeport[i] == '-1' then -- хп авто
@@ -2440,7 +2459,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			end)
 		end
 		if (id == 446 or id == 153 or id == 150 or id == 164 or id == 169 or id == 186
-			or id == 161 or id == 164 or id == 162 or id == 163 or id == 169
+			or id == 161 or id == 164 or id == 162 or id == 169 or id == 165
 			or id == 166 or id == 188 or id == 168 or id == 188 or id == 173
 			or id == 189 or id == 170 or id == 173 or id == 189 or id == 189
 			or id == 189 or id == 175 or id == 178 or id == 173 or id == 172
@@ -2449,7 +2468,8 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			or id == 159 or id == 192 or id == 156 or id == 160 or id == 158
 			or id == 182 or id == 151 or id == 152 or id == 193 or id == 155
 			or id == 167 or id == 174 or id == 171 or id == 187 or id == 176
-			or id == 181 or id == 180 or id == 157 or id == 154 or id == 185) then
+			or id == 181 or id == 180 or id == 157 or id == 154 or id == 185
+			or id == 444 or id == 149 or id == 148) then
 			return false -- удаление лишних текстравов в реконе
 		end
 	end
@@ -2749,7 +2769,9 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 	end
 	if text:find('REPORT') then
 		if cfg.settings.notify_report and not AFK then
-			notify_report.addNotify('{FF0000}AT Уведомление', '------------------------------------------------------\nПоступил новый репорт.', 2,2,8)
+			if notify_report then
+				notify_report.addNotify('{FF0000}AT Уведомление', '------------------------------------------------------\nПоступил новый репорт.', 2,2,8)
+			end
 		end
 		return false
 	end
@@ -3169,29 +3191,6 @@ function bringVec4To(from, dest, start_time, duration)
     end
     return (timer > duration) and dest or from, false
 end
-function imgui.Hint(text, delay, action) -- подсказки
-    if imgui.IsItemHovered() then
-        if go_hint == nil then go_hint = os.clock() + (delay and delay or 0.0) end
-        local alpha = (os.clock() - go_hint) * 5
-        if os.clock() >= go_hint then
-            imgui.PushStyleVar(imgui.StyleVar.WindowPadding, imgui.ImVec2(10, 10))
-            imgui.PushStyleVar(imgui.StyleVar.Alpha, (alpha <= 1.0 and alpha or 1.0))
-                imgui.PushStyleColor(imgui.Col.PopupBg, imgui.ImVec4(0.11, 0.11, 0.11, 1.00))
-                    imgui.BeginTooltip()
-                    imgui.PushTextWrapPos(450)
-                    imgui.TextColored(imgui.GetStyle().Colors[imgui.Col.ButtonHovered], u8' Подсказка:')
-                    imgui.TextUnformatted(text)
-                    if action ~= nil then
-                        imgui.TextColored(imgui.GetStyle().Colors[imgui.Col.TextDisabled], '\n '..action)
-                    end
-                    if not imgui.IsItemVisible() and imgui.GetStyle().Alpha == 1.0 then go_hint = nil end
-                    imgui.PopTextWrapPos()
-                    imgui.EndTooltip()
-                imgui.PopStyleColor()
-            imgui.PopStyleVar(2)
-        end
-    end
-end
  ------------- KEYSYNC ----------------
 function imgui.NewInputText(lable, val, width, hint, hintpos) -- Поле ввода с подсказкой
     local hint = hint and hint or ''
@@ -3229,9 +3228,7 @@ function ScriptExport()
 		if cfg.settings.wallhack then
 			sampSendInputChat('/wh ')
 		end
-		wait(200)
-		sampSendInputChat('/trasoff')
-		wait(200)
+		wait(300)
 		sampSendInputChat('/fsoff')
 		imgui.Process = false
 		showCursor(false,false)
@@ -3259,7 +3256,6 @@ function sampSendInputChat(text) -- отправка в чат через ф6
 	setVirtualKeyDown(13, true)
 	setVirtualKeyDown(13, false)
 end
-
 ---------------===================== Определенение ID нажатой клавиши
  function getDownKeys()
     local curkeys = ""
@@ -3355,6 +3351,71 @@ function isKeysDown(keylist, pressed)
     return bool
 end
 ---------------===================== Определенение ID нажатой клавиши
+function trassera()
+	while true do
+		wait(0)
+		if not windows.trassera.v then
+			imgui.ShowCursor = false
+		end     
+		local oTime = os.time()
+		if elements.checkbox.drawBullets.v then
+			for i = 1, bulletSync.maxLines do
+				if bulletSync[i].other.time >= oTime then
+					local result, wX, wY, wZ, wW, wH = convert3DCoordsToScreenEx(bulletSync[i].other.o.x, bulletSync[i].other.o.y, bulletSync[i].other.o.z, true, true)
+					local resulti, pX, pY, pZ, pW, pH = convert3DCoordsToScreenEx(bulletSync[i].other.t.x, bulletSync[i].other.t.y, bulletSync[i].other.t.z, true, true)
+					if result and resulti then
+						local xResolution = mem.getuint32(0x00C17044)
+						if wZ < 1 then
+							wX = xResolution - wX
+						end
+						if pZ < 1 then
+							pZ = xResolution - pZ
+						end 
+						if elements.checkbox.showPlayerInfo.v then
+							if bulletSync[i].other.id ~= -1 then 
+								if sampIsPlayerConnected(bulletSync[i].other.id) then
+									if elements.checkbox.onlyId.v and elements.checkbox.onlyNick.v then
+										renderFontDrawText(font, sampGetPlayerNickname(bulletSync[i].other.id)..'['..bulletSync[i].other.id..']', wX + 0.5, wY, bulletSync[i].other.colorText, false)
+									elseif elements.checkbox.onlyId.v then
+										renderFontDrawText(font, '['..bulletSync[i].other.id..']', wX + 0.5, wY, bulletSync[i].other.colorText, false)
+									elseif elements.checkbox.onlyNick.v then
+										renderFontDrawText(font, sampGetPlayerNickname(bulletSync[i].other.id), wX + 0.5, wY, bulletSync[i].other.colorText, false)
+									end
+								end
+							end
+						end
+						renderDrawLine(wX, wY, pX, pY, elements.int.sizeOffLine.v, bulletSync[i].other.color)
+						if elements.checkbox.cbEnd.v then
+							renderDrawPolygon(pX, pY-1, 3 + elements.int.sizeOffPolygonEnd.v, 3 + elements.int.sizeOffPolygonEnd.v, 1 + elements.int.rotationPolygonEnd.v, elements.int.degreePolygonEnd.v, bulletSync[i].other.color)
+						end
+					end
+				end
+			end
+		end
+		if elements.checkbox.drawMyBullets.v then
+			for i = 1, bulletSyncMy.maxLines do
+				if bulletSyncMy[i].my.time >= oTime then
+					local result, wX, wY, wZ, wW, wH = convert3DCoordsToScreenEx(bulletSyncMy[i].my.o.x, bulletSyncMy[i].my.o.y, bulletSyncMy[i].my.o.z, true, true)
+					local resulti, pX, pY, pZ, pW, pH = convert3DCoordsToScreenEx(bulletSyncMy[i].my.t.x, bulletSyncMy[i].my.t.y, bulletSyncMy[i].my.t.z, true, true)
+					if result and resulti then
+						local xResolution = mem.getuint32(0x00C17044)
+						if wZ < 1 then
+							wX = xResolution - wX
+						end
+						if pZ < 1 then
+							pZ = xResolution - pZ
+						end 
+						renderDrawLine(wX, wY, pX, pY, elements.int.sizeOffMyLine.v, bulletSyncMy[i].my.color)
+						if elements.checkbox.cbEndMy.v then
+							renderDrawPolygon(pX, pY-1, 3 + elements.int.sizeOffMyPolygonEnd.v, 3 + elements.int.sizeOffMyPolygonEnd.v, 1 + elements.int.rotationMyPolygonEnd.v, elements.int.degreeMyPolygonEnd.v, bulletSyncMy[i].my.color)
+						end
+					end
+				end
+			end
+		end 
+	end
+end
+
 function save()
 	inicfg.save(cfg,directIni)
 end
@@ -3392,12 +3453,12 @@ function timer() -- таймер для автоформ
             timer = os.clock() - st.timer
 			if st.probid then
 				if sampIsPlayerConnected(st.probid) then
-					renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{FF0000}' .. st.forma .. '{FFFFFF}' .. ' на игрока '.. '{FF0000}' .. nickid .. '[' .. st.probid .. ']'.. cfg.settings.stylecolor .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+					renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{F0E68C}' .. st.forma .. '{FFFFFF}' .. ' на игрока '.. '{F0E68C}' .. nickid .. '[' .. st.probid .. ']'.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
 				else
-					renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{FF0000}' .. st.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+					renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{F0E68C}' .. st.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
 				end
 			else
-				renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{FF0000}' .. st.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+				renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{F0E68C}' .. st.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
 			end
             if timer>8 then
 				st = {}
@@ -3477,11 +3538,11 @@ function join_argb(a, r, g, b)
 	return argb
 end
 function explode_argb(argb)
-	local a = bit.band(bit.rshift(argb, 24), 0xFF)
-	local r = bit.band(bit.rshift(argb, 16), 0xFF)
-	local g = bit.band(bit.rshift(argb, 8), 0xFF)
-	local b = bit.band(argb, 0xFF)
-	return a, r, g, b
+    local a = bit.band(bit.rshift(argb, 24), 0xFF)
+    local r = bit.band(bit.rshift(argb, 16), 0xFF)
+    local g = bit.band(bit.rshift(argb, 8), 0xFF)
+    local b = bit.band(argb, 0xFF)
+    return a, r, g, b
 end
 ----------Wall hack --------------
 function imgui.CenterText(text) -- центрирование текста
