@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.71 -- Версия скрипта
+local version = 2.72 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -21,7 +21,7 @@ local mem = require "memory"
 local font = require ("moonloader").font_flag
 ------=================== Подгрузка библиотек ===================----------------------
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local AT_MP = import ("\\resource\\AT_MP.lua") -- подгрузка плагина для мероприятий
+local AT_MP = script.load("\\resource\\AT_MP.lua") -- подгрузка плагина для мероприятий
 local AT_FastSpawn = script.load('\\resource\\AT_FastSpawn.lua') -- подгрузка быстрого спавна
 local AT_Trassera = script.load('\\resource\\AT_Trassera.lua') -- подгрузка трассеров
 local notify_report = import("\\resource\\lib_imgui_notf.lua") -- импорт уведомлений
@@ -3620,10 +3620,13 @@ sampRegisterChatCommand('tool', function()
 end)
 ----======================= Исключительно вспомогательные ===============------------------
 sampRegisterChatCommand('spp', function()
-	local playerid_to_stream = playersToStreamZone()
-	for _, v in pairs(playerid_to_stream) do
-	sampSendChat('/aspawn ' .. v)
-	end
+	lua_thread.create(function()
+		local playerid_to_stream = playersToStreamZone()
+		for _, v in pairs(playerid_to_stream) do
+			wait(500)
+			sampSendChat('/aspawn ' .. v)
+		end
+	end)
 end)
 sampRegisterChatCommand('n', function(param) 
 	if #param ~= 0 then
