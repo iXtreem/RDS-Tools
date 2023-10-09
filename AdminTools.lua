@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.8 -- Версия скрипта
+local version = 2.81 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -3779,26 +3779,7 @@ sampRegisterChatCommand('as', function(param)
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
 end)
-sampRegisterChatCommand("sbanip", function(arg)
-	if arg:find('(.+) (.+) (.+)') then
-        arg1, arg2, arg3 = arg:match('(.+) (.+) (.+)')
-		ipfind = true
-		sampSendChat('/offstats ' .. arg1)
-		lua_thread.create(function()
-			while not regip or sampIsDialogActive() do
-				wait(0)
-			end
-			sampSendChat('/banoff ' .. arg1 .. ' ' .. arg2 .. ' ' .. arg3)
-			sampSendChat('/banip ' .. regip .. ' ' .. arg2 .. ' ' .. arg3)
-			sampSendChat('/banip ' .. lastip .. ' ' .. arg2 .. ' ' .. arg3)
-			lastip = nil
-			regip = nil
-		end)
-    else
-        sampAddChatMessage(tag .. '/banip [ник] [число] [причина]', -1)
-    end
-end)
-sampRegisterChatCommand('sbani', function()
+sampRegisterChatCommand('sbanip', function()
 	lua_thread.create(function()
 		sampShowDialog(6400, "Введите ник нарушителя", "", "Подтвердить", nil, DIALOG_STYLE_INPUT) -- сам диалог
 		while sampIsDialogActive(6400) do wait(300) end -- ждёт пока вы ответите на диалог
