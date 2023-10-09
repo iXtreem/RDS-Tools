@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AdminTools Plus+' 
 script_author 'Neon4ik'
 local imgui = require 'imgui' 
-local version = 0.4
+local version = 0.5
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -12,7 +12,7 @@ local sampev = require 'lib.samp.events'
 local dektor_window_state = imgui.ImBool(false)
 local main_window_state = imgui.ImBool(false)
 local secondary_window_state = imgui.ImBool(false)
-local tag = '{2F4F4F}AdminTools Plus+ для руководящего состава: {FF7F50}'
+local tag = '{2F4F4F}AdminTools Plus+: {FF7F50}'
 local sw, sh = getScreenResolution()
 local selected_item = imgui.ImInt(1)
 local selected_item2 = imgui.ImInt(0)
@@ -48,30 +48,9 @@ local checkbox = {
 }
 local makeadmin = {}
 local kai = {}
-if selected_item.v == 0 then
-	newlvl = 0
-elseif selected_item.v == 1 then
-	newlvl = 'Skip'
-elseif selected_item.v == 2 then
-	newlvl = 1
-elseif selected_item.v == 3 then
-	newlvl = 2
-elseif selected_item.v == 4 then
-	newlvl = 3
-end
-if selected_item2.v == 0 then
-	SendKai = -1
-elseif selected_item2.v == 1 then
-	SendKai = -2
-elseif selected_item2.v == 2 then
-	SendKai = 0
-elseif selected_item2.v == 3 then
-	SendKai = 1
-elseif selected_item2.v == 4 then
-	SendKai = 2
-elseif selected_item2.v == 5 then
-	SendKai = '-'
-end
+local newlvl = 1
+local SendKai = -1
+
 
 function main()
 	while not isSampAvailable() do wait(0) end
@@ -229,8 +208,8 @@ function imgui.OnDrawFrame()
 		imgui.InputText('##2', buffer.text_buffer3)
 		imgui.PopItemWidth()
 		if imgui.Button(u8'Сохранить', imgui.ImVec2(115, 25)) then
-			if (SendKai == 0 and newlvl ~= 0) or (SendKai ~= 0 and newlvl == 0) then
-				buffer.text_buffer.v = u8'Проверьте точность ввода команд.\nНельзя снять с админки не кикнув с ВК'
+			if (newlvl == 0 and SendKai ~= 0) or (SendKai == 0 and newlvl ~= 0) then
+				sampAddChatMessage(tag .. 'Вы не можете исключить игрока из конференции, не сняв его с поста, и аналогично.', -1)
 			elseif buffer.text_buffer2.v and buffer.text_buffer3.v then -- проверка введен ли промежуток баллов
 				if #buffer.text_buffer.v == 0 then -- если в основном меню ничего нет - вывести доп инфу
 					buffer.text_buffer.v = u8'@all Итоги недели\nПодвёл итоги: AdminTools by N.E.O.N\nВ соответствии с еженедельной нормой\nПроводим реформацию состава.\n\n' 
@@ -260,7 +239,7 @@ function imgui.OnDrawFrame()
 								end
 								v = string.gsub(v, '= (%d+)', '')
 								nickv = string.gsub(v,'=(.+)', '')
-								for h,m in pairs(cfg.listNoResult) do
+								for h,m in pairs(cfg.listNoResult) do -- если администратор есть в списке исключений - удаляем его
 									if nickv:match(m) then
 										k,v = nil, nil
 									end
@@ -282,7 +261,7 @@ function imgui.OnDrawFrame()
 										if cfg.settings.delete_point then
 											nick_1 = string.sub(nick, 1,1) -- узнаем первый символ ника
 											nick_2 = string.sub(nick,-1) -- узнаем последний символ ника
-											nick_kai = string.gsub(string.sub(string.sub(nick, 2), 1, -2), '%p', '') -- удаляем точки в центре ника.
+											nick_kai = string.gsub(string.sub(string.sub(nick, 2), 1, -2), '%.', '') -- удаляем точки в центре ника.
 											nick_kai = (nick_1 .. nick_kai .. nick_2) -- присваиваем новое значение
 										end
 										if SendKai == 0 then
@@ -322,6 +301,38 @@ function imgui.OnDrawFrame()
 							end
 						end
 					end
+					if tonumber(buffer.text_buffer2.v) == 0 then -- если 0 баллов (т.е администратора вообще нет в /topadm) то делаем те же действия
+						for k,v in pairs(offadmins) do
+							v = string.gsub(string.gsub(v,'=(.+)', ''), '%s', '')
+							for d,s in pairs(topadm) do 
+								s = string.gsub(string.gsub(s, '= (.+)', ''), '%s', '')	
+								if v:match(s) then 
+									a = true 
+								end 
+							end 
+							for s,m in pairs(cfg.listNoResult) do 
+								if v == m then 
+									a = true  
+								end
+							end
+							if a then 
+								a = nil 
+							else
+								local nick_kai = v
+								if cfg.settings.delete_point then 
+									nick_1 = string.sub(v, 1, 1) 
+									nick_2 = string.sub(v,-1) 
+									nick_kai = string.gsub(string.sub(string.sub(v, 2), 1, -2), '%.', '') 
+									nick_kai = (nick_1 .. nick_kai .. nick_2) 
+								end 
+								if SendKai == 0 then 
+									kai[#kai + 1] = 'Кай кик ' .. nick_kai 
+									makeadmin[#makeadmin + 1] = ('/makeadmin ' .. v .. ' 0') 
+								end
+								buffer.text_buffer.v = buffer.text_buffer.v .. v .. u8' 0 баллов' .. '\n'
+							end  
+						end 
+					end
 					buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, '  ', ' ') -- удаляем лишние пробелы между никами если они имеются
 				else
 					sampAddChatMessage(tag .. 'Вы не указали количество баллов', -1)
@@ -332,7 +343,7 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Text(u8'Уровень.')
 		imgui.PushItemWidth(115)
-		if imgui.Combo(u8'', selected_item, {u8'Снять', '0', '1', '2', '3'}, 5) then
+		if imgui.Combo('##newlvl', selected_item, {u8'Снять', u8'Оставить', u8'+1 уровень', u8'+2 уровня', u8'+3 уровня'}, 5) then
 			if selected_item.v == 0 then
 				newlvl = 0
 			elseif selected_item.v == 1 then
@@ -348,7 +359,7 @@ function imgui.OnDrawFrame()
 		imgui.PopItemWidth()
 		imgui.Text(u8'Кай.')
 		imgui.PushItemWidth(115)
-		if imgui.Combo(u8'  ', selected_item2, {u8'Снять 1 пред', u8'Снять 2 преда', u8'Кикнуть', u8'Выдать 1 пред', u8'Выдать 2 преда', u8'Ничего'}, 6) then
+		if imgui.Combo('##newpred', selected_item2, {u8'Снять 1 пред', u8'Снять 2 преда', u8'Кикнуть', u8'Выдать 1 пред', u8'Выдать 2 преда', u8'Ничего'}, 6) then
 			if selected_item2.v == 0 then
 				SendKai = -1
 			elseif selected_item2.v == 1 then
@@ -367,8 +378,8 @@ function imgui.OnDrawFrame()
 		imgui.Text(u8'Добавить искл: /newadm')
 		imgui.Text(u8'Удалить искл: /deladm')
 		if imgui.Button(u8'Вывести исключения в чат') then
-			for k,v in pairs(cfg.listNoResult) do
-				sampAddChatMessage(v, -1)
+			for i = 2, #cfg.listNoResult do
+				sampAddChatMessage(cfg.listNoResult[i],-1)
 			end
 		end
 		imgui.End()

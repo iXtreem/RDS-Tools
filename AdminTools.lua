@@ -147,6 +147,7 @@ local menu2 = {true, -- основное меню
 	false,
 	false,
 }
+local textdraw = {} -- узнаем ид текстравов для взаимодействия с ними
 local style_selected = imgui.ImInt(cfg.settings.style)
 local style_list = {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8"Бирюзовая тема", u8"Розовая тема", u8"Голубая тема"}
 local selected_item = imgui.ImInt(cfg.settings.size_adminchat)
@@ -281,7 +282,7 @@ function main() -- основной сценарий скрипта
 		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 			local AdminTools = inicfg.load(nil, getWorkingDirectory() .. '//AdminTools.ini')
 			if AdminTools.script.version > version then
-				update_state_main = true
+				update_state = true
 			end
 			if AdminTools.script.versionMP > cfg.settings.versionMP then
 				update_state = true
@@ -552,30 +553,23 @@ function imgui.OnDrawFrame()
 			end
 			imgui.SameLine()
 			imgui.Text(u8'Кастом ответ на репорт')
-			if update_state_main then
-				if imgui.Button(u8'Обновить основной скрипт', imgui.ImVec2(410, 24)) then
-					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
-						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-							sampAddChatMessage(tag .. 'Основной скрипт успешно обновлен.')
-							imgui.Process = false
-							showCursor(false,false)
-							reloadScripts()
-						end
-					end)
-				end
-			end
 			if update_state then
-				if imgui.Button(u8'Обновить скрипты-дополнение к АТ', imgui.ImVec2(410,24)) then
+				if imgui.Button(u8'Обновить скрипт', imgui.ImVec2(410,24)) then
+					imgui.Process = false
+					showCursor(false,false)
 					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", getWorkingDirectory() .. "//resource//AT_MP.lua", function(id, status)
 						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-							imgui.Process = false
 							sampAddChatMessage(tag .. 'Первый плагин подгружен. Ожидаю подгрузку второго.', -1)
 						end
 					end)
 					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", getWorkingDirectory() .. "//resource//AT_FastSpawn.lua", function(id, status)
 						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-							sampAddChatMessage(tag .. 'Плагины успешно обновлены.', -1)
-							showCursor(false,false)
+							sampAddChatMessage(tag .. 'Второй плагин успешно обновлены. Ожидаю загрузку основного скрипта', -1)
+						end
+					end)
+					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
+						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+							sampAddChatMessage(tag .. 'Основной скрипт успешно обновлен.')
 							reloadScripts()
 						end
 					end)
@@ -598,17 +592,20 @@ function imgui.OnDrawFrame()
 		if menu2[3] then
 			imgui.SetCursorPosX(8)
 			if imgui.Button(u8'Автоматическая отправка форм', imgui.ImVec2(410, 24)) and not server03 then
+				windows.menu_tools.v = false
 				windows.help_young_admin.v = not windows.help_young_admin.v
 			end
 			if imgui.Button(u8'Открыть настройки спавна', imgui.ImVec2(410, 24)) then
+				windows.menu_tools.v = false
 				sampSendInputChat('/fs')
 			end
 			if imgui.Button(u8'Открыть настройки трассеров', imgui.ImVec2(410, 24)) then
+				windows.menu_tools.v = false
 				sampSendInputChat('/trassera')
 			end
 			if imgui.Button(u8'Открыть настройки админ-статистики', imgui.ImVec2(410, 24)) then
-				sampSendInputChat('/state')
 				windows.menu_tools.v = false
+				sampSendInputChat('/state')
 			end
 			imgui.Text('\n\n')
 			imgui.CenterText(u8'Дополнительный текст команд')
@@ -950,7 +947,7 @@ function imgui.OnDrawFrame()
 					wait(500)
 					sampSendChat('/mess 13 Нашел читера, злостного нарушителя, ДМера, или просто мешают играть?')
 					wait(500)
-					sampSendChat('/mess 13 Появился вопрос о возможностях сервера или его ньансах?')
+					sampSendChat('/mess 13 Появился вопрос о возможностях сервера или его особенностей?')
 					wait(500)
 					sampSendChat('/mess 13 Администрация поможет! Пиши /report и свою жалобу/вопрос')
 					wait(500)
@@ -1669,7 +1666,7 @@ function imgui.OnDrawFrame()
 			end
 			if imgui.Button(u8'Посмотреть вторую статистику', imgui.ImVec2(250, 25)) then
 				if not sampIsDialogActive() then
-					sampSendClickTextdraw(174)
+					sampSendClickTextdraw(textdraw.stats)
 				else
 					sampAddChatMessage(tag .. 'У вас открыт диалог, закройте его.', -1)
 				end
@@ -1694,7 +1691,7 @@ function imgui.OnDrawFrame()
 				saveplayerrecon = nil
 			end
 			if isKeyJustPressed(VK_R) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				sampSendClickTextdraw(163)
+				sampSendClickTextdraw(textdraw.refresh)
 				if cfg.settings.keysync then
 					lua_thread.create(function()
 						wait(1000)
@@ -1706,7 +1703,7 @@ function imgui.OnDrawFrame()
 				end
 			end
 			if isKeyJustPressed(VK_Q) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				sampSendChat('/reoff')
+				sampSendClickTextdraw(textdraw.close)
 			end
 			if isKeyJustPressed(VK_RBUTTON) and not sampIsChatInputActive() and not sampIsDialogActive() then
 				lua_thread.create(function()
@@ -2406,16 +2403,25 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 end
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 	if cfg.settings.on_custom_recon_menu then
-		if id == 2052 then
+		for k,v in pairs(data) do 
+			v = tostring(v)
+			if v == 'REFRESH' then textdraw.refresh = id  -- записываем ид кнопки обновить в реконе
+			elseif v:match('~') and v:match('0') then textdraw.inforeport = id  -- инфо панель в реконе
+			elseif v:match('(%(%d+)%)') then textdraw.name_report = id -- ник игрока в реконе
+			elseif v == 'STATS' then textdraw.stats = id sampTextdrawSetPos(id, 2000, 0) 
+			elseif v == 'CLOSE' then textdraw.close = id sampTextdrawSetPos(id, 2000, 0) 
+			end
+		end
+		if id == textdraw.name_report then
 			lua_thread.create(function()
-				wait(300)
-				playerrecon = tonumber(string.match(sampTextdrawGetString(2052), '%((%d+)%)')) -- id нарушителя
+				wait(500)
+				playerrecon = tonumber(string.match(sampTextdrawGetString(textdraw.name_report), '%((%d+)%)')) -- id нарушителя
 				while not inforeport do
 					wait(0)
 				end
-				sampTextdrawSetPos(2058, 2000, 0) -- информация
-				sampTextdrawSetPos(163,2000,0) -- кнопка Refresh в реконе
-				sampTextdrawSetPos(2052, 2000, 0) -- информация о никнейме игрока
+				sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
+				sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
+				sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информация о никнейме игрока
 				windows.recon_menu.v = true
 				imgui.Process = true
 				if cfg.settings.keysync then
@@ -2423,10 +2429,10 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				end
 			end)
 		end
-		if id == 2058 then
+		if id == textdraw.inforeport then
 			lua_thread.create(function()
-				while id == 2058 do
-					inforeport = textSplit(sampTextdrawGetString(2058), "~n~") -- информация о игроке, считывание с текстрдрава
+				while id == textdraw.inforeport do
+					inforeport = textSplit(sampTextdrawGetString(textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
 					for i = 4, #inforeport do
 						if i == 4 then
 							if inforeport[i] == '-1' then -- хп авто
@@ -2459,7 +2465,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			end)
 		end
 		if (id == 446 or id == 153 or id == 150 or id == 164 or id == 169 or id == 186
-			or id == 161 or id == 164 or id == 162 or id == 169 or id == 165
+			or id == 161 or id == 164 or id == 162 or id == 163 or id == 169
 			or id == 166 or id == 188 or id == 168 or id == 188 or id == 173
 			or id == 189 or id == 170 or id == 173 or id == 189 or id == 189
 			or id == 189 or id == 175 or id == 178 or id == 173 or id == 172
@@ -2469,7 +2475,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			or id == 182 or id == 151 or id == 152 or id == 193 or id == 155
 			or id == 167 or id == 174 or id == 171 or id == 187 or id == 176
 			or id == 181 or id == 180 or id == 157 or id == 154 or id == 185
-			or id == 444 or id == 149 or id == 148) then
+			or id == 444 or id == 148 or id == 165 or id == 149) then
 			return false -- удаление лишних текстравов в реконе
 		end
 	end
@@ -2603,7 +2609,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			peremrep = (u8:decode(buffer.text_ans.v))
 			if #peremrep >= 80 then
 				setClipboardText(peremrep)
-				--peremrep = 'Мой ответ не вмещается в окно репорта, я отпишу вам лично'
 				sampAddChatMessage(tag .. 'Ваш ответ оказался слишком длинным и сохранен в буффер обмена.', -1)
 			elseif #peremrep <= 4 and not cfg.settings.mytextreport then
 				peremrep = (u8:decode(buffer.text_ans.v) .. '   ')
@@ -2718,7 +2723,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				sampSendChat('/re ' .. reportid)
 			end
 			if answer.peredamrep then
-				sampSendChat('/a ' .. autor .. '[' ..autorid.. ']: ' .. textreport)
+				sampSendChat(u8:decode('/a ' .. autor .. '[' ..autorid.. ']: ' .. textreport))
 			end
 			if answer.nakajy then
 				if nakazatreport.oftop then
@@ -2770,7 +2775,7 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 	if text:find('REPORT') then
 		if cfg.settings.notify_report and not AFK then
 			if notify_report then
-				notify_report.addNotify('{FF0000}AT Уведомление', '------------------------------------------------------\nПоступил новый репорт.', 2,2,8)
+				notify_report.addNotify('{FF0000}[AT Уведомление]', '------------------------------------------------------\nПоступил новый репорт.', 2,2,8)
 			end
 		end
 		return false
@@ -3161,7 +3166,7 @@ function cyrillic(text)
     local convtbl = {
     	[230] = 155, [231] = 159, [247] = 164, [234] = 107, [250] = 144, [251] = 168,
     	[254] = 171, [253] = 170, [255] = 172, [224] = 097, [240] = 112, [241] = 099, 
-    	[226] = 162, [228] = 154, [225] = 151, [227] = 153, [248] = 165, [243] = 121, 
+    	[226] = 162, [228] = 154, [225] = 151, [227] = 153, [248] = textdraw.refresh, [243] = 121, 
     	[184] = 101, [235] = 158, [238] = 111, [245] = 120, [233] = 157, [242] = 166, 
     	[239] = 163, [244] = 063, [237] = 174, [229] = 101, [246] = 036, [236] = 175, 
     	[232] = 156, [249] = 161, [252] = 169, [215] = 141, [202] = 075, [204] = 077, 
@@ -3793,6 +3798,45 @@ sampRegisterChatCommand("sbanip", function(arg)
         sampAddChatMessage(tag .. '/banip [ник] [число] [причина]', -1)
     end
 end)
+sampRegisterChatCommand('sbani', function()
+	lua_thread.create(function()
+		sampShowDialog(6400, "Введите ник нарушителя", "", "Подтвердить", nil, DIALOG_STYLE_INPUT) -- сам диалог
+		while sampIsDialogActive(6400) do wait(300) end -- ждёт пока вы ответите на диалог
+		local result, button, _, input = sampHasDialogRespond(6405)
+		if not input:match('(.+) (.+)') and #input ~= 0 then 
+			local nick_nakazyemogo = input
+			result, button, input = nil
+			sampShowDialog(6401, "Введите наказание", "Необходимо указать количество дней блокировки аккаунта", "Подтвердить", nil, DIALOG_STYLE_INPUT) -- сам диалог
+			while sampIsDialogActive(6401) do wait(300) end -- ждёт пока вы ответите на диалог
+			local result, button, _, input = sampHasDialogRespond(6405)
+			if not input:match('(.+) (.+)') and #input ~= 0 then 
+				local nakazanie = input
+				result, button, input = nil
+				sampShowDialog(6402, "Введите причину", "Необходимо указать причину блокировки", "Подтвердить", nil, DIALOG_STYLE_INPUT) -- сам диалог
+				while sampIsDialogActive(6402) do wait(300) end -- ждёт пока вы ответите на диалог
+				local result, button, _, input = sampHasDialogRespond(6405)
+				if input:match('(.+)') and #input ~= 0 then 
+					local pri4ina = input
+					result, button, input = nil
+					ipfind = true
+					sampSendChat('/offstats ' .. nick_nakazyemogo)
+					while not regip or sampIsDialogActive() do wait(200) end
+					sampSendChat('/banoff ' .. nick_nakazyemogo .. ' ' .. nakazanie .. ' ' .. pri4ina)
+					sampSendChat('/banip ' .. regip .. ' ' .. nakazanie .. ' ' .. pri4ina)
+					sampSendChat('/banip ' .. lastip .. ' ' .. nakazanie .. ' ' .. pri4ina)
+					lastip,regip,nick_nakazyemogo,pri4ina,nakazanie = nil
+				else
+					sampAddChatMessage(tag .. 'Данные введены некорректно.',-1)
+				end
+			else
+				sampAddChatMessage(tag .. 'Данные введены некорректно.',-1)
+			end
+		else
+			sampAddChatMessage(tag .. 'Данные введены некорректно.',-1)
+		end
+	end)
+end)
+
 ----======================= Исключительно для МУТОВ ЧАТА ===============------------------
 sampRegisterChatCommand('m', function(param) 
 	if #param ~= 0 then
