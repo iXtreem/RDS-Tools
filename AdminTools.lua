@@ -261,8 +261,8 @@ function main() -- основной сценарий скрипта
 	func4 = lua_thread.create_suspended(ac4)
 	func5 = lua_thread.create_suspended(ac5)
 	func6 = lua_thread.create_suspended(HelperMA)
-	func7 = lua_thread.create_suspended(ad)
-	func7:run()
+	--func7 = lua_thread.create_suspended(ad)
+	--func7:run()
 	if cfg.settings.forma_na_ban or cfg.settings.forma_na_mute or cfg.settings.forma_na_jail or cfg.settings.forma_na_mute then
 		func6:run()
 	end
@@ -2118,13 +2118,6 @@ function ac5()
 				renderFontDrawText(font_adminchat, ac5, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y+85, 0xCCFFFFFF)
 			end
 		end
-	end
-end
-function ad()
-	while true do
-		wait(0)
-		--renderFontDrawText(font_adminchat, adminchat[0], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (#adminchat * 10) , 0xCCFFFFFF)
-		--renderFontDrawText(font_adminchat, adminchat[1], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (#adminchat * 10) , 0xCCFFFFFF)
 	end
 end
 function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
