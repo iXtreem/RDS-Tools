@@ -2,6 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
+local version = 0.4
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -89,15 +90,22 @@ local checked_test3 = imgui.ImBool(cfg.settings.spawn)
 local secondary_window_state = imgui.ImBool(false)
 local main_window_state = imgui.ImBool(false)
 
+
+function sampev.OnServerMessange(color,text)
+	if text:match('Вы успешно авторизовались!') then
+		start_click_shift = true
+	end
+end
+
 function main()
 	while not isSampAvailable() do wait(0) end
-	cfg2.settings.versionFS = 0.3
+	cfg2.settings.versionFS = version
 	inicfg.save(cfg2,'AdminTools.ini')
 	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	nick = sampGetPlayerNickname(id)
 	if cfg.settings.spawn then
 		while not sampIsLocalPlayerSpawned() do
-			wait(0)
+			wait(1000)
 			if not sampIsChatInputActive() and not sampIsDialogActive() and start_click_shift then
 				setVirtualKeyDown(16, true)
 				wait(50)
@@ -109,7 +117,7 @@ function main()
 	while sampIsDialogActive() or sampIsChatInputActive() do
 		wait(0)
 	end
-	wait(3000)
+	wait(8000)
 	if autorizate and cfg.settings.parolalogin and cfg.settings.autoalogin and cfg.settings.server == sampGetCurrentServerAddress() and cfg.settings.nickname == nick then
 		while sampIsDialogActive() or sampIsChatInputActive() do
 			wait(0)
@@ -147,7 +155,7 @@ function imgui.OnDrawFrame()
         imgui.SameLine()
         if imgui.Button(u8'Сохранить') then
 			printStyledString('save', 1000, 7)
-            cfg.settings.parolalogin = text_buffer.v
+            cfg.settings.parolalogin = text_buffer.v .. '%'
 			save()
         end
         imgui.Text(u8'Пароль от аккаунта:')
@@ -155,7 +163,7 @@ function imgui.OnDrawFrame()
         imgui.SameLine()
         if imgui.Button(u8'Сoхранить') then
 			printStyledString('save', 1000, 7)
-            cfg.settings.parolaccount = text_buffer2.v
+            cfg.settings.parolaccount = text_buffer2.v ..'%'
             save()
         end
         imgui.Separator()
@@ -224,11 +232,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 			inputpassword = true
 		end
     end
-end
-function sampev.OnServerMessange(color,text)
-	if text:match('Вы успешно авторизовались!') then
-		start_click_shift = true
-	end
 end
 sampRegisterChatCommand('fs', function()
     main_window_state.v = not main_window_state.v
