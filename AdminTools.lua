@@ -71,11 +71,11 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
         add_mynick_in_form = false,
 		on_custom_recon_menu = true,
 		on_custom_answer = true,
-		strok_admin_chat = 10,
+		strok_admin_chat = 6,
 		position_ears_x = sh*0.5 + 100,
 		position_ears_y = sw*0.5 - 80,
-		size_ears = 0,
-		strok_ears = 4,
+		size_ears = 10,
+		strok_ears = 6,
 	},
 	customotvet = {},
 	osk = {},
@@ -1762,13 +1762,15 @@ function imgui.OnDrawFrame()
 		imgui.Text(u8' ол-во строк: ')
 		imgui.SameLine()
 		imgui.PushItemWidth(20)
-		if imgui.Combo('##stroki', selected_item, {'5', '10', '15'}, 3) then -- счет на -1 число, т.к счет идет с 0
+		if imgui.Combo('##stroki', selected_item, {'3', '6', '9', '12'}, 4) then -- счет на -1 число, т.к счет идет с 0
 			if selected_item.v == 0 then
-				cfg.settings.strok_admin_chat = 4
+				cfg.settings.strok_admin_chat = 2
 			elseif selected_item.v == 1 then
-				cfg.settings.strok_admin_chat = 9
+				cfg.settings.strok_admin_chat = 5
 			elseif selected_item.v == 2 then
-				cfg.settings.strok_admin_chat = 14
+				cfg.settings.strok_admin_chat = 8
+			elseif selected_item.v == 3 then
+				cfg.settings.strok_admin_chat = 11
 			end
 			adminchat = {}
 			save()
@@ -1812,13 +1814,15 @@ function imgui.OnDrawFrame()
 		imgui.Text(u8' ол-во строк: ')
 		imgui.SameLine()
 		imgui.PushItemWidth(20)
-		if imgui.Combo('##stroki2', selected_item, {'5', '10', '15'}, 3) then -- счет на -1 число, т.к счет идет с 0
+		if imgui.Combo('##stroki2', selected_item, {'3', '6', '9', '12'}, 4) then -- счет на -1 число, т.к счет идет с 0
 			if selected_item.v == 0 then
-				cfg.settings.strok_ears = 4
+				cfg.settings.strok_ears = 2
 			elseif selected_item.v == 1 then
-				cfg.settings.strok_ears = 9
+				cfg.settings.strok_ears = 5
 			elseif selected_item.v == 2 then
-				cfg.settings.strok_ears = 14
+				cfg.settings.strok_ears = 8
+			elseif selected_item.v == 3 then
+				cfg.settings.strok_ears = 11
 			end
 			ears = {}
 			save()
