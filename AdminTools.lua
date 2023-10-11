@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.9 -- Версия скрипта
+local version = 2.91 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -2108,12 +2108,12 @@ function render_adminchat() --[A] NEARBY CHAT: 1 | отправил N.E.O.N(101)
 		if not isPauseMenuActive() then
 			for i = 0, cfg.settings.strok_admin_chat do
 				if adminchat[i] then
-					renderFontDrawText(font_adminchat, adminchat[i], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15), 0xCCFFFFFF)
+					renderFontDrawText(font_adminchat, adminchat[i], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*17), 0xCCFFFFFF)
 				end
 			end
 			for i = 0, cfg.settings.strok_admin_chat do
 				if ears[i] then
-					renderFontDrawText(font_earschat, ears[i], cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15), 0xCCFFFFFF)
+					renderFontDrawText(font_earschat, ears[i], cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*17), 0xCCFFFFFF)
 				end
 			end
 		end
