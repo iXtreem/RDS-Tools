@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.81 -- Версия скрипта
+local version = 2.82 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -154,6 +154,7 @@ local selected_item = imgui.ImInt(cfg.settings.size_adminchat)
 local st = {}
 local nakazatreport = {}
 local answer = {}
+local adminchat = {'dwadw','dwada'}
 local spisok = { -- список для автоформ
 	'ban',
 	'jail',
@@ -250,7 +251,7 @@ function main() -- основной сценарий скрипта
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		ScriptExport()
+		--ScriptExport()
 	end
  	font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
 	func0 = lua_thread.create_suspended(ac0)
@@ -260,10 +261,12 @@ function main() -- основной сценарий скрипта
 	func4 = lua_thread.create_suspended(ac4)
 	func5 = lua_thread.create_suspended(ac5)
 	func6 = lua_thread.create_suspended(HelperMA)
+	func7 = lua_thread.create_suspended(ad)
+	func7:run()
 	if cfg.settings.forma_na_ban or cfg.settings.forma_na_mute or cfg.settings.forma_na_jail or cfg.settings.forma_na_mute then
 		func6:run()
 	end
-	func = lua_thread.create_suspended(ao)
+	func = lua_thread.create_suspended(autoonline)
 	funcadm = lua_thread.create_suspended(render_admins)
 	funct = lua_thread.create_suspended(timer)
 	funct:run()
@@ -604,8 +607,9 @@ function imgui.OnDrawFrame()
 				sampSendInputChat('/trassera')
 			end
 			if imgui.Button(u8'Открыть настройки админ-статистики', imgui.ImVec2(410, 24)) then
-				windows.menu_tools.v = false
 				sampSendInputChat('/state')
+				windows.menu_tools.v = false
+				showCursor(true,false)
 			end
 			imgui.Text('\n\n')
 			imgui.CenterText(u8'Дополнительный текст команд')
@@ -2064,11 +2068,6 @@ function ac0()
 		if not isPauseMenuActive() then
 			if cfg.settings.position_adminchat_x then
 				renderFontDrawText(font_adminchat, ac0, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y, 0xCCFFFFFF)
-			else
-				cfg.settings.position_adminchat_x = -2
-				cfg.settings.position_adminchat_y = ((sh*0.5)-100)
-				save()
-				renderFontDrawText(font_adminchat, ac0, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y, 0xCCFFFFFF)
 			end
 		end
 	end
@@ -2121,6 +2120,13 @@ function ac5()
 		end
 	end
 end
+function ad()
+	while true do
+		wait(0)
+		--renderFontDrawText(font_adminchat, adminchat[0], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (#adminchat * 10) , 0xCCFFFFFF)
+		--renderFontDrawText(font_adminchat, adminchat[1], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (#adminchat * 10) , 0xCCFFFFFF)
+	end
+end
 function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 	if cfg.settings.find_warning_weapon_hack then
 		if not AFK then
@@ -2144,132 +2150,11 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			return false
 		end
 	end
-	if cfg.settings.find_form then
-		if not AFK then
-			if text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") then
-				local poiskform = string.sub(text, 7)
-				for i = 0, #spisok do
-					if poiskform:find(tostring(spisok[i])) then
-						st = {}
-						st.idadmin = tonumber(poiskform:match('%[(%d+)%]'))
-						local d = string.len(poiskform)
-						while d ~= 0 do
-							poiskform = string.sub(poiskform, 2)
-							local don = string.sub(poiskform, 1, 1)
-							local d = d - 1
-							if don == '/' then
-								st.forma = poiskform
-								if poiskform:find('unban') then
-									st.bool = true
-									st.timer = os.clock()
-									st.sett = true
-									wait_accept_form()
-									st.styleform = true
-									break
-								end
-								if poiskform:find('off') or poiskform:find('akk') then
-									st.bool = true
-									st.timer = os.clock()
-									if (poiskform.sub(poiskform, 2)):find('//') then
-										st.styleform = true
-									end
-									st.sett = true
-									wait_accept_form()
-									break
-								end
-								if spisok[i] == 'ban' then
-									st.forumplease = true
-								end
-								st.probid = string.match(st.forma, '%d[%d.,]*')
-								if st.probid and sampIsPlayerConnected(st.probid) then
-									st.bool = true
-									st.timer = os.clock()
-									nickid = sampGetPlayerNickname(st.probid)
-									if (poiskform.sub(poiskform, 2)):find('//') then
-										st.styleform = true
-									end
-									st.sett = true
-									wait_accept_form()
-									break
-								else
-									st = {}
-									sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
-									break
-								end
-							end
-						end
-					end
-				end
-				poiskform = nil
-			end
-		end
-	end
-	if cfg.settings.admin_chat and text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)") then
-		local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)')
-		local messange = string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext
-		if #messange >= 150 then
-			messange = string.sub(messange, 1, 150) .. '...'
-		end 
-		local admlvl, prefix, nickadm, idadm, admtext = nil
-		if maximum == true then
-			func0:terminate()
-			func1:terminate()
-			func2:terminate()
-			func3:terminate()
-			func4:terminate()
-			func5:terminate()
-			ac0 = ac1
-			ac1 = ac2
-			ac2 = ac3 
-			ac3 = ac4
-			ac4 = ac5
-			ac5 = messange
-			func0:run()
-			func1:run()
-			func2:run()
-			func3:run()
-			func4:run()
-			func5:run()
-		end
-		if count == 0 then
-			ac0 = messange
-			func0:run()
-		end
-		if count == 1 then
-			ac1 = messange
-			func1:run()
-		end
-		if count == 2 then
-			ac2 = messange
-			func2:run()
-		end
-		if count == 3 then
-			ac3 = messange
-			func3:run()
-		end
-		if count == 4 then
-			ac4 = messange
-			func4:run()
-		end
-		if count == 5 then
-			if count == 5 then
-				ac5 = messange
-				func5:run()
-				maximum = true
-			else
-				ac5 = messange
-			    func5:run()
-			end
-		end
-		local messange = nil
-		count = count + 1
-		return false --
-	end
 	if cfg.settings.forma_na_ban or cfg.settings.forma_na_mute or cfg.settings.forma_na_jail or cfg.settings.forma_na_kick then
         if text:match('{FFFFFF}У Вас нет доступа к этой команде, для покупки {FFFFFF}перейдите в панель администратора.') then
             return false
         end
-    end
+	end
 	if cfg.settings.automute and not AFK then 
 		text = text:lower()
         text = text:rlower() .. ' '
@@ -2399,17 +2284,142 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
                 end
             end
         end
-    end
+	end
+	if cfg.settings.find_form then
+		if not AFK then
+			if text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") then
+				local poiskform = string.sub(text, 7)
+				for i = 0, #spisok do
+					if poiskform:find(tostring(spisok[i])) then
+						st = {}
+						st.idadmin = tonumber(poiskform:match('%[(%d+)%]'))
+						local d = string.len(poiskform)
+						while d ~= 0 do
+							poiskform = string.sub(poiskform, 2)
+							local don = string.sub(poiskform, 1, 1)
+							local d = d - 1
+							if don == '/' then
+								st.forma = poiskform
+								if poiskform:find('unban') then
+									st.bool = true
+									st.timer = os.clock()
+									st.sett = true
+									st.styleform = true
+									wait_accept_form()
+									break
+								end
+								if poiskform:find('off') or poiskform:find('akk') then
+									st.bool = true
+									st.timer = os.clock()
+									if (poiskform.sub(poiskform, 2)):find('//') then
+										st.styleform = true
+									end
+									st.sett = true
+									wait_accept_form()
+									break
+								end
+								if spisok[i] == 'ban' then
+									st.forumplease = true
+								end
+								st.probid = string.match(st.forma, '%d[%d.,]*')
+								if st.probid and sampIsPlayerConnected(st.probid) then
+									st.bool = true
+									st.timer = os.clock()
+									nickid = sampGetPlayerNickname(st.probid)
+									if (poiskform.sub(poiskform, 2)):find('//') then
+										st.styleform = true
+									end
+									st.sett = true
+									wait_accept_form()
+									break
+								else
+									st = {}
+									sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
+									break
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	if cfg.settings.admin_chat and text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)") then
+		local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)')
+		local messange = string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext
+		if #messange >= 150 then
+			messange = string.sub(messange, 1, 150) .. '...'
+		end
+		if #adminchat >= 10 then
+			adminchat[#adminchat] = messange
+		else
+			adminchat[#adminchat + 1] = messange
+		end
+		local admlvl, prefix, nickadm, idadm, admtext = nil
+		if maximum == true then
+			func0:terminate()
+			func1:terminate()
+			func2:terminate()
+			func3:terminate()
+			func4:terminate()
+			func5:terminate()
+			ac0 = ac1
+			ac1 = ac2
+			ac2 = ac3 
+			ac3 = ac4
+			ac4 = ac5
+			ac5 = messange
+			func0:run()
+			func1:run()
+			func2:run()
+			func3:run()
+			func4:run()
+			func5:run()
+		end
+		if count == 0 then
+			ac0 = messange
+			func0:run()
+		end
+		if count == 1 then
+			ac1 = messange
+			func1:run()
+		end
+		if count == 2 then
+			ac2 = messange
+			func2:run()
+		end
+		if count == 3 then
+			ac3 = messange
+			func3:run()
+		end
+		if count == 4 then
+			ac4 = messange
+			func4:run()
+		end
+		if count == 5 then
+			if count == 5 then
+				ac5 = messange
+				func5:run()
+				maximum = true
+			else
+				ac5 = messange
+			    func5:run()
+			end
+		end
+		local messange = nil
+		count = count + 1
+		return false --
+	end
 end
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 	if cfg.settings.on_custom_recon_menu then
-		for k,v in pairs(data) do 
+		for k,v in pairs(data) do
 			v = tostring(v)
 			if v == 'REFRESH' then textdraw.refresh = id  -- записываем ид кнопки обновить в реконе
 			elseif v:match('~') and v:match('0') then textdraw.inforeport = id  -- инфо панель в реконе
 			elseif v:match('(%(%d+)%)') then textdraw.name_report = id -- ник игрока в реконе
 			elseif v == 'STATS' then textdraw.stats = id sampTextdrawSetPos(id, 2000, 0) 
-			elseif v == 'CLOSE' then textdraw.close = id sampTextdrawSetPos(id, 2000, 0) 
+			elseif v == 'CLOSE' then textdraw.close = id sampTextdrawSetPos(id, 2000, 0)
 			end
 		end
 		if id == textdraw.name_report then
@@ -2438,13 +2448,11 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 							if inforeport[i] == '-1' then -- хп авто
 								inforeport[i] = '-'
 							end
-						end
-						if i == 7 then -- gun
+						elseif i == 7 then -- gun
 							if inforeport[i] == '0 : 0 ' then
 								inforeport[i] = '-'
 							end
-						end
-						if i == 12 then -- vip
+						elseif i == 12 then -- vip
 							if inforeport[i] == '0' then
 								inforeport[i] = '-'
 							elseif inforeport[i] == '1' then
@@ -2723,7 +2731,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				sampSendChat('/re ' .. reportid)
 			end
 			if answer.peredamrep then
-				sampSendChat(u8:decode('/a ' .. autor .. '[' ..autorid.. ']: ' .. textreport))
+				sampSendChat('/a ' .. autor .. '[' .. u8(autorid) .. '] | ' .. textreport)
 			end
 			if answer.nakajy then
 				if nakazatreport.oftop then
@@ -2786,7 +2794,7 @@ function wait_accept_form()
 		while st.sett do
 			wait(50)
 			if isKeyJustPressed(VK_U) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				if true then
+				if sampIsPlayerConnected(st.idadmin) then
 					if st.forumplease then
 						st.cheater = string.match(st.forma, '%d[%d.,]*')
 						sampSendChat('/ans ' .. st.cheater .. ' Уважаемый ' .. sampGetPlayerNickname(st.cheater) .. ', Вы нарушали правила сервера.')
@@ -2972,7 +2980,7 @@ function render_admins()
 		while sampIsDialogActive() or sampIsChatInputActive() do
 			wait(0)
 		end
-		wait(1000)
+		wait(500)
 		if not AFK then
 			sampSendChat('/admins')
 		end
@@ -3240,17 +3248,15 @@ function ScriptExport()
 		thisScript():unload()
 	end)
 end
-function ao()
+function autoonline()
 	while true do
-		if cfg.settings.autoonline then
-			wait(61000)
-			while sampIsDialogActive() or sampIsChatInputActive() do
-				wait(0)
-			end
-			wait(500)
-			if not AFK then
-				sampSendChat("/online")
-			end
+		wait(61000)
+		while sampIsDialogActive() or sampIsChatInputActive() do
+			wait(0)
+		end
+		wait(200)
+		if not AFK then
+			sampSendChat("/online")
 		end
 	end
 end
@@ -3356,71 +3362,6 @@ function isKeysDown(keylist, pressed)
     return bool
 end
 ---------------===================== Определенение ID нажатой клавиши
-function trassera()
-	while true do
-		wait(0)
-		if not windows.trassera.v then
-			imgui.ShowCursor = false
-		end     
-		local oTime = os.time()
-		if elements.checkbox.drawBullets.v then
-			for i = 1, bulletSync.maxLines do
-				if bulletSync[i].other.time >= oTime then
-					local result, wX, wY, wZ, wW, wH = convert3DCoordsToScreenEx(bulletSync[i].other.o.x, bulletSync[i].other.o.y, bulletSync[i].other.o.z, true, true)
-					local resulti, pX, pY, pZ, pW, pH = convert3DCoordsToScreenEx(bulletSync[i].other.t.x, bulletSync[i].other.t.y, bulletSync[i].other.t.z, true, true)
-					if result and resulti then
-						local xResolution = mem.getuint32(0x00C17044)
-						if wZ < 1 then
-							wX = xResolution - wX
-						end
-						if pZ < 1 then
-							pZ = xResolution - pZ
-						end 
-						if elements.checkbox.showPlayerInfo.v then
-							if bulletSync[i].other.id ~= -1 then 
-								if sampIsPlayerConnected(bulletSync[i].other.id) then
-									if elements.checkbox.onlyId.v and elements.checkbox.onlyNick.v then
-										renderFontDrawText(font, sampGetPlayerNickname(bulletSync[i].other.id)..'['..bulletSync[i].other.id..']', wX + 0.5, wY, bulletSync[i].other.colorText, false)
-									elseif elements.checkbox.onlyId.v then
-										renderFontDrawText(font, '['..bulletSync[i].other.id..']', wX + 0.5, wY, bulletSync[i].other.colorText, false)
-									elseif elements.checkbox.onlyNick.v then
-										renderFontDrawText(font, sampGetPlayerNickname(bulletSync[i].other.id), wX + 0.5, wY, bulletSync[i].other.colorText, false)
-									end
-								end
-							end
-						end
-						renderDrawLine(wX, wY, pX, pY, elements.int.sizeOffLine.v, bulletSync[i].other.color)
-						if elements.checkbox.cbEnd.v then
-							renderDrawPolygon(pX, pY-1, 3 + elements.int.sizeOffPolygonEnd.v, 3 + elements.int.sizeOffPolygonEnd.v, 1 + elements.int.rotationPolygonEnd.v, elements.int.degreePolygonEnd.v, bulletSync[i].other.color)
-						end
-					end
-				end
-			end
-		end
-		if elements.checkbox.drawMyBullets.v then
-			for i = 1, bulletSyncMy.maxLines do
-				if bulletSyncMy[i].my.time >= oTime then
-					local result, wX, wY, wZ, wW, wH = convert3DCoordsToScreenEx(bulletSyncMy[i].my.o.x, bulletSyncMy[i].my.o.y, bulletSyncMy[i].my.o.z, true, true)
-					local resulti, pX, pY, pZ, pW, pH = convert3DCoordsToScreenEx(bulletSyncMy[i].my.t.x, bulletSyncMy[i].my.t.y, bulletSyncMy[i].my.t.z, true, true)
-					if result and resulti then
-						local xResolution = mem.getuint32(0x00C17044)
-						if wZ < 1 then
-							wX = xResolution - wX
-						end
-						if pZ < 1 then
-							pZ = xResolution - pZ
-						end 
-						renderDrawLine(wX, wY, pX, pY, elements.int.sizeOffMyLine.v, bulletSyncMy[i].my.color)
-						if elements.checkbox.cbEndMy.v then
-							renderDrawPolygon(pX, pY-1, 3 + elements.int.sizeOffMyPolygonEnd.v, 3 + elements.int.sizeOffMyPolygonEnd.v, 1 + elements.int.rotationMyPolygonEnd.v, elements.int.degreeMyPolygonEnd.v, bulletSyncMy[i].my.color)
-						end
-					end
-				end
-			end
-		end 
-	end
-end
-
 function save()
 	inicfg.save(cfg,directIni)
 end
@@ -3479,52 +3420,37 @@ function color() -- рандом префикс
         local b = math.random(1, 16)
         if b == 1 then
             mcolor = mcolor .. "A"
-        end
-        if b == 2 then
+		elseif b == 2 then
             mcolor = mcolor .. "B"
-        end
-        if b == 3 then
+        elseif b == 3 then
             mcolor = mcolor .. "C"
-        end
-        if b == 4 then
+		elseif b == 4 then
             mcolor = mcolor .. "D"
-        end
-        if b == 5 then
+        elseif b == 5 then
             mcolor = mcolor .. "E"
-        end
-        if b == 6 then
+		elseif b == 6 then
             mcolor = mcolor .. "F"
-        end
-        if b == 7 then
+		elseif b == 7 then
             mcolor = mcolor .. "0"
-        end
-        if b == 8 then
+        elseif b == 8 then
             mcolor = mcolor .. "1"
-        end
-        if b == 9 then
+        elseif b == 9 then
             mcolor = mcolor .. "2"
-        end
-        if b == 10 then
+        elseif b == 10 then
             mcolor = mcolor .. "3"
-        end
-        if b == 11 then
+        elseif b == 11 then
             mcolor = mcolor .. "4"
-        end
-        if b == 12 then
+        elseif b == 12 then
             mcolor = mcolor .. "5"
-        end
-        if b == 13 then
+        elseif b == 13 then
             mcolor = mcolor .. "6"
-        end
-        if b == 14 then
+        elseif b == 14 then
             mcolor = mcolor .. "7"
-        end
-        if b == 15 then
+        elseif b == 15 then
             mcolor = mcolor .. "8"
-        end
-        if b == 16 then
+        elseif b == 16 then
             mcolor = mcolor .. "9"
-        end
+		end
     end
     return mcolor
 end
@@ -3758,16 +3684,21 @@ sampRegisterChatCommand('ur', function(param)
 end)
 sampRegisterChatCommand('al', function(param) 
 	if #param ~= 0 then
-		sampSendChat('/ans ' .. param .. ' Здравствуйте! Вы забыли ввести /alogin!') 
-		sampSendChat('/ans ' .. param .. ' Введите команду /alogin и свой пароль, пожалуйста.')
+		lua_thread.create(function()
+			sampSendChat('/ans ' .. param .. ' Здравствуйте! Вы забыли ввести /alogin!') 
+			sampSendChat('/ans ' .. param .. ' Введите команду /alogin и свой пароль, пожалуйста.')
+		end)
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
 end)
 sampRegisterChatCommand('rep', function(param) 
 	if #param ~= 0 then
-		sampSendChat('/ans ' .. param .. ' Задать вопрос или пожаловаться на игрока вы можете в /report') 
-		sampSendChat('/ans ' .. param .. ' Администрация сразу решит ваш вопрос.')
+		lua_thread.create(function()
+			sampSendChat('/ans ' .. param .. ' Задать вопрос или пожаловаться на игрока вы можете в /report')
+			wait(500) 
+			sampSendChat('/ans ' .. param .. ' Администрация сразу решит ваш вопрос.')
+		end)
 	else
 		sampAddChatMessage(tag .. 'Вы не указали значение.')
 	end
@@ -3803,7 +3734,9 @@ sampRegisterChatCommand('sbanip', function()
 					sampSendChat('/offstats ' .. nick_nakazyemogo)
 					while not regip or sampIsDialogActive() do wait(200) end
 					sampSendChat('/banoff ' .. nick_nakazyemogo .. ' ' .. nakazanie .. ' ' .. pri4ina)
+					wait(1000)
 					sampSendChat('/banip ' .. regip .. ' ' .. nakazanie .. ' ' .. pri4ina)
+					wait(1000)
 					sampSendChat('/banip ' .. lastip .. ' ' .. nakazanie .. ' ' .. pri4ina)
 					lastip,regip,nick_nakazyemogo,pri4ina,nakazanie = nil
 				else
