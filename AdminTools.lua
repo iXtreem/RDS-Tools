@@ -3704,11 +3704,11 @@ sampRegisterChatCommand('sbanip', function()
 					result, button, input = nil
 					ipfind = true
 					sampSendChat('/offstats ' .. nick_nakazyemogo)
-					while not regip or sampIsDialogActive() do wait(200) end
+					while not regip or sampIsDialogActive() do wait(500) end
 					sampSendChat('/banoff ' .. nick_nakazyemogo .. ' ' .. nakazanie .. ' ' .. pri4ina)
-					wait(1000)
+					wait(2000)
 					sampSendChat('/banip ' .. regip .. ' ' .. nakazanie .. ' ' .. pri4ina)
-					wait(1000)
+					wait(2000)
 					sampSendChat('/banip ' .. lastip .. ' ' .. nakazanie .. ' ' .. pri4ina)
 					lastip,regip,nick_nakazyemogo,pri4ina,nakazanie = nil
 				else
