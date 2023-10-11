@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AdminTools Plus+' 
 script_author 'Neon4ik'
 local imgui = require 'imgui' 
-local version = 0.5
+local version = 0.6
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -112,11 +112,13 @@ function imgui.OnDrawFrame()
 		end
 		if update_state then
 			if imgui.Button(u8'Обновить скрипт') then
+				local dlstatus = require('moonloader').download_status
 				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.lua", thisScript().path, function(id, status)
 					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-						sampAddChatMessage(tag .. 'Скрипт успешно обновлен.', -1)
+						sampAddChatMessage(tag .. 'Основной скрипт успешно обновлен.')
+						imgui.Process = false
 						showCursor(false,false)
-						os.remove(getWorkingDirectory() .. "//AdminToolsPlus.ini")
+						sampAddChatMessage(tag .. 'Скрипт обновлен.', -1)
 						thisScript():reload()
 					end
 				end)
@@ -458,52 +460,37 @@ function color() -- рандом префикс
         local b = math.random(1, 16)
         if b == 1 then
             mcolor = mcolor .. "A"
-        end
-        if b == 2 then
+		elseif b == 2 then
             mcolor = mcolor .. "B"
-        end
-        if b == 3 then
+        elseif b == 3 then
             mcolor = mcolor .. "C"
-        end
-        if b == 4 then
+		elseif b == 4 then
             mcolor = mcolor .. "D"
-        end
-        if b == 5 then
+        elseif b == 5 then
             mcolor = mcolor .. "E"
-        end
-        if b == 6 then
+		elseif b == 6 then
             mcolor = mcolor .. "F"
-        end
-        if b == 7 then
+		elseif b == 7 then
             mcolor = mcolor .. "0"
-        end
-        if b == 8 then
+        elseif b == 8 then
             mcolor = mcolor .. "1"
-        end
-        if b == 9 then
+        elseif b == 9 then
             mcolor = mcolor .. "2"
-        end
-        if b == 10 then
+        elseif b == 10 then
             mcolor = mcolor .. "3"
-        end
-        if b == 11 then
+        elseif b == 11 then
             mcolor = mcolor .. "4"
-        end
-        if b == 12 then
+        elseif b == 12 then
             mcolor = mcolor .. "5"
-        end
-        if b == 13 then
+        elseif b == 13 then
             mcolor = mcolor .. "6"
-        end
-        if b == 14 then
+        elseif b == 14 then
             mcolor = mcolor .. "7"
-        end
-        if b == 15 then
+        elseif b == 15 then
             mcolor = mcolor .. "8"
-        end
-        if b == 16 then
+        elseif b == 16 then
             mcolor = mcolor .. "9"
-        end
+		end
     end
     return mcolor
 end
