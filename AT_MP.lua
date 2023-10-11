@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 0.6
+local version = 0.7
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -112,8 +112,8 @@ end
 
 function sampev.onServerMessage(color,text)
     if text:match('%[(%d+)%] ответил (.*)%[(%d+)%]: (.*)') and text:match(mynick) then --[A] N.E.O.N[10] ответил Vergeltung[31]: Отправляюсь в слежку за игроком Podro_Chill[17]{7A9E77} // by Neon
-        cfg.info[0] = cfg.info[0] + 1
-    end 
+        cfg.info[0] = cfg.info[0] + 1 
+    end
     if text:match('Администратор .+ забанил%(.+%) игрока .+ на .+ дней. Причина: .+') and text:match(mynick) then
         cfg.info[1] = cfg.info[1] + 1
     end
@@ -136,6 +136,7 @@ function imgui.OnDrawFrame()
         end
     end
     if static_window_state.v then
+        imgui.ShowCursor = true
         imgui.SetNextWindowPos(imgui.ImVec2(sw*0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.Begin(u8"Статистика", static_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         if imadd.ToggleButton('##activerstate', checkbox.check_1) then
@@ -221,7 +222,7 @@ function imgui.OnDrawFrame()
         for i = 0, #cfg.info do
             if i == 0 then
                 if cfg.settings.mynick then
-                    imgui.Text(mynick .. ' ID: '..myid)
+                    imgui.Text(mynick .. ' ('..myid ..')')
                 end
                 if cfg.settings.data then
                     imgui.Text(os.date('%H:%M | ') .. os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year)
@@ -1266,6 +1267,11 @@ function autoSave()
         wait(30000) -- сохранение каждые 30 секунд
 	end
 end
+
+sampRegisterChatCommand('state', function()
+    static_window_state.v = not static_window_state.v
+    imgui.Process = static_window_state.v
+end)
 
 function style(id) -- ТЕМЫ
     imgui.SwitchContext()
