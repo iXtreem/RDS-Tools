@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.82 -- Версия скрипта
+local version = 2.9 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -45,6 +45,7 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		render_admins_positionX = sw - 300,
 		render_admins_positionY = sh - 300,
 		render_admins = false,
+		render_ears = false,
 		mytextreport = ' // Приятной игры на RDS <3',
 		position_recon_menu_x = sw - 270,
 		position_recon_menu_y = 0,
@@ -58,8 +59,8 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		answer_player_report = false,
 		bloknotik = '',
 		admin_chat = false,
-		position_adminchat_x = nil,
-		position_adminchat_y = nil,
+		position_adminchat_x = -2,
+		position_adminchat_y = (sh*0.5)-100,
 		size_adminchat = 10,
 		custom_answer_save = false,
 		find_form = false,
@@ -70,6 +71,11 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
         add_mynick_in_form = false,
 		on_custom_recon_menu = true,
 		on_custom_answer = true,
+		strok_admin_chat = 10,
+		position_ears_x = sh*0.5 + 100,
+		position_ears_y = sw*0.5 - 80,
+		size_ears = 0,
+		strok_ears = 4,
 	},
 	customotvet = {},
 	osk = {},
@@ -121,6 +127,7 @@ local checkbox = {
 	check_smart_automute = imgui.ImBool(cfg.settings.smart_automute),
 	check_on_custom_recon_menu = imgui.ImBool(cfg.settings.on_custom_recon_menu),
 	check_on_custom_answer = imgui.ImBool(cfg.settings.on_custom_answer),
+	check_render_ears = imgui.ImBool(cfg.settings.render_ears),
 }
 local buffer = {
 	text_ans = imgui.ImBuffer(256),
@@ -154,7 +161,8 @@ local selected_item = imgui.ImInt(cfg.settings.size_adminchat)
 local st = {}
 local nakazatreport = {}
 local answer = {}
-local adminchat = {'dwadw','dwada'}
+local adminchat = {}
+local ears = {}
 local spisok = { -- список для автоформ
 	'ban',
 	'jail',
@@ -188,7 +196,6 @@ local spisokor = { -- список возможных вариаций оскорбления родни (мат + что-то 
 	'мать',
 	'мам',
 	'выблядок',
-	'mam'
 }
 local keys = {
 	["onfoot"] = {},
@@ -251,18 +258,13 @@ function main() -- основной сценарий скрипта
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		--ScriptExport()
+		ScriptExport()
 	end
  	font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-	func0 = lua_thread.create_suspended(ac0)
-	func1 = lua_thread.create_suspended(ac1)
-	func2 = lua_thread.create_suspended(ac2)
-	func3 = lua_thread.create_suspended(ac3)
-	func4 = lua_thread.create_suspended(ac4)
-	func5 = lua_thread.create_suspended(ac5)
+	font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
 	func6 = lua_thread.create_suspended(HelperMA)
-	--func7 = lua_thread.create_suspended(ad)
-	--func7:run()
+	func1 = lua_thread.create_suspended(render_adminchat)
+	func1:run()
 	if cfg.settings.forma_na_ban or cfg.settings.forma_na_mute or cfg.settings.forma_na_jail or cfg.settings.forma_na_mute then
 		func6:run()
 	end
@@ -446,31 +448,20 @@ function imgui.OnDrawFrame()
 			imgui.Text('WallHack')
 			if imadd.ToggleButton("##AdminChat", checkbox.check_admin_chat) then
 				if cfg.settings.admin_chat then
-					cfg.settings.admin_chat = not cfg.settings.admin_chat
-					save()
-					func0:terminate()
-					func1:terminate()
-					func2:terminate()
-					func3:terminate()
-					func4:terminate()
-					func5:terminate()
-				else
-					cfg.settings.admin_chat = not cfg.settings.admin_chat
-					save()
+					adminchat = {}
 				end
+				cfg.settings.admin_chat = not cfg.settings.admin_chat
+				save()
 			end
 			imgui.SameLine()
 			imgui.Text('Admin Chat')
 			imgui.SameLine()
 			imgui.SetCursorPosX(200)
 			if imadd.ToggleButton('##find_form', checkbox.check_find_form) then
+				cfg.settings.find_form  = false
+				save()
 				if server03 then
-					cfg.settings.find_form  = false
-					save()
 					checkbox.check_find_form = imgui.ImBool(cfg.settings.find_form)
-				else
-					cfg.settings.find_form  = not cfg.settings.find_form
-					save()
 				end
 			end
 			imgui.SameLine()
@@ -556,6 +547,15 @@ function imgui.OnDrawFrame()
 			end
 			imgui.SameLine()
 			imgui.Text(u8'Кастом ответ на репорт')
+			if imadd.ToggleButton("##renderEars", checkbox.check_render_ears) then
+				if cfg.settings.render_ears then
+					ears = {}
+				end
+				cfg.settings.render_ears = not cfg.settings.render_ears
+				save()
+			end
+			imgui.SameLine()
+			imgui.Text(u8'Рендер /ears')
 			if update_state then
 				if imgui.Button(u8'Обновить скрипт', imgui.ImVec2(410,24)) then
 					imgui.Process = false
@@ -578,7 +578,7 @@ function imgui.OnDrawFrame()
 					end)
 				end
 			end
-			imgui.Text('\n\n')
+			imgui.Text('\n')
 			imgui.Separator()
 			imgui.Text(u8'Разработчик скрипта - N.E.O.N [RDS 01].\nОбратная связь ниже\n')
 			imgui.Text('VK:')
@@ -633,7 +633,7 @@ function imgui.OnDrawFrame()
 				end
 			end
 			if cfg.settings.admin_chat then
-				if imgui.Button(u8'Сохранить позицию админ-чата', imgui.ImVec2(410, 24)) then
+				if imgui.Button(u8'Сохранить позицию рендеров текста', imgui.ImVec2(410, 24)) then
 					windows.new_position_adminchat.v = not windows.new_position_adminchat.v
 				end
 			end
@@ -1245,72 +1245,6 @@ function imgui.OnDrawFrame()
 		imgui.PopFont()
  		imgui.End()
 	end
-	if windows.new_position_adminchat.v then -- сохранение позиции админ чата
-		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8'Админ-чат', windows.new_position_adminchat, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
-		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
-		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-		imgui.PushFont(fontsize)
-		if imgui.Button(u8'Сохранить позицию ' .. fa.ICON_ARROWS) then
-			local pos = imgui.GetWindowPos()
-			cfg.settings.position_adminchat_x = pos.x
-			cfg.settings.position_adminchat_y = pos.y
-			save()
-		end
-		imgui.Text(u8'Размер: ')
-		imgui.SameLine()
-		imgui.PushItemWidth(20)
-		if imgui.Combo(u8'', selected_item, {'1', '2', '3', '4', '5', '6', '7', '8', '9'}, 9) then
-			if selected_item.v == 0 then
-			  	cfg.settings.size_adminchat = 9
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-			if selected_item.v == 1 then
-				cfg.settings.size_adminchat = 10
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-			if selected_item.v == 2 then
-				cfg.settings.size_adminchat = 11
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-			if selected_item.v == 3 then
-				cfg.settings.size_adminchat = 12
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-			if selected_item.v == 4 then
-				cfg.settings.size_adminchat = 13
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-			if selected_item.v == 5 then
-				cfg.settings.size_adminchat = 14
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-			if selected_item.v == 6 then
-				cfg.settings.size_adminchat = 15
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-			if selected_item.v == 7 then
-				cfg.settings.size_adminchat = 16
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-			if selected_item.v == 8 then
-				cfg.settings.size_adminchat = 17
-				save()
-				font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
-			end
-		end
-		imgui.PopItemWidth()
-		imgui.PopFont()
-		imgui.End()
-	end
 	if windows.fast_report.v then -- быстрый ответ на репорт
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5) - 250, (sh * 0.5)-90), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8'Ответ на репорт', windows.fast_report, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -1785,6 +1719,115 @@ function imgui.OnDrawFrame()
 		imgui.PopFont()
 		imgui.End()
 	end
+	if windows.new_position_adminchat.v then -- сохранение позиции админ чата
+		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.Begin(u8'Админ-чат', windows.new_position_adminchat, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.PushFont(fontsize)
+		imgui.CenterText(u8'| Админ чат |')
+		if imgui.Button(u8'Сохранить позицию ' .. fa.ICON_ARROWS) then
+			local pos = imgui.GetWindowPos()
+			cfg.settings.position_adminchat_x = pos.x
+			cfg.settings.position_adminchat_y = pos.y
+			save()
+		end
+		imgui.Text(u8'Размер: ')
+		imgui.SameLine()
+		imgui.PushItemWidth(20)
+		if imgui.Combo('##color', selected_item, {'1', '2', '3', '4', '5', '6', '7', '8', '9'}, 9) then
+			if selected_item.v == 0 then
+			  	cfg.settings.size_adminchat = 9
+			elseif selected_item.v == 1 then
+				cfg.settings.size_adminchat = 10
+			elseif selected_item.v == 2 then
+				cfg.settings.size_adminchat = 11
+			elseif selected_item.v == 3 then
+				cfg.settings.size_adminchat = 12
+			elseif selected_item.v == 4 then
+				cfg.settings.size_adminchat = 13
+			elseif selected_item.v == 5 then
+				cfg.settings.size_adminchat = 14
+			elseif selected_item.v == 6 then
+				cfg.settings.size_adminchat = 15
+			elseif selected_item.v == 7 then
+				cfg.settings.size_adminchat = 16
+			elseif selected_item.v == 8 then
+				cfg.settings.size_adminchat = 17
+			end
+			save()
+			font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
+		end
+		imgui.PopItemWidth()
+		imgui.Text(u8'Кол-во строк: ')
+		imgui.SameLine()
+		imgui.PushItemWidth(20)
+		if imgui.Combo('##stroki', selected_item, {'5', '10', '15'}, 3) then -- счет на -1 число, т.к счет идет с 0
+			if selected_item.v == 0 then
+				cfg.settings.strok_admin_chat = 4
+			elseif selected_item.v == 1 then
+				cfg.settings.strok_admin_chat = 9
+			elseif selected_item.v == 2 then
+				cfg.settings.strok_admin_chat = 14
+			end
+			adminchat = {}
+			save()
+			sampAddChatMessage(tag .. 'Текст чата был сброшен.', -1)
+		end
+		imgui.PopItemWidth()
+		imgui.CenterText(u8'| Чат /ears |')
+		if imgui.Button(u8'Сoхранить позицию ' .. fa.ICON_ARROWS) then
+			local pos = imgui.GetWindowPos()
+			cfg.settings.position_ears_x = pos.x
+			cfg.settings.position_ears_y = pos.y
+			save()
+		end
+		imgui.Text(u8'Размер: ')
+		imgui.SameLine()
+		imgui.PushItemWidth(20)
+		if imgui.Combo('##color2', selected_item, {'1', '2', '3', '4', '5', '6', '7', '8', '9'}, 9) then
+			if selected_item.v == 0 then
+			  	cfg.settings.size_ears = 9
+			elseif selected_item.v == 1 then
+				cfg.settings.size_ears = 10
+			elseif selected_item.v == 2 then
+				cfg.settings.size_ears = 11
+			elseif selected_item.v == 3 then
+				cfg.settings.size_ears = 12
+			elseif selected_item.v == 4 then
+				cfg.settings.size_ears = 13
+			elseif selected_item.v == 5 then
+				cfg.settings.size_ears = 14
+			elseif selected_item.v == 6 then
+				cfg.settings.size_ears = 15
+			elseif selected_item.v == 7 then
+				cfg.settings.size_ears = 16
+			elseif selected_item.v == 8 then
+				cfg.settings.size_ears = 17
+			end
+			save()
+			font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
+		end
+		imgui.PopItemWidth()
+		imgui.Text(u8'Кол-во строк: ')
+		imgui.SameLine()
+		imgui.PushItemWidth(20)
+		if imgui.Combo('##stroki2', selected_item, {'5', '10', '15'}, 3) then -- счет на -1 число, т.к счет идет с 0
+			if selected_item.v == 0 then
+				cfg.settings.strok_ears = 4
+			elseif selected_item.v == 1 then
+				cfg.settings.strok_ears = 9
+			elseif selected_item.v == 2 then
+				cfg.settings.strok_ears = 14
+			end
+			ears = {}
+			save()
+			sampAddChatMessage(tag .. 'Текст чата был сброшен.', -1)
+		end
+		imgui.PopItemWidth()
+		imgui.PopFont()
+		imgui.End()
+	end
 	if windows.actions_in_recon_menu.v then -- доп действия в кастом рекон меню
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8"Взаимодействие с игроком", windows.actions_in_recon_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -2060,62 +2103,20 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 end
-local count = 0 -- счетчик кол-ва сообщений в Аdmin chate
------ Поток для рендера админ чата ---------------
-function ac0()
+
+function render_adminchat() --[A] NEARBY CHAT: 1 | отправил N.E.O.N(101)
 	while true do
 		wait(5)
 		if not isPauseMenuActive() then
-			if cfg.settings.position_adminchat_x then
-				renderFontDrawText(font_adminchat, ac0, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y, 0xCCFFFFFF)
+			for i = 0, cfg.settings.strok_admin_chat do
+				if adminchat[i] then
+					renderFontDrawText(font_adminchat, adminchat[i], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15), 0xCCFFFFFF)
+				end
 			end
-		end
-	end
-end
-function ac1()
-	while true do
-		wait(5)
-		if not isPauseMenuActive() then
-			renderFontDrawText(font_adminchat, ac1, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y+17, 0xCCFFFFFF)
-		end
-	end
-end
-function ac2()
-	while true do
-		wait(5)
-		if not isPauseMenuActive() then
-			if cfg.settings.position_adminchat_x then
-				renderFontDrawText(font_adminchat, ac2, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y+34, 0xCCFFFFFF)
-			end
-		end
-	end
-end
-function ac3()
-	while true do
-		wait(5)
-		if not isPauseMenuActive() then
-			if cfg.settings.position_adminchat_x then
-				renderFontDrawText(font_adminchat, ac3, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y+51, 0xCCFFFFFF)
-			end
-		end
-	end
-end
-function ac4()
-	while true do
-		wait(5)
-		if not isPauseMenuActive() then
-			if cfg.settings.position_adminchat_x then
-				renderFontDrawText(font_adminchat, ac4, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y+68, 0xCCFFFFFF)
-			end
-		end
-	end
-end
-function ac5()
-	while true do
-		wait(5)
-		if not isPauseMenuActive() then
-			if cfg.settings.position_adminchat_x then
-				renderFontDrawText(font_adminchat, ac5, cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y+85, 0xCCFFFFFF)
+			for i = 0, cfg.settings.strok_admin_chat do
+				if ears[i] then
+					renderFontDrawText(font_earschat, ears[i], cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15), 0xCCFFFFFF)
+				end
 			end
 		end
 	end
@@ -2147,6 +2148,105 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
         if text:match('{FFFFFF}У Вас нет доступа к этой команде, для покупки {FFFFFF}перейдите в панель администратора.') then
             return false
         end
+	end
+	if cfg.settings.find_form then
+		if not AFK then
+			if text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") then
+				local poiskform = string.sub(text, 7)
+				for i = 0, #spisok do
+					if poiskform:find(tostring(spisok[i])) then
+						st = {}
+						st.idadmin = tonumber(poiskform:match('%[(%d+)%]'))
+						local d = string.len(poiskform)
+						while d ~= 0 do
+							poiskform = string.sub(poiskform, 2)
+							local don = string.sub(poiskform, 1, 1)
+							local d = d - 1
+							if don == '/' then
+								st.forma = poiskform
+								if poiskform:find('unban') then
+									st.bool = true
+									st.timer = os.clock()
+									st.sett = true
+									st.styleform = true
+									wait_accept_form()
+									break
+								end
+								if poiskform:find('off') or poiskform:find('akk') then
+									st.bool = true
+									st.timer = os.clock()
+									if (poiskform.sub(poiskform, 2)):find('//') then
+										st.styleform = true
+									end
+									st.sett = true
+									wait_accept_form()
+									break
+								end
+								if spisok[i] == 'ban' then
+									st.forumplease = true
+								end
+								st.probid = string.match(st.forma, '%d[%d.,]*')
+								if st.probid and sampIsPlayerConnected(st.probid) then
+									st.bool = true
+									st.timer = os.clock()
+									nickid = sampGetPlayerNickname(st.probid)
+									if (poiskform.sub(poiskform, 2)):find('//') then
+										st.styleform = true
+									end
+									st.sett = true
+									wait_accept_form()
+									break
+								else
+									st = {}
+									sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
+									break
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	if cfg.settings.render_ears then
+		if text:match('NEARBY CHAT: ') or text:match('SMS: ') then
+			text = string.gsub(text, 'отправил', '')
+			text = string.gsub(text, ' игроку ', '->')
+			text = string.sub(text, 5) -- удаляем [A]
+			text = string.gsub(text, '  ', ' ')
+			if #ears >= cfg.settings.strok_ears then
+				for i = 0, #ears do
+					if i ~= cfg.settings.strok_ears then
+						ears[i] = ears[i + 1]
+					else
+						ears[#ears] = text
+					end
+				end
+			else
+				ears[#ears + 1] = text
+			end
+			return false
+		end
+	end
+	if cfg.settings.admin_chat and text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)") then
+		local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)')
+		local messange = string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext
+		if #messange >= 160 then
+			messange = string.sub(messange, 1, 160) .. '...'
+		end
+		if #adminchat >= cfg.settings.strok_admin_chat then
+			for i = 0, #adminchat do
+				if i ~= cfg.settings.strok_admin_chat then
+					adminchat[i] = adminchat[i+1]
+				else
+					adminchat[#adminchat] = messange
+				end
+			end
+		else
+			adminchat[#adminchat + 1] = messange
+		end
+		local admlvl, prefix, nickadm, idadm, admtext = nil
+		return false --
 	end
 	if cfg.settings.automute and not AFK then 
 		text = text:lower()
@@ -2277,131 +2377,6 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
                 end
             end
         end
-	end
-	if cfg.settings.find_form then
-		if not AFK then
-			if text:match("%[A%-(%d+)%] (.+)%[(%d+)%]: {FFFFFF}(.+)") then
-				local poiskform = string.sub(text, 7)
-				for i = 0, #spisok do
-					if poiskform:find(tostring(spisok[i])) then
-						st = {}
-						st.idadmin = tonumber(poiskform:match('%[(%d+)%]'))
-						local d = string.len(poiskform)
-						while d ~= 0 do
-							poiskform = string.sub(poiskform, 2)
-							local don = string.sub(poiskform, 1, 1)
-							local d = d - 1
-							if don == '/' then
-								st.forma = poiskform
-								if poiskform:find('unban') then
-									st.bool = true
-									st.timer = os.clock()
-									st.sett = true
-									st.styleform = true
-									wait_accept_form()
-									break
-								end
-								if poiskform:find('off') or poiskform:find('akk') then
-									st.bool = true
-									st.timer = os.clock()
-									if (poiskform.sub(poiskform, 2)):find('//') then
-										st.styleform = true
-									end
-									st.sett = true
-									wait_accept_form()
-									break
-								end
-								if spisok[i] == 'ban' then
-									st.forumplease = true
-								end
-								st.probid = string.match(st.forma, '%d[%d.,]*')
-								if st.probid and sampIsPlayerConnected(st.probid) then
-									st.bool = true
-									st.timer = os.clock()
-									nickid = sampGetPlayerNickname(st.probid)
-									if (poiskform.sub(poiskform, 2)):find('//') then
-										st.styleform = true
-									end
-									st.sett = true
-									wait_accept_form()
-									break
-								else
-									st = {}
-									sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
-									break
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-	end
-	if cfg.settings.admin_chat and text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)") then
-		local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)')
-		local messange = string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext
-		if #messange >= 150 then
-			messange = string.sub(messange, 1, 150) .. '...'
-		end
-		if #adminchat >= 10 then
-			adminchat[#adminchat] = messange
-		else
-			adminchat[#adminchat + 1] = messange
-		end
-		local admlvl, prefix, nickadm, idadm, admtext = nil
-		if maximum == true then
-			func0:terminate()
-			func1:terminate()
-			func2:terminate()
-			func3:terminate()
-			func4:terminate()
-			func5:terminate()
-			ac0 = ac1
-			ac1 = ac2
-			ac2 = ac3 
-			ac3 = ac4
-			ac4 = ac5
-			ac5 = messange
-			func0:run()
-			func1:run()
-			func2:run()
-			func3:run()
-			func4:run()
-			func5:run()
-		end
-		if count == 0 then
-			ac0 = messange
-			func0:run()
-		end
-		if count == 1 then
-			ac1 = messange
-			func1:run()
-		end
-		if count == 2 then
-			ac2 = messange
-			func2:run()
-		end
-		if count == 3 then
-			ac3 = messange
-			func3:run()
-		end
-		if count == 4 then
-			ac4 = messange
-			func4:run()
-		end
-		if count == 5 then
-			if count == 5 then
-				ac5 = messange
-				func5:run()
-				maximum = true
-			else
-				ac5 = messange
-			    func5:run()
-			end
-		end
-		local messange = nil
-		count = count + 1
-		return false --
 	end
 end
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
