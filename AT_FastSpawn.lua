@@ -2,27 +2,21 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 0.4
+local version = 0.5
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
 local inicfg = require 'inicfg'
-local directIni = 'AT_FastSpawn.ini'
+local directIni = 'AdminTools.ini'
 encoding.default = 'CP1251'
 u8 = encoding.UTF8 
 local key = require 'vkeys'
-local cfg2 = inicfg.load({
-    settings = {
-        style = 0,
-    },
-}, 'AdminTools.ini')
-inicfg.save(cfg2,'AdminTools.ini')
-local style_selected = imgui.ImInt(cfg2.settings.style)
 local cfg = inicfg.load({
 	settings = {
         spawn = false,
 		autorizate = false,
-		autoalogin = false
+		autoalogin = false,
+		style = 0,
 	},
 	command = {
 		[0] = '',
@@ -51,7 +45,8 @@ local cfg = inicfg.load({
 		[10] = 0
 	},
 }, directIni)
-inicfg.save(cfg,directIni)
+inicfg.save(cfg,directIni) -- Если файла, или определенных настроек нет, добавляем их в файл AdminTools.ini
+local style_selected = imgui.ImInt(cfg.settings.style)
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
 local buffer = {}
 local sw, sh = getScreenResolution()
@@ -98,9 +93,9 @@ function sampev.OnServerMessange(color,text)
 end
 
 function main()
+	cfg.settings.versionFS = version
+	inicfg.save(cfg,'AdminTools.ini')
 	while not isSampAvailable() do wait(0) end
-	cfg2.settings.versionFS = version
-	inicfg.save(cfg2,'AdminTools.ini')
 	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	nick = sampGetPlayerNickname(id)
 	if cfg.settings.spawn then
