@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 0.7
+local version = 0.8
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -12,21 +12,11 @@ u8 = encoding.UTF8
 local vkeys = require 'vkeys'
 local inicfg = require 'inicfg'
 local font = require ("moonloader").font_flag
-local main_window_state = imgui.ImBool(false)
-local menu_window_state = imgui.ImBool(false)
-local secondary_window_state = imgui.ImBool(false)
-local russkaya_window_state = imgui.ImBool(false)
-local corol_window_state = imgui.ImBool(false)
-local poliv_window_state = imgui.ImBool(false)
-local pryatki_window_state = imgui.ImBool(false)
-local sportzal_window_state = imgui.ImBool(false)
-local stata_window_state = imgui.ImBool(false)
-local static_window_state = imgui.ImBool(false)
 local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
 local text_myprize = imgui.ImBuffer(256)
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
-local directIni = 'AT_MP.json'
+local directIni = 'AdminTools.ini'
 
 local cfg = inicfg.load({
     settings = {
@@ -41,6 +31,8 @@ local cfg = inicfg.load({
         warningkick = false,
         staticposX = 20,
         staticposY = sh - 200,
+        style = 0,
+        wallhack = true,
     },
     info = {
         0, -- myreport
@@ -50,18 +42,11 @@ local cfg = inicfg.load({
         0, -- mykick
         0, -- myonline
     },
+    
 }, directIni)
-inicfg.save(cfg,directIni)
+inicfg.save(cfg,directIni) -- Если файла, или определенных настроек нет, добавляем их в файл AdminTools.ini
 
-local tools = inicfg.load({
-    settings = {
-        style = 0,
-        wallhack = true,
-    },
-}, 'AdminTools.ini')
-inicfg.save(tools, 'AdminTools.ini')
-
-local style_selected = imgui.ImInt(tools.settings.style) -- Берём стандартное значение стиля из конфига
+local style_selected = imgui.ImInt(cfg.settings.style) -- Берём стандартное значение стиля из конфига
 
 local checkbox = {
     check_1 = imgui.ImBool(cfg.settings.adminstate),
@@ -74,11 +59,22 @@ local checkbox = {
     check_8 = imgui.ImBool(cfg.settings.warningjail),
     check_9 = imgui.ImBool(cfg.settings.warningkick),
 }
-
+local windows = {
+    main_window_state = imgui.ImBool(false),
+    menu_window_state = imgui.ImBool(false),
+    secondary_window_state = imgui.ImBool(false),
+    russkaya_window_state = imgui.ImBool(false),
+    corol_window_state = imgui.ImBool(false),
+    poliv_window_state = imgui.ImBool(false),
+    pryatki_window_state = imgui.ImBool(false),
+    sportzal_window_state = imgui.ImBool(false),
+    stata_window_state = imgui.ImBool(false),
+    static_window_state = imgui.ImBool(false)
+}
 function main()
+    cfg.settings.versionMP = version
+    inicfg.save(cfg, directIni)
     while not isSampAvailable() do wait(0) end
-    tools.settings.versionMP = version
-    inicfg.save(tools, 'AdminTools.ini')
     while not sampIsLocalPlayerSpawned() do wait(1000) end
     font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
     func = lua_thread.create_suspended(autoSave)
@@ -87,7 +83,7 @@ function main()
     func:run()
     func1:run()
     if cfg.settings.adminstate then
-        stata_window_state.v = true
+        windows.stata_window_state.v = true
         imgui.Process = true
     end
     if cfg.info.data ~= os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year then
@@ -103,7 +99,7 @@ function main()
             result, ped = getCharPlayerIsTargeting(PLAYER_HANDLE)
             if result and imgui.Process then
                 _, id = sampGetPlayerIdByCharHandle(ped)
-                menu_window_state.v = true
+                windows.menu_window_state.v = true
                 showCursor(true,false)
             end
         end
@@ -128,17 +124,17 @@ function sampev.onServerMessage(color,text)
     end
 end
 function imgui.OnDrawFrame()
-    if not main_window_state.v and not static_window_state.v and not secondary_window_state.v and not russkaya_window_state.v and not stata_window_state.v and not menu_window_state.v and not corol_window_state.v and not poliv_window_state.v and not pryatki_window_state.v and not sportzal_window_state.v then
+    if not windows.main_window_state.v and not windows.static_window_state.v and not windows.secondary_window_state.v and not windows.russkaya_window_state.v and not windows.stata_window_state.v and not windows.menu_window_state.v and not windows.corol_window_state.v and not windows.poliv_window_state.v and not windows.pryatki_window_state.v and not windows.sportzal_window_state.v then
         if cfg.settings.adminstate then
-            stata_window_state.v = true
+            windows.stata_window_state.v = true
         else
             imgui.Process = false
         end
     end
-    if static_window_state.v then
+    if windows.static_window_state.v then
         imgui.ShowCursor = true
         imgui.SetNextWindowPos(imgui.ImVec2(sw*0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"Статистика", static_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Статистика", windows.static_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         if imadd.ToggleButton('##activerstate', checkbox.check_1) then
             cfg.settings.adminstate = not cfg.settings.adminstate
 			inicfg.save(cfg,directIni)
@@ -212,10 +208,10 @@ function imgui.OnDrawFrame()
         end
         imgui.End()
     end
-    if stata_window_state.v then
+    if windows.stata_window_state.v then
         imgui.ShowCursor = false
-        if static_window_state.v then
-            stata_window_state.v = false -- вырубаем статистику чтобы не было бага с мышью
+        if windows.static_window_state.v then
+            windows.stata_window_state.v = false -- вырубаем статистику чтобы не было бага с мышью
         end
         imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.staticposX, cfg.settings.staticposY), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.Begin("AdminStata", state_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -244,24 +240,24 @@ function imgui.OnDrawFrame()
         end
         imgui.End()
     end
-    if main_window_state.v then
+    if windows.main_window_state.v then
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"Мероприятия", main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Мероприятия", windows.main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.Text(u8'Помочь провести мероприятие?')
         if imgui.Button(u8'Да', imgui.ImVec2(125, 25)) then
-            secondary_window_state.v = true
-            main_window_state.v = false
+            windows.secondary_window_state.v = true
+            windows.main_window_state.v = false
         end
         imgui.SameLine()
         if imgui.Button(u8'Нет', imgui.ImVec2(125, 25)) then
-            main_window_state.v = false
+            windows.main_window_state.v = false
         end
         imgui.End()
     end
-    if menu_window_state.v then
+    if windows.menu_window_state.v then
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2) - 100, (sh/2) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"Взаимодействие с игроком", menu_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Взаимодействие с игроком", windows.menu_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.Text(u8'Что сделать с игроком\n' .. sampGetPlayerNickname(id) .. '?')
         if imgui.Button(u8'Заспавнить', imgui.ImVec2(200, 30)) then
@@ -270,16 +266,16 @@ function imgui.OnDrawFrame()
         if imgui.Button(u8'Нарушение правил мероприятий', imgui.ImVec2(200, 30)) then
             sampSendChat('/jail ' .. id .. ' 300 Нарушение правил МП')
             showCursor(false,false)
-            menu_window_state.v = false
+            windows.menu_window_state.v = false
         end
         if imgui.Button(u8'Срыв мероприятия', imgui.ImVec2(200, 30)) then
             sampSendChat('/jail ' .. id .. ' 3000 Срыв мероприятия')
             showCursor(false,false)
-            menu_window_state.v = false
+            windows.menu_window_state.v = false
         end
         if imgui.Button(u8'Выдать приз', imgui.ImVec2(200, 30)) then
             lua_thread.create(function()
-                menu_window_state.v = false
+                windows.menu_window_state.v = false
                 sampSendChat('/mess 7 Победитель мероприятия - ' .. sampGetPlayerNickname(id) .. '[' .. id .. ']' .. ' поздравим его!')
                 wait(500)
                 sampSendChat('/mpwin ' .. id)
@@ -310,56 +306,56 @@ function imgui.OnDrawFrame()
                 end
             end)
         end
-        if corol_window_state.v or sportzal_window_state.v then
+        if windows.corol_window_state.v or windows.sportzal_window_state.v then
             if not player1 then
                 if imgui.Button(u8'Сохранить 1-ого игрока', imgui.ImVec2(200, 30)) then
                     player1 = id
                     showCursor(false,false)
-                    menu_window_state.v = false
+                    windows.menu_window_state.v = false
                 end
             end
             if not player2 then
                 if imgui.Button(u8'Сохранить 2-ого игрока', imgui.ImVec2(200, 30)) then
                     player2 = id
                     showCursor(false,false)
-                    menu_window_state.v = false
+                    windows.menu_window_state.v = false
                 end
             end
         end
         imgui.End()
     end
-    if secondary_window_state.v then
+    if windows.secondary_window_state.v then
      --   imgui.SetNextWindowSize(imgui.ImVec2(250, 170), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"Выбери мероприятие", secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin(u8"Выбери мероприятие", windows.secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         if imgui.Button(u8'Русская рулетка', imgui.ImVec2(230, 30)) then
-            russkaya_window_state.v = true
-            secondary_window_state.v = false
+            windows.russkaya_window_state.v = true
+            windows.secondary_window_state.v = false
         end
         if imgui.Button(u8'Король дигла', imgui.ImVec2(230, 30)) then
-            corol_window_state.v = true
-            secondary_window_state.v = false
+            windows.corol_window_state.v = true
+            windows.secondary_window_state.v = false
         end
         if imgui.Button(u8'Поливалка', imgui.ImVec2(230, 30)) then
-            poliv_window_state.v = true
-            secondary_window_state.v = false
+            windows.poliv_window_state.v = true
+            windows.secondary_window_state.v = false
         end
         if imgui.Button(u8'Прятки', imgui.ImVec2(230, 30)) then
-            pryatki_window_state.v = true
-            secondary_window_state.v = false
+            windows.pryatki_window_state.v = true
+            windows.secondary_window_state.v = false
         end
         if imgui.Button(u8'Бокс', imgui.ImVec2(230, 30)) then
-            sportzal_window_state.v = true
-            secondary_window_state.v = false
+            windows.sportzal_window_state.v = true
+            windows.secondary_window_state.v = false
         end
         imgui.InputTextMultiline("##Текст оглашения приза", text_myprize, imgui.ImVec2(230,25))
         imgui.Tooltip(u8('Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp'))
         imgui.End()
     end
-    if russkaya_window_state.v then
+    if windows.russkaya_window_state.v then
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin("russkaya roulette", russkaya_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin("russkaya roulette", windows.russkaya_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
@@ -487,10 +483,10 @@ function imgui.OnDrawFrame()
         end
         imgui.End()
     end
-    if corol_window_state.v then
+    if windows.corol_window_state.v then
       --  imgui.SetNextWindowSize(imgui.ImVec2(300, 150), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin('korol deagle', corol_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin('korol deagle', windows.corol_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
@@ -667,10 +663,10 @@ function imgui.OnDrawFrame()
         end
         imgui.End()
     end
-    if poliv_window_state.v then
+    if windows.poliv_window_state.v then
         imgui.SetNextWindowSize(imgui.ImVec2(250, 120), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin('polivalka', poliv_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin('polivalka', windows.poliv_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
@@ -819,10 +815,10 @@ function imgui.OnDrawFrame()
         end
         imgui.End()
     end
-    if pryatki_window_state.v then
+    if windows.pryatki_window_state.v then
         --     imgui.SetNextWindowSize(imgui.ImVec2(250, 120), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin("pryatki", pryatki_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin("pryatki", windows.pryatki_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
@@ -887,7 +883,7 @@ function imgui.OnDrawFrame()
                 end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
-                if tools.settings.wallhack then
+                if cfg.settings.wallhack then
                     sampSendInputChat('/wh')
                 end
                 lua_thread.create(function()
@@ -960,9 +956,9 @@ function imgui.OnDrawFrame()
         end
         imgui.End()
     end
-    if sportzal_window_state.v then
+    if windows.sportzal_window_state.v then
         imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin("box", sportzal_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin("box", windows.sportzal_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         if not sbor and not mp then
@@ -1193,8 +1189,8 @@ function sampSendInputChat(text) -- отправка в чат через ф6
 end
 
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-    if dialogId == 5343 and (not main_window_state.v and not secondary_window_state.v and not russkaya_window_state.v and not menu_window_state.v and not corol_window_state.v and not poliv_window_state.v and not pryatki_window_state.v and not sportzal_window_state.v) then
-        main_window_state.v = true
+    if dialogId == 5343 and (not windows.main_window_state.v and not windows.secondary_window_state.v and not windows.russkaya_window_state.v and not windows.menu_window_state.v and not windows.corol_window_state.v and not windows.poliv_window_state.v and not windows.pryatki_window_state.v and not windows.sportzal_window_state.v) then
+        windows.main_window_state.v = true
         imgui.Process = true
     end
     if dialogId == 16067 and imgui.Process then
@@ -1252,7 +1248,7 @@ function playersToStreamZone() -- игроки в радиусе
 	return streaming_player
 end
 function radius()
-    while imgui.Process and not stata_window_state.v do
+    while imgui.Process and not windows.stata_window_state.v do
         wait(1)
         local playerid_to_stream = #(playersToStreamZone()) -1
         renderFontDrawText(font_watermark, 'Игроков в радиусе: ' .. playerid_to_stream , sh*0.5, sw*0.5, 0xCCFFFFFF)
@@ -1269,8 +1265,11 @@ function autoSave()
 end
 
 sampRegisterChatCommand('state', function()
-    static_window_state.v = not static_window_state.v
-    imgui.Process = static_window_state.v
+    windows.static_window_state.v = not windows.static_window_state.v
+    imgui.Process = windows.static_window_state.v
+end)
+sampRegisterChatCommand('mpoff', function()
+    thisScript():reload()
 end)
 
 function style(id) -- ТЕМЫ
