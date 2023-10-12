@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 2.91 -- Версия скрипта
+local version = 3.01 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -69,15 +69,20 @@ local cfg = inicfg.load({ -- базовые настройки скрипта
 		on_custom_recon_menu = true,
 		on_custom_answer = true,
 		strok_admin_chat = 6,
-		position_ears_x = sh*0.5 + 100,
-		position_ears_y = sw*0.5 - 80,
+		position_ears_x = sw/2,
+		position_ears_y = sh - 100,
 		size_ears = 10,
 		strok_ears = 6,
+		keysyncx = sh/2 + 100,
+		keysyncy = sw/2 + 20,
+		versionFS = 10,
+		versionMP = 10,
 	},
 	customotvet = {},
 	osk = {},
 	mat = {},
 	myflood = {},
+	my_command = {},
 }, directIni)
 inicfg.save(cfg,directIni) -- Если файла, или определенных настроек нет, добавляем их в файл AdminTools.ini
 
@@ -135,7 +140,9 @@ local buffer = {
 	add_new_text = imgui.ImBuffer(u8(cfg.settings.mytextreport), 256),
 	bloknotik = imgui.ImBuffer(cfg.settings.bloknotik, 4096),
 	new_flood_mess = imgui.ImBuffer(4096),
-	title_flood_mess = imgui.ImBuffer(256)
+	title_flood_mess = imgui.ImBuffer(256),
+	new_command_title = imgui.ImBuffer(256),
+	new_command = imgui.ImBuffer(4096),
 }
 local menu = {true, -- рекон меню
     false,
@@ -252,7 +259,7 @@ function main() -- основной сценарий скрипта
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		ScriptExport()
+		--ScriptExport()
 	end
  	font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
 	font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
@@ -306,6 +313,20 @@ function main() -- основной сценарий скрипта
 		mem.setint8(pStSet + 56, 1)
 		nameTag = true
 	end
+	for k,v in pairs(cfg.my_command) do -- регистрация команд пользователя
+		sampRegisterChatCommand(k, function(param)
+			lua_thread.create(function()
+				for a,b in pairs(textSplit(string.gsub(v, '_', param), '\n')) do
+					if b:match('wait(%(%d+)%)') then
+						wait(tonumber(b:match('%d+') .. '000'))
+					else
+						sampSendChat(b)
+					end
+				end
+			end)
+		end)
+	end
+	--mem.write(sampGetBase() + 643864, 37008, 2, true) худ в реконе
 	while true do
         wait(0)
 		if isPauseMenuActive() or isGamePaused() then
@@ -432,7 +453,7 @@ function imgui.OnDrawFrame()
 				save()
 			end
 			imgui.SameLine()
-			imgui.Text('Input helper')
+			imgui.Text(u8'Перевод команд')
 			imgui.SameLine()
 			imgui.SetCursorPosX(200)
 			if imadd.ToggleButton("##WallHack", checkbox.check_WallHack) then
@@ -1123,6 +1144,9 @@ function imgui.OnDrawFrame()
 		end
 		if menu2[8] then
 			imgui.CenterText(u8'Добавить мат (Enter или кнопкой)')
+			imgui.SameLine()
+			imgui.Text('?')
+			imgui.Tooltip(u8'Автомут работает по принципу Слово(Дополнение).\nЕсли вам надо мутить исключительно за целое слово\nДобавляйте в конец строки без пробела %s')
 			imgui.PushItemWidth(350)
 			imgui.InputText('##newmat', buffer.newmat)
 			imgui.PopItemWidth()
@@ -1228,13 +1252,59 @@ function imgui.OnDrawFrame()
 			end
 			imgui.CenterText(u8'Выберите тему оформления')
 			imgui.PushItemWidth(400)
-			if imgui.Combo(u8"", style_selected, style_list, style_selected) then
+			if imgui.Combo("##selected", style_selected, style_list, style_selected) then
 				style(style_selected.v) -- Применяем сразу же выбранный стиль
 				cfg.settings.style = style_selected.v 
 				inicfg.save(cfg, directIni) 
 			end
 			imgui.PopItemWidth()
-			imgui.Text(u8'Автомут работает по принципу Слово(Дополнение).\nЕсли вам надо мутить исключительно за целое слово\nДобавляйте в конец строки без пробела %s')
+			imgui.CenterText(u8'Добавить быструю команду')
+			imgui.Tooltip(u8'Символ "_" без кавычек принимает введенный аргумент\nКоманда wait добавляет задержку, пример: wait(5) (это 5 сек)')
+			imgui.NewInputText('##titlecommand5', buffer.new_command_title, 400, u8'Команда (пример: /ok, /dz, /ch)', 2)
+			imgui.InputTextMultiline("##newcommand", buffer.new_command, imgui.ImVec2(400, 100))
+			if imgui.Button(u8'Сохрaнить') then
+				buffer.new_command_title.v = string.gsub(u8:decode(buffer.new_command_title.v), '/', '')
+				cfg.my_command[buffer.new_command_title.v] = u8:decode(buffer.new_command.v)
+				save()
+				for k,v in pairs(cfg.my_command) do
+					if k == buffer.new_command_title.v then
+						sampRegisterChatCommand(k, function(param)
+							lua_thread.create(function()
+								for a,b in pairs(textSplit(string.gsub(v, '_', param), '\n')) do
+									if b:match('wait(%(%d+)%)') then
+										wait(tonumber(b:match('%d+') .. '000'))
+									else
+										sampSendChat(b)
+									end
+								end
+								param = nil
+							end)
+						end)
+						sampAddChatMessage(tag .. 'Новая команда /' .. buffer.new_command_title.v .. ' успешно создана.',-1)
+						buffer.new_command.v, buffer.new_command_title.v = '',''
+					end
+				end
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Вывести мои команды в чат') then
+				for k,v in pairs(cfg.my_command) do
+					sampAddChatMessage(tag .. 'Команда - /' .. k, -1)
+				end
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Удалить') then
+				if #(buffer.new_command_title.v) < 1 then
+					sampAddChatMessage(tag ..'Вы не указали название команды, что вы собрались удалять?', -1)
+				else
+					buffer.new_command_title.v = string.gsub(u8:decode(buffer.new_command_title.v), '/', '')
+					if cfg.my_command[buffer.new_command_title.v] then
+						cfg.my_command[buffer.new_command_title.v] = nil
+						sampAddChatMessage(tag .. 'Команда была успешно удалена. Перестанет действовать после перезагрузки игры.', -1)
+					else
+						sampAddChatMessage(tag .. 'Такой команды в базе данных нет.', -1)
+					end
+				end
+			end
 		end
 		imgui.PopFont()
  		imgui.End()
@@ -1766,9 +1836,11 @@ function imgui.OnDrawFrame()
 			elseif selected_item.v == 3 then
 				cfg.settings.strok_admin_chat = 11
 			end
-			adminchat = {}
+			if #adminchat > cfg.settings.strok_admin_chat then
+				adminchat = {}
+				sampAddChatMessage(tag .. 'Текст чата был сброшен.', -1)
+			end
 			save()
-			sampAddChatMessage(tag .. 'Текст чата был сброшен.', -1)
 		end
 		imgui.PopItemWidth()
 		imgui.CenterText(u8'| Чат /ears |')
@@ -1808,7 +1880,7 @@ function imgui.OnDrawFrame()
 		imgui.Text(u8'Кол-во строк: ')
 		imgui.SameLine()
 		imgui.PushItemWidth(20)
-		if imgui.Combo('##stroki2', selected_item, {'3', '6', '9', '12'}, 4) then -- счет на -1 число, т.к счет идет с 0
+		if imgui.Combo('##stroki2', selected_item, {'3', '6', '9', '12', '15','20'}, 6) then -- счет на -1 число, т.к счет идет с 0
 			if selected_item.v == 0 then
 				cfg.settings.strok_ears = 2
 			elseif selected_item.v == 1 then
@@ -1817,10 +1889,16 @@ function imgui.OnDrawFrame()
 				cfg.settings.strok_ears = 8
 			elseif selected_item.v == 3 then
 				cfg.settings.strok_ears = 11
+			elseif selected_item.v == 4 then
+				cfg.settings.strok_ears = 14
+			elseif selected_item.v == 5 then
+				cfg.settings.strok_ears = 19
 			end
-			ears = {}
+			if #ears > cfg.settings.strok_ears then
+				ears = {}
+				sampAddChatMessage(tag .. 'Текст чата был сброшен.', -1)
+			end
 			save()
-			sampAddChatMessage(tag .. 'Текст чата был сброшен.', -1)
 		end
 		imgui.PopItemWidth()
 		imgui.PopFont()
@@ -2106,14 +2184,14 @@ function render_adminchat() --[A] NEARBY CHAT: 1 | отправил N.E.O.N(101)
 	while true do
 		wait(5)
 		if not isPauseMenuActive() then
-			for i = 0, cfg.settings.strok_admin_chat do
+			for i = 0, #adminchat do
 				if adminchat[i] then
-					renderFontDrawText(font_adminchat, adminchat[i], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*17), 0xCCFFFFFF)
+					renderFontDrawText(font_adminchat, adminchat[i], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15), 0xCCFFFFFF)
 				end
 			end
-			for i = 0, cfg.settings.strok_admin_chat do
+			for i = 0, #ears do
 				if ears[i] then
-					renderFontDrawText(font_earschat, ears[i], cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*17), 0xCCFFFFFF)
+					renderFontDrawText(font_earschat, ears[i], cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15), 0xCCFFFFFF)
 				end
 			end
 		end
@@ -2212,9 +2290,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			text = string.gsub(text, ' игроку ', '->')
 			text = string.sub(text, 5) -- удаляем [A]
 			text = string.gsub(text, '  ', ' ')
-			if #ears >= cfg.settings.strok_ears then
+			if #ears == cfg.settings.strok_ears then
 				for i = 0, #ears do
-					if i ~= cfg.settings.strok_ears then
+					if i ~= #ears then
 						ears[i] = ears[i + 1]
 					else
 						ears[#ears] = text
@@ -2232,9 +2310,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		if #messange >= 160 then
 			messange = string.sub(messange, 1, 160) .. '...'
 		end
-		if #adminchat >= cfg.settings.strok_admin_chat then
+		if #adminchat == cfg.settings.strok_admin_chat then
 			for i = 0, #adminchat do
-				if i ~= cfg.settings.strok_admin_chat then
+				if i ~= #adminchat then
 					adminchat[i] = adminchat[i+1]
 				else
 					adminchat[#adminchat] = messange
@@ -3040,11 +3118,6 @@ mimgui.OnFrame(
     function() return target ~= -1 end,
     function(self)
     	self.HideCursor = true
-		if cfg.settings.keysyncx then
-			mimgui.SetNextWindowPos(mimgui.ImVec2(cfg.settings.keysyncx + 200, cfg.settings.keysyncy + 50), mimgui.Cond.Always, mimgui.ImVec2(0.5, 0.5))
-		else
-			mimgui.SetNextWindowPos(mimgui.ImVec2(sW / 2, sH - 100), mimgui.Cond.Always, mimgui.ImVec2(0.5, 0.5))
-		end
 		mimgui.Begin("##KEYS", nil, mimgui.WindowFlags.NoTitleBar + mimgui.WindowFlags.AlwaysAutoResize)
 			if doesCharExist(target) then
 				local plState = (isCharOnFoot(target) and "onfoot" or "vehicle")
@@ -3209,6 +3282,8 @@ function ScriptExport()
 		end
 		wait(300)
 		sampSendInputChat('/fsoff')
+		wait(300)
+		sampSendInputChat('/mpoff')
 		imgui.Process = false
 		showCursor(false,false)
 		thisScript():unload()
@@ -3226,7 +3301,6 @@ function autoonline()
 		end
 	end
 end
-
 function sampSendInputChat(text) -- отправка в чат через ф6
 	sampSetChatInputText(text)
 	sampSetChatInputEnabled(true)
@@ -3533,7 +3607,7 @@ sampRegisterChatCommand('n', function(param)
 			sampSendChat('/ot ' .. param .. ' Не наблюдаю нарушений со стороны игрока.')
 		end
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('dpr', function(param) 
@@ -3544,7 +3618,7 @@ sampRegisterChatCommand('dpr', function(param)
 			sampSendChat('/ot ' .. param .. ' У игрока куплены функции за /donate')
 		end
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('c', function(param) 
@@ -3555,7 +3629,7 @@ sampRegisterChatCommand('c', function(param)
 			sampSendChat('/ot ' .. param .. ' Начал(а) работу над вашей жалобой.')
 		end
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('cl', function(param) 
@@ -3566,7 +3640,7 @@ sampRegisterChatCommand('cl', function(param)
 			sampSendChat('/ot ' .. param .. ' Данный игрок чист.')
 		end
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('nak', function(param) 
@@ -3577,7 +3651,7 @@ sampRegisterChatCommand('nak', function(param)
 			sampSendChat('/ot ' .. param .. ' Игрок был наказан, спасибо за обращение.')
 		end
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('pmv', function(param) 
@@ -3588,7 +3662,7 @@ sampRegisterChatCommand('pmv', function(param)
 			sampSendChat('/ot ' .. param .. ' Помогли вам. Обращайтесь ещё')
 		end
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('afk', function(param) 
@@ -3599,7 +3673,7 @@ sampRegisterChatCommand('afk', function(param)
 			sampSendChat('/ot ' .. param .. ' Игрок бездействует или находится в AFK')
 		end
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('nv', function(param) 
@@ -3610,42 +3684,42 @@ sampRegisterChatCommand('nv', function(param)
 			sampSendChat('/ot ' .. param .. ' Игрок не в сети')
 		end
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('stw', function(param) 
 	if #param ~= 0 then
 		sampSendChat("/setweap " .. param .. " 38 5000")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('fo', function(param)
 	if #param ~= 0 then
 		sampSendChat('/ans ' .. param .. ' Обратитесь с данной проблемой на форум https://forumrds.ru')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('uu', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/unmute ' .. param) 
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('uj', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/unjail ' .. param) 
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('ur', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/unrmute ' .. param) 
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('al', function(param) 
@@ -3655,7 +3729,7 @@ sampRegisterChatCommand('al', function(param)
 			sampSendChat('/ans ' .. param .. ' Введите команду /alogin и свой пароль, пожалуйста.')
 		end)
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rep', function(param) 
@@ -3666,14 +3740,14 @@ sampRegisterChatCommand('rep', function(param)
 			sampSendChat('/ans ' .. param .. ' Администрация сразу решит ваш вопрос.')
 		end)
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('as', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/aspawn ' .. param)
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('sbanip', function()
@@ -3698,11 +3772,11 @@ sampRegisterChatCommand('sbanip', function()
 					result, button, input = nil
 					ipfind = true
 					sampSendChat('/offstats ' .. nick_nakazyemogo)
-					while not regip or sampIsDialogActive() do wait(500) end
+					while not regip or sampIsDialogActive() do wait(200) end
 					sampSendChat('/banoff ' .. nick_nakazyemogo .. ' ' .. nakazanie .. ' ' .. pri4ina)
-					wait(2000)
+					wait(1000)
 					sampSendChat('/banip ' .. regip .. ' ' .. nakazanie .. ' ' .. pri4ina)
-					wait(2000)
+					wait(1000)
 					sampSendChat('/banip ' .. lastip .. ' ' .. nakazanie .. ' ' .. pri4ina)
 					lastip,regip,nick_nakazyemogo,pri4ina,nakazanie = nil
 				else
@@ -3722,98 +3796,98 @@ sampRegisterChatCommand('m', function(param)
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 300 Нецензурная лексика')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('mf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 300 Нецензурная лексика')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('m2', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 600 Нецензурная лексика x2')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('m3', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 900 Нецензурная лексика x3')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('ok', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 400 Оскорбление/Унижение')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('okf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 400 Оскорбление/Унижение')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('ok2', function(param) 
 	if #param ~= 0 then
  		sampSendChat('/mute ' .. param .. ' 800 Оскорбление/Унижение x2')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('ok3', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 1200 Оскорбление/Унижение x3')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('fd', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 120 Флуд')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('fdf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 120 Флуд')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('fd2', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 240 Флуд x2')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('fd3', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 360 Флуд x3')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('or', function(param) 
 	if #param ~= 0 then 
 		sampSendChat('/mute ' .. param .. ' 5000 Оскорбление/Упоминание родных')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('orf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 5000 Оскорбление/Упоминание родных')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('up', function(param) 
@@ -3821,133 +3895,133 @@ sampRegisterChatCommand('up', function(param)
 		sampSendChat('/mute ' .. param .. ' 1000 Упоминание сторонних проектов')
 		sampAddChatMessage(tag .. 'рекомендуется очистить чат командой /cc', -1)
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('upf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 1000 Упоминание сторонних проектов')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('oa', function(param)
 	if #param ~= 0 then 
 		sampSendChat('/mute ' .. param .. ' 2500 Оскорбление администрации')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('oaf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 2500 Оскорбление администрации')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('kl', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 3000 Клевета на администрацию')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('klf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 3000 Клевета на администрацию')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('po', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 120 Попрошайничество')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('pof', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 120 Попрошайничество')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('po2', function(param)
 	if #param ~= 0 then 
 		sampSendChat('/mute ' .. param .. ' 240 Попрошайничество x2')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('po3', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 360 Попрошайничество x3')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('zs', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. " 600 Злоупотребление символами")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('zsf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 600 Злоупотребление символами')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('nm', function(param)
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. ' 600 неадекватное поведение.')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rekl', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. " 1000 Реклама")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('reklf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 1000 Реклама')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rz', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. " 5000 Розжиг межнац. розни")
 	else 
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rzf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 5000 Розжиг межнац. розни')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('ia', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/mute ' .. param .. " 2500 Выдача себя за администратора")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('iaf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/muteoff ' .. param .. ' 2500 Выдача себя за администратора')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 ----======================= Исключительно для МУТОВ РЕПОРТА ===============------------------
@@ -3955,154 +4029,154 @@ sampRegisterChatCommand('oft', function(param)
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 120 Offtop in /report")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('oftf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 120 Offtop in /report")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('oft2', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 240 Offtop in /report x2")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('oft3', function(param) 
 	if param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 360 Offtop in /report x3")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('cp', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 120 Caps in /report")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('cpf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 120 Caps in /report")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('cp2', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 240 Caps in /report x2")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('cp3', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 360 Caps in /report x3")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('roa', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 2500 Оскорбление администрации")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('roaf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 2500 Оскорбление администрации")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('ror', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 5000 Оскорбление/Упоминание родных")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rorf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 5000 Оскорбление/Упоминание родных")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rzs', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 600 Злоупотребление символами")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rzsf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 600 Злоупотребление символами")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rrz', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 5000 Розжиг меж.нац. розни")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rrzf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 5000 Розжиг меж.нац. розни")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rpo', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 120 Попрошайничество")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rpof', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 120 Попрошайничество")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rm', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 300 Мат в /report")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rmf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 300 Нецензурная лексика")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rok', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmute ' .. param .. " 400 Оскорбление в /report")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('rokf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/rmuteoff ' .. param .. " 400 Оскорбление в /report")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 ----======================= Исключительно для ДЖАЙЛА ===============------------------
@@ -4110,161 +4184,161 @@ sampRegisterChatCommand('dz', function(param)
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 300 ДМ/ДБ в зеленой зоне')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('dzf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jailakk ' .. param .. ' 300 ДМ/ДБ в зеленой зоне')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('dz2', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 600 ДМ/ДБ в зеленой зоне x2')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('dz3', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 900 ДМ/ДБ в зеленой зоне x3')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('zv', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. " 3000 Злоупотребление VIP'ом")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('dmp', function(param)
 	if #param ~= 0 then
 		sampSendChat("/jail " .. param .. " 3000 Серьезная помеха на МП")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('zvf', function(param) 
 	if #param ~= 0 then
 		sampSendChat("/jailakk " .. param .. " 3000 Злоупотребление VIP'oм")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('sk', function(param)
 	if #param ~= 0 then 
 		sampSendChat('/jail ' .. param .. ' 300 Spawn Kill')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('skf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jailakk ' .. param .. ' 300 Spawn Kill')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('dk', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 900 ДБ Ковш в зеленой зоне')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('dkf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jailakk ' .. param .. ' 900 ДБ Ковш в зеленой зоне')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('td', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 300 car in /trade')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('tdf', function(param) 
 	if #param ~= 0 then
 		sampSendChat("/jailakk " .. param .. " 300 Car in /trade")
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jcb', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 3000 чит')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jcbf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jailakk ' .. param .. ' 3000 чит')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jm', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 300 Нарушение правил МП')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jmf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jailakk ' .. param .. ' 300 Нарушение правил МП')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jc', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 900 сторонний скрипт/ПО')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jc2', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 1800 сторонний скрипт/ПО')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jc3', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 2700 сторонний скрипт/ПО')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jcf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jailakk ' .. param .. ' 900 сторонний скрипт/ПО')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('bg', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jail ' .. param .. ' 300 Багоюз')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('bgf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/jailakk ' .. param .. ' 300 Багоюз')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 ----======================= Исключительно для БАНА ===============------------------
@@ -4272,90 +4346,84 @@ sampRegisterChatCommand('bosk', function(param)
 	if #param ~= 0 then
 		sampSendChat('/siban ' .. param .. ' 999 Оскорбление проекта')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('boskf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/banoff ' .. param .. ' 999 Оскорбление проекта')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('reklama', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/siban ' .. param .. ' 999 Реклама')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('reklamaf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/banoff ' .. param .. ' 999 Реклама')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('obm', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/siban ' .. param .. ' 30 Обман/Развод')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('obmf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/banoff ' .. param .. ' 30 Обман/Развод')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('nmb', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/ban ' .. param .. ' 3 Неадекватное поведение')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('nmbf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/banoff ' .. param .. ' 3 Неадекватное поведение')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('ch', function(param) 
 	if #param ~= 0 then
-		lua_thread.create(function()
-			sampSendChat('/ans ' .. param .. ' Уважаемый игрок, Вы наказаны за нарушение правил сервера.')
-			wait(600)
-			sampSendChat('/ans ' .. param .. ' Если Вы не согласны с выданным наказанием, напишите жалобу на https://forumrds.ru')
-			wait(600)
-			sampSendChat('/iban ' .. param .. ' 7 Читерский скрипт/ПО')
-		end)
+		sampSendChat('/iban ' .. param .. ' 7 читерский скрипт/ПО')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('chf', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/banoff ' .. param .. ' 7 читерский скрипт/ПО')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('obh', function(param)
 	if #param ~= 0 then
 		sampSendChat('/iban ' .. param .. ' 7 Обход прошлого бана')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('oskhelper', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/ban ' .. param .. ' 3 Нарушение правил /helper')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 ----======================= Исключительно для КИКОВ ===============------------------
@@ -4364,35 +4432,35 @@ sampRegisterChatCommand('cafk', function(param)
 		sampSendChat('/kick ' .. param .. ' AFK in /arena') 
 		windows.recon_menu.v = false
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('kk1', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/kick ' .. param .. ' Смените ник 1/3') 
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('kk2', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/kick ' .. param .. ' Смените ник 2/3')
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('kk3', function(param)
 	if #param ~= 0 then 
 		sampSendChat('/ban ' .. param .. ' 7 Смените ник 3/3') 
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 sampRegisterChatCommand('jk', function(param) 
 	if #param ~= 0 then
 		sampSendChat('/kick ' .. param .. ' DM in jail') 
 	else
-		sampAddChatMessage(tag .. 'Вы не указали значение.')
+		sampAddChatMessage(tag .. 'Вы не указали значение.', -1)
 	end
 end)
 
