@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 3.01 -- Версия скрипта
+local version = 3.02 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -473,10 +473,13 @@ function imgui.OnDrawFrame()
 			imgui.SameLine()
 			imgui.SetCursorPosX(200)
 			if imadd.ToggleButton('##find_form', checkbox.check_find_form) then
-				cfg.settings.find_form  = false
-				save()
 				if server03 then
+					cfg.settings.find_form  = false
+					save()
 					checkbox.check_find_form = imgui.ImBool(cfg.settings.find_form)
+				else
+					cfg.settings.find_form  = not cfg.settings.find_form
+					save()
 				end
 			end
 			imgui.SameLine()
@@ -675,36 +678,46 @@ function imgui.OnDrawFrame()
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.fast_key_ans))
 			if imgui.Button(u8"Сoxрaнить.", imgui.ImVec2(410, 24)) then
-				cfg.settings.fast_key_ans = getDownKeysText()
-				save()
+				if getDownKeysText() then
+					cfg.settings.fast_key_ans = getDownKeysText()
+					save()
+				end
 			end
 			imgui.CenterText(u8'Вкл/выкл быстрого репорта')
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.fast_key_takereport))
 			if imgui.Button(u8"Соxрaнить.", imgui.ImVec2(410, 24)) then
-				cfg.settings.fast_key_takereport = getDownKeysText()
-				save()
+				if getDownKeysText() then
+					cfg.settings.fast_key_takereport = getDownKeysText()
+					save()
+				end
 			end
 			imgui.CenterText(u8"Очистка транспорта: ")
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.fast_key_wallhack))
 			if imgui.Button(u8"Cоxрaнить.", imgui.ImVec2(410, 24)) then
-				cfg.settings.fast_key_wallhack = getDownKeysText()
-				save()
+				if getDownKeysText() then
+					cfg.settings.fast_key_wallhack = getDownKeysText()
+					save()
+				end
 			end
 			imgui.CenterText(u8"Отправка в чат доп.текста")
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.fast_key_addText))
 			if imgui.Button(u8"Coxрaнить.", imgui.ImVec2(410, 24)) then
-				cfg.settings.fast_key_addText = getDownKeysText()
-				save()
+				if getDownKeysText() then
+					cfg.settings.fast_key_addText = getDownKeysText()
+					save()
+				end
 			end
 			imgui.CenterText(u8"Вкл/выкл WallHack ")
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.fast_key_mytext))
 			if imgui.Button(u8"Соxpaнить.", imgui.ImVec2(410, 24)) then
-				cfg.settings.fast_key_mytext = getDownKeysText()
-				save()
+				if getDownKeysText() then
+					cfg.settings.fast_key_mytext = getDownKeysText()
+					save()
+				end
 			end
 			imgui.Separator()
 			if imgui.Button(u8"Сбросить все значения.", imgui.ImVec2(410, 24)) then
@@ -1145,7 +1158,7 @@ function imgui.OnDrawFrame()
 		if menu2[8] then
 			imgui.CenterText(u8'Добавить мат (Enter или кнопкой)')
 			imgui.SameLine()
-			imgui.Text('?')
+			imgui.Text('(?)')
 			imgui.Tooltip(u8'Автомут работает по принципу Слово(Дополнение).\nЕсли вам надо мутить исключительно за целое слово\nДобавляйте в конец строки без пробела %s')
 			imgui.PushItemWidth(350)
 			imgui.InputText('##newmat', buffer.newmat)
@@ -1259,6 +1272,8 @@ function imgui.OnDrawFrame()
 			end
 			imgui.PopItemWidth()
 			imgui.CenterText(u8'Добавить быструю команду')
+			imgui.SameLine()
+			imgui.Text('(?)')
 			imgui.Tooltip(u8'Символ "_" без кавычек принимает введенный аргумент\nКоманда wait добавляет задержку, пример: wait(5) (это 5 сек)')
 			imgui.NewInputText('##titlecommand5', buffer.new_command_title, 400, u8'Команда (пример: /ok, /dz, /ch)', 2)
 			imgui.InputTextMultiline("##newcommand", buffer.new_command, imgui.ImVec2(400, 100))
@@ -1293,7 +1308,7 @@ function imgui.OnDrawFrame()
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Удалить') then
-				if #(buffer.new_command_title.v) < 1 then
+				if #(buffer.new_command_title.v) == 0 then
 					sampAddChatMessage(tag ..'Вы не указали название команды, что вы собрались удалять?', -1)
 				else
 					buffer.new_command_title.v = string.gsub(u8:decode(buffer.new_command_title.v), '/', '')
@@ -1316,7 +1331,7 @@ function imgui.OnDrawFrame()
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
 		imgui.Text(u8'Игрок: ' .. autor .. '[' ..autorid.. ']')
-		imgui.TextWrapped(u8('Жалоба: ') .. u8(textreport))
+		imgui.TextWrapped(u8('Жалоба: ' .. textreport))
 		if isKeyJustPressed(VK_SPACE) then
 			imgui.SetKeyboardFocusHere(-1)
 		end
@@ -1325,10 +1340,9 @@ function imgui.OnDrawFrame()
 		imgui.SetCursorPosX(383)
 		imgui.Tooltip('Space')
 		if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) then
-			if #(u8:decode(buffer.text_ans.v)) >= 1 then
+			if #(u8:decode(buffer.text_ans.v)) > 0 then
 				if cfg.settings.custom_answer_save then
-					key = #cfg.customotvet + 1
-					cfg.customotvet[key] = u8:decode(buffer.text_ans.v)
+					cfg.customotvet[#cfg.customotvet + 1] = u8:decode(buffer.text_ans.v)
 					save()
 				end
 				answer.moiotvet = true
@@ -1338,26 +1352,26 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Tooltip('Enter')
 		imgui.Separator()
-		if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_Q) then
+		if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or isKeyDown(VK_Q) then
 			answer.rabotay = true
 		end
 		imgui.Tooltip('Q')
 		imgui.SameLine()
-		if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_E) then
+		if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or isKeyDown(VK_E) then
 			answer.slejy = true
 		end
 		imgui.Tooltip('E')
 		imgui.SameLine()
-		if imgui.Button(u8'Список своих', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_R) then
+		if imgui.Button(u8'Список своих', imgui.ImVec2(120, 25)) or isKeyDown(VK_R) then
 			windows.custom_ans.v = not windows.custom_ans.v
 		end
 		imgui.Tooltip('R')
 		imgui.SameLine()
-		if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_V) then
+		if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or isKeyDown(VK_V) then
 			answer.peredamrep = true
 		end
 		imgui.Tooltip('V')
-		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_G) then
+		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or isKeyDown(VK_G) then
 			if tonumber(autorid) then
 				windows.fast_rmute.v = not windows.fast_rmute.v
 			else
@@ -1366,12 +1380,12 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Tooltip('G')
 		imgui.SameLine()
-		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_T) then
+		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or isKeyDown(VK_T) then
 			answer.uto4id = true
 		end
 		imgui.Tooltip('T')
 		imgui.SameLine()
-		if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_F) then
+		if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or isKeyDown(VK_F) then
 			answer.uto4 = true
 		end
 		imgui.Tooltip('F')
@@ -1380,16 +1394,18 @@ function imgui.OnDrawFrame()
 			answer.otklon = true
 		end
 		imgui.Separator()
-		if imadd.ToggleButton('##doptextans' .. fa.ICON_COMMENTING_O, checkbox.check_add_answer_report) or isKeyJustPressed(VK_X) then
+		if imadd.ToggleButton('##doptextans' .. fa.ICON_COMMENTING_O, checkbox.check_add_answer_report) or isKeyDown(VK_X) then
 			cfg.settings.add_answer_report = not cfg.settings.add_answer_report
 			save()
 		end
+		imgui.Tooltip('X')
 		imgui.SameLine()
 		imgui.Text(u8'Добавить дополнительный текст к ответу')
-		if imadd.ToggleButton('##saveans' .. fa.ICON_DATABASE, checkbox.check_save_answer) then
+		if imadd.ToggleButton('##saveans' .. fa.ICON_DATABASE, checkbox.check_save_answer) or isKeyDown(VK_Z) then
 			cfg.settings.custom_answer_save = not cfg.settings.custom_answer_save
 			save()
 		end
+		imgui.Tooltip('Z')
 		imgui.SameLine()
 		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта')
 		imgui.PopFont()
@@ -2180,7 +2196,7 @@ function imgui.OnDrawFrame()
 	end
 end
 
-function render_adminchat() --[A] NEARBY CHAT: 1 | отправил N.E.O.N(101)
+function render_adminchat()
 	while true do
 		wait(5)
 		if not isPauseMenuActive() then
@@ -3021,13 +3037,8 @@ function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
 end
 function render_admins()
 	while true do
-		while sampIsDialogActive() or sampIsChatInputActive() do
-			wait(0)
-		end
-		wait(500)
-		if not AFK then
-			sampSendChat('/admins')
-		end
+		while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
+		if not AFK then sampSendChat('/admins') end
 		wait(20000)
 	end
 end
@@ -3457,40 +3468,8 @@ function color() -- рандом префикс
     mcolor = ""
     math.randomseed( os.time() )
     for i = 1, 6 do
-        local b = math.random(1, 16)
-        if b == 1 then
-            mcolor = mcolor .. "A"
-		elseif b == 2 then
-            mcolor = mcolor .. "B"
-        elseif b == 3 then
-            mcolor = mcolor .. "C"
-		elseif b == 4 then
-            mcolor = mcolor .. "D"
-        elseif b == 5 then
-            mcolor = mcolor .. "E"
-		elseif b == 6 then
-            mcolor = mcolor .. "F"
-		elseif b == 7 then
-            mcolor = mcolor .. "0"
-        elseif b == 8 then
-            mcolor = mcolor .. "1"
-        elseif b == 9 then
-            mcolor = mcolor .. "2"
-        elseif b == 10 then
-            mcolor = mcolor .. "3"
-        elseif b == 11 then
-            mcolor = mcolor .. "4"
-        elseif b == 12 then
-            mcolor = mcolor .. "5"
-        elseif b == 13 then
-            mcolor = mcolor .. "6"
-        elseif b == 14 then
-            mcolor = mcolor .. "7"
-        elseif b == 15 then
-            mcolor = mcolor .. "8"
-        elseif b == 16 then
-            mcolor = mcolor .. "9"
-		end
+		local b = math.random(1, 16)
+        if b == 1 then mcolor = mcolor .. "A" elseif b == 2 then mcolor = mcolor .. "B" elseif b == 3 then mcolor = mcolor .. "C" elseif b == 4 then mcolor = mcolor .. "D" elseif b == 5 then mcolor = mcolor .. "E" elseif b == 6 then mcolor = mcolor .. "F" elseif b == 7 then mcolor = mcolor .. "0" elseif b == 8 then mcolor = mcolor .. "1" elseif b == 9 then mcolor = mcolor .. "2" elseif b == 10 then mcolor = mcolor .. "3" elseif b == 11 then mcolor = mcolor .. "4" elseif b == 12 then mcolor = mcolor .. "5" elseif b == 13 then mcolor = mcolor .. "6" elseif b == 14 then mcolor = mcolor .. "7" elseif b == 15 then mcolor = mcolor .. "8" elseif b == 16 then mcolor = mcolor .. "9" end
     end
     return mcolor
 end
@@ -3773,6 +3752,7 @@ sampRegisterChatCommand('sbanip', function()
 					ipfind = true
 					sampSendChat('/offstats ' .. nick_nakazyemogo)
 					while not regip or sampIsDialogActive() do wait(200) end
+					wait(1000)
 					sampSendChat('/banoff ' .. nick_nakazyemogo .. ' ' .. nakazanie .. ' ' .. pri4ina)
 					wait(1000)
 					sampSendChat('/banip ' .. regip .. ' ' .. nakazanie .. ' ' .. pri4ina)
