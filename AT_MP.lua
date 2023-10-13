@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 0.9
+local version = 1
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -1209,7 +1209,7 @@ function find_weapon()
             if v ~= myid then
                 if getCurrentCharWeapon(handle) ~= 0 then
                     sampAddChatMessage(tag .. 'Обнаружена попытка слива мп. Игрок: ' .. sampGetPlayerNickname(v) .. '[' .. v .. ']. Оружие: ' .. (require 'game.weapons').get_name(getCurrentCharWeapon(handle)) , -1)
-                    sampSendChat('/jail ' .. v .. ' 300 Нарушение правил мп')
+                    sampSendChat('/jail ' .. v .. ' 300 Оружие на мероприятии')
                 end
             end
         end
