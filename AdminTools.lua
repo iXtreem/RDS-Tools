@@ -2859,9 +2859,9 @@ function wait_accept_form()
 				if sampIsPlayerConnected(st.idadmin) then
 					if st.forumplease then
 						st.cheater = string.match(st.forma, '%d[%d.,]*')
-						sampSendChat('/ans ' .. st.cheater .. ' Уважаемый ' .. sampGetPlayerNickname(st.cheater) .. ', Вы нарушали правила сервера.')
+						sampSendChat('/ans ' .. st.cheater .. ' Уважаемый игрок, Вы наказаны по форме администратора ' .. sampGetPlayerNickname(st.idadmin))
 						wait(500)
-						sampSendChat('/ans ' .. st.cheater .. ' Если Вы не согласны с наказанием, напишите жалобу на https://forumrds.ru')
+						sampSendChat('/ans ' .. st.cheater .. ' Если Вы не согласны с наказанием, напишите жалобу на форум https://forumrds.ru')
 					end
 					if not st.styleform then
 						wait(500)
@@ -2871,7 +2871,7 @@ function wait_accept_form()
 						sampSendChat(st.forma)
 					end
 					wait(500)
-					sampSendChat('/a Admin Tools: Форму принял.')
+					sampSendChat('/a AT - Одобрено.')
 				else
 					sampAddChatMessage(tag .. 'Администратор не в сети.', -1)
 				end
