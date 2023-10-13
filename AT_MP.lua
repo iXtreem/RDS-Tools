@@ -418,7 +418,7 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 Начинается мероприятие Русская Рулетка, для телепорта вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Начинается мероприятие Русская Рулетка, для телепорта вводи /tpmp')
                     wait(500)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
@@ -431,9 +431,9 @@ function imgui.OnDrawFrame()
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
                 if #(u8:decode(text_myprize.v)) ~= 0 then
-                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp, после телепорта - строй!')
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp!')
                 else
-                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать на Русской Рулетке, вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать на Русской Рулетке, вводи /tpmp')
                 end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
@@ -554,7 +554,7 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 Начинается мероприятие Король дигла, для телепорта вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Начинается мероприятие Король дигла, для телепорта вводи /tpmp')
                     wait(500)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
@@ -567,9 +567,9 @@ function imgui.OnDrawFrame()
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(280, 30)) then
                 if #(u8:decode(text_myprize.v)) ~= 0 then
-                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp, после телепорта - строй!')
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp!')
                 else
-                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Король Дигла, вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Король Дигла, вводи /tpmp')
                 end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(280, 30)) then
@@ -738,7 +738,7 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 Начинается мероприятие Поливалка, для телепорта вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Начинается мероприятие Поливалка, для телепорта вводи /tpmp')
                     wait(500)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
@@ -751,9 +751,9 @@ function imgui.OnDrawFrame()
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
                 if #(u8:decode(text_myprize.v)) ~= 0 then
-                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp, после телепорта - строй!')
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp!')
                 else
-                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Поливалка, вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Поливалка, вводи /tpmp')
                 end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
@@ -887,7 +887,7 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 Начинается мероприятие Прятки, для телепорта вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Начинается мероприятие Прятки, для телепорта вводи /tpmp')
                     wait(500)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
@@ -900,9 +900,9 @@ function imgui.OnDrawFrame()
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
                 if #(u8:decode(text_myprize.v)) ~= 0 then
-                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp, после телепорта - строй!')
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp!')
                 else
-                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в Прятках, вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в Прятках, вводи /tpmp')
                 end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
@@ -1033,7 +1033,7 @@ function imgui.OnDrawFrame()
                     while sampIsDialogActive() do
                         wait(0)
                     end
-                    sampSendChat('/mess 7 Начинается мероприятие Бокс, для телепорта вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Начинается мероприятие Бокс, для телепорта вводи /tpmp')
                     wait(500)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
@@ -1046,9 +1046,9 @@ function imgui.OnDrawFrame()
         if sbor then
             if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(280, 30)) then
                 if #(u8:decode(text_myprize.v)) ~= 0 then
-                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp, после телепорта - строй!')
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp!')
                 else
-                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Бокс, вводи /tpmp, после телепорта - строй')
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, у тебя есть шанс поучавствовать в мероприятии Бокс, вводи /tpmp')
                 end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(280, 30)) then
