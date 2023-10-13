@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 0.5
+local version = 0.6
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -16,7 +16,13 @@ local cfg = inicfg.load({
         spawn = false,
 		autorizate = false,
 		autoalogin = false,
+		parolalogin = nil,
+		parolaccount = nil,
 		style = 0,
+		server = nil,
+		nickname = nil,
+		autoalogin = nil,
+		autorizate = nil,
 	},
 	command = {
 		[0] = '',
