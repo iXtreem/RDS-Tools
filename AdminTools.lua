@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 3.03 -- Версия скрипта
+local version = 3.04 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -28,8 +28,8 @@ local notify_report = import("\\resource\\lib_imgui_notf.lua") -- импорт уведомл
 local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
 local sw, sh = getScreenResolution()
-
-local cfg = inicfg.load({ -- базовые настройки скрипта
+local pravila = {}
+local cfg = inicfg.load({ 
 	settings = {
 		style = 0,
 		autoonline = false,
@@ -105,6 +105,7 @@ local windows = {
 	new_position_keylogger = imgui.ImBool(false),
 	new_position_render_admins = imgui.ImBool(false),
 	new_position_adminchat = imgui.ImBool(false),
+	pravila = imgui.ImBool(false),
 }
 
 local checkbox = {
@@ -143,6 +144,7 @@ local buffer = {
 	title_flood_mess = imgui.ImBuffer(256),
 	new_command_title = imgui.ImBuffer(256),
 	new_command = imgui.ImBuffer(4096),
+	find_rules = imgui.ImBuffer(256),
 }
 local menu = {true, -- рекон меню
     false,
@@ -164,6 +166,7 @@ local nakazatreport = {}
 local answer = {}
 local adminchat = {}
 local ears = {}
+
 local spisok = { -- список для автоформ
 	'ban',
 	'jail',
@@ -299,6 +302,7 @@ function main() -- основной сценарий скрипта
 			os.remove(getWorkingDirectory() .. "/AdminTools.ini" )
 		end
     end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "//config//rules.txt", function(id, status) end)
 	lua_thread.create(inputChat)
 	if cfg.settings.render_admins then
 		funcadm:run()
@@ -395,7 +399,7 @@ function main() -- основной сценарий скрипта
 	end
 end
 function imgui.OnDrawFrame()
-	if not windows.render_admins.v and not windows.menu_tools.v and not windows.fast_report.v and not windows.recon_menu.v and not windows.help_young_admin.v and not windows.new_position_recon_menu.v and not windows.new_position_keylogger.v and not windows.new_position_adminchat.v and not windows.answer_player_report.v and not windows.actions_in_recon_menu.v then
+	if not windows.render_admins.v and not windows.menu_tools.v and not windows.pravila.v and not windows.fast_report.v and not windows.recon_menu.v and not windows.help_young_admin.v and not windows.new_position_recon_menu.v and not windows.new_position_keylogger.v and not windows.new_position_adminchat.v and not windows.answer_player_report.v and not windows.actions_in_recon_menu.v then
 		showCursor(false,false)
 		imgui.Process = false
 		if cfg.settings.render_admins then
@@ -1133,7 +1137,7 @@ function imgui.OnDrawFrame()
 		end
 		if menu2[6] then
 			imgui.CenterText(u8'Скрипт')
-			imgui.Text(u8'/tool - открыть меню скрипта\n/wh - вкл/выкл функцию WallHack')
+			imgui.Text(u8'/pravila - посмотреть актуальные правила\n/tool - открыть меню скрипта\n/wh - вкл/выкл функцию WallHack')
 			imgui.Separator()
 			imgui.CenterText(u8'Вспомогательные команды')
 			imgui.Text(u8'/n - Не наблюдаю нарушений от игрока\n/nak - игрок наказан\n/fo - обратитесь на форум\n/afk - игрок находится в афк или бездействует\n/pmv - Помогли вам\n/dpr - донат преимущества\n/rep - сообщить игроку о наличии команды /report\n/c - начал(а) работу над вашей жалобой\n/cl - данный игрок чист\n/uj - снять джайл\n/nv - Игрок не в сети\n/stw - выдать миниган\n/ur - снять мут репорта\n/uu - снятие мута\n/al - Напомнить администратору про /alogin\n/as - заспавнить игрока\n/spp - заспавнить всех в радиусе\n/sbanip - бан игрока офф по нику с IP (ФД!)')
@@ -1330,9 +1334,7 @@ function imgui.OnDrawFrame()
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
-		autor, autorid = '',''
 		imgui.Text(u8'Игрок: ' .. autor .. '[' ..autorid.. ']')
-		imgui.SameLine()
 		imgui.TextWrapped(u8('Жалоба: ' .. textreport))
 		if isKeyJustPressed(VK_SPACE) then
 			imgui.SetKeyboardFocusHere(-1)
@@ -2012,18 +2014,8 @@ function imgui.OnDrawFrame()
 		end
 		imgui.NewInputText('##SearchBar3', buffer.find_custom_answer, 480, u8'Поиск по ответам', 2)
 		imgui.Separator()
-		if #buffer.find_custom_answer.v ~= 0 then
-			for k,v in pairs(cfg.customotvet) do
-				if string.rlower(v):find(string.rlower(u8:decode(buffer.find_custom_answer.v))) then	
-					if imgui.Button(u8(v), imgui.ImVec2(480, 24)) then
-						answer.customans = v
-						buffer.find_custom_answer.v = ''
-						windows.custom_ans.v = false
-					end
-				end
-			end
-		else
-			for k,v in pairs(cfg.customotvet) do
+		for k,v in pairs(cfg.customotvet) do
+			if string.rlower(v):find(string.rlower(u8:decode(buffer.find_custom_answer.v))) then	
 				if imgui.Button(u8(v), imgui.ImVec2(480, 24)) then
 					answer.customans = v
 					buffer.find_custom_answer.v = ''
@@ -2191,6 +2183,21 @@ function imgui.OnDrawFrame()
 				inicfg.save(cfg, directIni)
 			end
 			imgui.PopFont()
+		end
+		imgui.End()
+	end
+	if windows.pravila.v then
+		imgui.ShowCursor = true
+		imgui.SetNextWindowPos(imgui.ImVec2(sw * 0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowSize(imgui.ImVec2(sw*0.5,sh*0.6), imgui.Cond.FirstUseEver)
+		imgui.Begin(u8'Актуальные правила', windows.pravila, imgui.WindowFlags.NoResize +imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.NewInputText('##SearchBar6', buffer.find_rules, sw*0.5, u8'Поиск по списку', 2)
+		for i = 1, #pravila do
+			if string.rlower(pravila[i]):find(string.rlower(u8:decode('%s'..buffer.find_rules.v))) then
+				imgui.TextWrapped(u8(pravila[i]))
+			end
 		end
 		imgui.End()
 	end
@@ -2786,6 +2793,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			while sampIsDialogActive() do
 				wait(0)
 			end
+			wait(300)
 			if answer.rabotay then
 				sampSendChat('/re ' .. autor)
 			end
@@ -3445,6 +3453,11 @@ function timerans()
 		end
 	end
 end
+--------------------------- Правила ---------------------------
+rules = io.open(getWorkingDirectory() .. "\\config\\rules.txt","r")
+for line in rules:lines() do pravila[#pravila + 1] = u8:decode(line);end
+rules:close()
+--------------------------- Правила ---------------------------
 function timer() -- таймер для автоформ
 	while true do
 		wait(0)
@@ -3569,6 +3582,10 @@ end)
 sampRegisterChatCommand('tool', function()
 	windows.menu_tools.v = not windows.menu_tools.v
 	imgui.Process = windows.menu_tools.v
+end)
+sampRegisterChatCommand('pravila', function()
+	windows.pravila.v = not windows.pravila.v
+	imgui.Process = true
 end)
 ----======================= Исключительно вспомогательные ===============------------------
 sampRegisterChatCommand('spp', function()
