@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 3.02 -- Версия скрипта
+local version = 3.03 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -1330,14 +1330,16 @@ function imgui.OnDrawFrame()
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
+		autor, autorid = '',''
 		imgui.Text(u8'Игрок: ' .. autor .. '[' ..autorid.. ']')
+		imgui.SameLine()
 		imgui.TextWrapped(u8('Жалоба: ' .. textreport))
 		if isKeyJustPressed(VK_SPACE) then
 			imgui.SetKeyboardFocusHere(-1)
 		end
-		imgui.NewInputText('##SearchBar', buffer.text_ans, 370, u8'Введите ваш ответ.', 2)
+		imgui.NewInputText('##SearchBar', buffer.text_ans, 375, u8'Введите ваш ответ.', 2)
 		imgui.SameLine()
-		imgui.SetCursorPosX(383)
+		imgui.SetCursorPosX(392)
 		imgui.Tooltip('Space')
 		if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) then
 			if #(u8:decode(buffer.text_ans.v)) > 0 then
@@ -1394,18 +1396,16 @@ function imgui.OnDrawFrame()
 			answer.otklon = true
 		end
 		imgui.Separator()
-		if imadd.ToggleButton('##doptextans' .. fa.ICON_COMMENTING_O, checkbox.check_add_answer_report) or isKeyDown(VK_X) then
+		if imadd.ToggleButton('##doptextans' .. fa.ICON_COMMENTING_O, checkbox.check_add_answer_report) then
 			cfg.settings.add_answer_report = not cfg.settings.add_answer_report
 			save()
 		end
-		imgui.Tooltip('X')
 		imgui.SameLine()
 		imgui.Text(u8'Добавить дополнительный текст к ответу')
-		if imadd.ToggleButton('##saveans' .. fa.ICON_DATABASE, checkbox.check_save_answer) or isKeyDown(VK_Z) then
+		if imadd.ToggleButton('##saveans' .. fa.ICON_DATABASE, checkbox.check_save_answer) then
 			cfg.settings.custom_answer_save = not cfg.settings.custom_answer_save
 			save()
 		end
-		imgui.Tooltip('Z')
 		imgui.SameLine()
 		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта')
 		imgui.PopFont()
@@ -1790,7 +1790,7 @@ function imgui.OnDrawFrame()
 		imgui.PushFont(fontsize)
 		if imgui.Button(u8"Сохранить расположение " .. fa.ICON_ARROWS, imgui.ImVec2(250, 25)) then
 			local pos = imgui.GetWindowPos()
-			cfg.settings.keysyncx = pos.x
+			cfg.settings.keysyncx = pos.x + 200
 			cfg.settings.keysyncy = pos.y
 			save()
 			windows.new_position_keylogger.v = false
@@ -2195,7 +2195,6 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 end
-
 function render_adminchat()
 	while true do
 		wait(5)
@@ -2625,6 +2624,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		windows.fast_report.v = false
 	end
 	if dialogId == 2349 then -- окно с самим репортом.
+		answer = {}
 		windows.answer_player_report.v = false
 		saveplayerrecon = nil
 		local lineIndex = -1
@@ -2786,7 +2786,9 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			while sampIsDialogActive() do
 				wait(0)
 			end
-			wait(200)
+			if answer.rabotay then
+				sampSendChat('/re ' .. autor)
+			end
 			if answer.slejy then
 				sampSendChat('/re ' .. reportid)
 			end
@@ -3129,10 +3131,10 @@ mimgui.OnFrame(
     function() return target ~= -1 end,
     function(self)
     	self.HideCursor = true
+		mimgui.SetNextWindowPos(mimgui.ImVec2(cfg.settings.keysyncx, cfg.settings.keysyncy), mimgui.Cond.Always, mimgui.ImVec2(0.5, 0.5))
 		mimgui.Begin("##KEYS", nil, mimgui.WindowFlags.NoTitleBar + mimgui.WindowFlags.AlwaysAutoResize)
 			if doesCharExist(target) then
 				local plState = (isCharOnFoot(target) and "onfoot" or "vehicle")
-
 				mimgui.BeginGroup()
 					mimgui.SetCursorPosX(10 + 30 + 5)
 					KeyCap("W", (keys[plState]["W"] ~= nil), mimgui.ImVec2(30, 30))
