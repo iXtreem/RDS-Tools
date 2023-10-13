@@ -2803,7 +2803,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			end
 			wait(300)
 			if answer.rabotay then
-				sampSendChat('/re ' .. autor)
+				sampSendChat('/re ' .. autorid)
 			end
 			if answer.slejy then
 				sampSendChat('/re ' .. reportid)
