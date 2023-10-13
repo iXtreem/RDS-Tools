@@ -302,7 +302,15 @@ function main() -- основной сценарий скрипта
 			os.remove(getWorkingDirectory() .. "/AdminTools.ini" )
 		end
     end)
-	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "//config//rules.txt", function(id, status) end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "//config//rules.txt", function(id, status) 
+		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+			--------------------------- Правила ---------------------------
+			rules = io.open(getWorkingDirectory() .. "\\config\\rules.txt","r")
+			for line in rules:lines() do pravila[#pravila + 1] = u8:decode(line);end
+			rules:close()
+			--------------------------- Правила ---------------------------
+		end
+	end)
 	lua_thread.create(inputChat)
 	if cfg.settings.render_admins then
 		funcadm:run()
@@ -3453,11 +3461,6 @@ function timerans()
 		end
 	end
 end
---------------------------- Правила ---------------------------
-rules = io.open(getWorkingDirectory() .. "\\config\\rules.txt","r")
-for line in rules:lines() do pravila[#pravila + 1] = u8:decode(line);end
-rules:close()
---------------------------- Правила ---------------------------
 function timer() -- таймер для автоформ
 	while true do
 		wait(0)
