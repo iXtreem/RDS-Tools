@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 3.11 -- Версия скрипта
+local version = 3.2 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -46,11 +46,6 @@ local cfg = inicfg.load({
 		position_recon_menu_x = sw - 270,
 		position_recon_menu_y = 0,
 		keysync = true,
-		fast_key_ans = 'None',
-		fast_key_takereport = 'None',
-		fast_key_wallhack = 'None',
-		fast_key_addText = 'None',
-		fast_key_mytext = 'None',
 		wallhack = true,
 		answer_player_report = false,
 		bloknotik = '',
@@ -76,12 +71,15 @@ local cfg = inicfg.load({
 		keysyncy = sw/2 + 20,
 		on_color_report = false,
 		color_report = nil,
+		fast_key_ans = 'None',
+		fast_key_addText = 'None',
 	},
 	customotvet = {},
 	osk = {},
 	mat = {},
 	myflood = {},
 	my_command = {},
+	binder_key = {},
 }, 'AT//AT_main.ini')
 inicfg.save(cfg, 'AT//AT_main.ini')
 local windows = {
@@ -104,6 +102,7 @@ local windows = {
 	new_position_render_admins = imgui.ImBool(false),
 	new_position_adminchat = imgui.ImBool(false),
 	pravila = imgui.ImBool(false),
+	fast_key = imgui.ImBool(false),
 }
 
 local checkbox = {
@@ -145,6 +144,7 @@ local buffer = {
 	new_command_title = imgui.ImBuffer(256),
 	new_command = imgui.ImBuffer(4096),
 	find_rules = imgui.ImBuffer(256),
+	new_binder_key = imgui.ImBuffer(2056),
 }
 local menu = {true, -- рекон меню
     false,
@@ -269,13 +269,14 @@ function main() -- основной сценарий скрипта
 	end
 	func6 = lua_thread.create_suspended(HelperMA)
 	func1 = lua_thread.create_suspended(render_adminchat)
+	func4 = lua_thread.create_suspended(binder_key)
+	func4:run()
 	func1:run()
 	if cfg.settings.forma_na_ban or cfg.settings.forma_na_mute or cfg.settings.forma_na_jail or cfg.settings.forma_na_mute then
 		func6:run()
 	end
 	func = lua_thread.create_suspended(autoonline)
 	funcadm = lua_thread.create_suspended(render_admins)
-	funct = lua_thread.create_suspended(timer)
 	if cfg.settings.autoonline then
 		func:run()
 	end
@@ -299,12 +300,12 @@ function main() -- основной сценарий скрипта
 				if cfg.settings.versionFS and cfg.settings.versionMP then
 					if AdminTools.script.versionMP > cfg.settings.versionMP then
 						update_state = true
-						sampAddChatMessage(tag .. 'Обнаружена новая плагина мероприятий - ' .. AdminTools.script.version, -1)
+						sampAddChatMessage(tag .. 'Обнаружена новая плагина мероприятий - ' .. AdminTools.script.versionMP, -1)
 						sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 					end
 					if AdminTools.script.versionFS > cfg.settings.versionFS then
 						update_state = true
-						sampAddChatMessage(tag .. 'Обнаружена новая версия быстрого спавна - ' .. AdminTools.script.version, -1)
+						sampAddChatMessage(tag .. 'Обнаружена новая версия быстрого спавна - ' .. AdminTools.script.versionFS, -1)
 						sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 					end
 				else
@@ -369,6 +370,37 @@ function main() -- основной сценарий скрипта
 			imgui.Process = true
 			showCursor(true,false)
 		end
+		while admin_form.sett do
+			wait(50)
+			if isKeyJustPressed(VK_U) and not sampIsChatInputActive() and not sampIsDialogActive() then
+				if sampIsPlayerConnected(admin_form.idadmin) then
+					if admin_form.forumplease then
+						admin_form.cheater = string.match(admin_form.forma, '%d[%d.,]*')
+						sampSendChat('/ans ' .. admin_form.cheater .. ' Уважаемый игрок, Вы наказаны по форме администратора ' .. sampGetPlayerNickname(admin_form.idadmin))
+						wait(500)
+						sampSendChat('/ans ' .. admin_form.cheater .. ' Если Вы не согласны с наказанием, напишите жалобу на форум https://forumrds.ru')
+					end
+					if not admin_form.styleform then
+						wait(500)
+						sampSendChat(admin_form.forma .. ' // ' .. sampGetPlayerNickname(admin_form.idadmin))
+					else
+						wait(500)
+						sampSendChat(admin_form.forma)
+					end
+					wait(500)
+					sampSendChat('/a AT - Принято.')
+				else
+					sampAddChatMessage(tag .. 'Администратор не в сети.', -1)
+				end
+				admin_form = {}
+				break
+			end
+			if isKeyDown(VK_J) and not sampIsChatInputActive() and not sampIsDialogActive() then
+				sampAddChatMessage(tag .. 'форма отклонена', -1)
+				admin_form = {}
+				break
+			end
+		end
 		if cfg.settings.wallhack and not AFK then
 			for i = 0, sampGetMaxPlayerId() do
 				if sampIsPlayerConnected(i) then
@@ -401,25 +433,28 @@ function main() -- основной сценарий скрипта
 				end
 			end
 		end
+	end
+end
+
+function binder_key()
+	while true do
+		wait(1)
 		if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_ans)) and not windows.fast_report.v and not windows.answer_player_report.v and not isKeyJustPressed(VK_RBUTTON) and not sampIsChatInputActive() and not sampIsDialogActive() and not windows.menu_tools.v then
 			sampSendChat("/ans")
 			sampSendDialogResponse (2348, 1, 0)
-		end
-		if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_takereport)) and not windows.fast_report.v and not windows.answer_player_report.v and not isKeyJustPressed(VK_RBUTTON)  and not sampIsChatInputActive() and not sampIsDialogActive() and not windows.menu_tools.v then
-			sampSendChat("/tr")
-		end
-		if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_wallhack)) and not windows.fast_report.v and not windows.answer_player_report.v  and not isKeyJustPressed(VK_RBUTTON)  and not sampIsChatInputActive() and not sampIsDialogActive() and not windows.menu_tools.v then
-			sampSendChat('/spveh 100')
 		end
 		if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_addText)) and not windows.fast_report.v and not windows.answer_player_report.v  and not isKeyJustPressed(VK_RBUTTON)  and not sampIsDialogActive() and not windows.menu_tools.v then
 			sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport)
 			sampSetChatInputEnabled(true)
 		end
-		if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_mytext)) and not windows.fast_report.v and not windows.answer_player_report.v  and not isKeyJustPressed(VK_RBUTTON)  and not sampIsChatInputActive() and not sampIsDialogActive() and not windows.menu_tools.v then
-			sampSendInputChat('/wh')
+		for k,v in pairs(cfg.binder_key) do
+			if isKeyJustPressed(strToIdKeys(k)) and not windows.fast_report.v and not windows.answer_player_report.v and not isKeyJustPressed(VK_RBUTTON) and not sampIsChatInputActive() and not sampIsDialogActive() and not windows.menu_tools.v then
+				sampSendInputChat(v)
+			end
 		end
 	end
 end
+
 function imgui.OnDrawFrame()
 	if not windows.render_admins.v and not windows.menu_tools.v and not windows.pravila.v and not windows.fast_report.v and not windows.recon_menu.v and not windows.help_young_admin.v and not windows.new_position_recon_menu.v and not windows.new_position_keylogger.v and not windows.new_position_adminchat.v and not windows.answer_player_report.v and not windows.actions_in_recon_menu.v then
 		showCursor(false,false)
@@ -429,9 +464,7 @@ function imgui.OnDrawFrame()
 		end
 	end
 	if windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
-		if windows.render_admins.v then
-			windows.render_admins.v = false
-		end
+		windows.render_admins.v = false
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(420, 400), imgui.Cond.FirstUseEver)
 		imgui.Begin('xX   ' .. " Admin Tools " .. '  Xx', windows.menu_tools, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -705,30 +738,19 @@ function imgui.OnDrawFrame()
 		end
 		if menu2[5] then
 			imgui.SetCursorPosX(10)
+			if imgui.Button(u8"Добавить биндер на клавишу", imgui.ImVec2(410, 24)) then
+				windows.fast_key.v = true
+			end
+			if imgui.Button(u8"Сбросить все значения.", imgui.ImVec2(410, 24)) then
+				for k,v in pairs(cfg.binder_key) do cfg.binder_key[k] = nil end
+				save()
+			end
 			imgui.CenterText(u8'Открытие репорта:')
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.fast_key_ans))
 			if imgui.Button(u8"Сoxрaнить.", imgui.ImVec2(410, 24)) then
 				if getDownKeysText() then
 					cfg.settings.fast_key_ans = getDownKeysText()
-					save()
-				end
-			end
-			imgui.CenterText(u8'Вкл/выкл быстрого репорта')
-			imgui.SameLine()
-			imgui.Text(u8(cfg.settings.fast_key_takereport))
-			if imgui.Button(u8"Соxрaнить.", imgui.ImVec2(410, 24)) then
-				if getDownKeysText() then
-					cfg.settings.fast_key_takereport = getDownKeysText()
-					save()
-				end
-			end
-			imgui.CenterText(u8"Очистка транспорта: ")
-			imgui.SameLine()
-			imgui.Text(u8(cfg.settings.fast_key_wallhack))
-			if imgui.Button(u8"Cоxрaнить.", imgui.ImVec2(410, 24)) then
-				if getDownKeysText() then
-					cfg.settings.fast_key_wallhack = getDownKeysText()
 					save()
 				end
 			end
@@ -741,23 +763,10 @@ function imgui.OnDrawFrame()
 					save()
 				end
 			end
-			imgui.CenterText(u8"Вкл/выкл WallHack ")
-			imgui.SameLine()
-			imgui.Text(u8(cfg.settings.fast_key_mytext))
-			if imgui.Button(u8"Соxpaнить.", imgui.ImVec2(410, 24)) then
-				if getDownKeysText() then
-					cfg.settings.fast_key_mytext = getDownKeysText()
-					save()
-				end
-			end
-			imgui.Separator()
-			if imgui.Button(u8"Сбросить все значения.", imgui.ImVec2(410, 24)) then
-				cfg.settings.fast_key_mytext = 'None'
-				cfg.settings.fast_key_ans = 'None'
-				cfg.settings.fast_key_wallhack = 'None'
-				cfg.settings.fast_key_addText = 'None'
-				cfg.settings.fast_key_takereport = 'None'
-				save()
+			for k, v in pairs(cfg.binder_key) do
+				imgui.CenterText(u8('[Клавиша '..k..'] ='))
+				imgui.SameLine()
+				imgui.Text(u8(v))
 			end
 		end
 		if menu2[7] then
@@ -2227,6 +2236,35 @@ function imgui.OnDrawFrame()
 		imgui.PopFont()
 		imgui.End()
 	end
+	if windows.fast_key.v then
+		imgui.SetNextWindowPos(imgui.ImVec2(sw*0.5, sh*0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.Begin(u8'Добавить биндер на клавишу', windows.fast_key, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.PushFont(fontsize)
+		imgui.CenterText(u8'Зажми клавишу и сохрани')
+		imgui.NewInputText('##SearchBar7', buffer.new_binder_key, 300, u8'Текст биндера', 2)
+		if imgui.Button(u8'Добавить', imgui.ImVec2(140,24)) and #u8:decode(buffer.new_binder_key.v) ~= 0 then
+			if getDownKeysText() then
+				cfg.binder_key[getDownKeysText()] = u8:decode(buffer.new_binder_key.v)
+				save()
+			else
+				sampAddChatMessage(tag .. 'Зажмите клавишу, на которую хотите сохранить биндер', -1)
+			end
+		end
+		imgui.SameLine()
+		if imgui.Button(u8'Удалить', imgui.ImVec2(140,24)) and #u8:decode(buffer.new_binder_key.v) ~= 0 then
+			for k,v in pairs(cfg.binder_key) do
+				if u8:decode(buffer.new_binder_key.v) == v then
+					cfg.binder_key[k] = nil
+					save()
+					sampAddChatMessage(tag .. 'Биндер удален.', -1)
+				end
+			end 
+		end
+		imgui.PopFont()
+ 		imgui.End()
+	end
 end
 function render_adminchat()
 	while true do
@@ -2279,7 +2317,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				local poiskform = string.sub(text, 7)
 				for i = 0, #spisok do
 					if poiskform:find(tostring(spisok[i])) then
-						st = {}
+						admin_form = {}
 						admin_form.idadmin = tonumber(poiskform:match('%[(%d+)%]'))
 						local d = string.len(poiskform)
 						while d ~= 0 do
@@ -2294,7 +2332,6 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 									admin_form.sett = true
 									admin_form.styleform = true
 									wait_accept_form()
-									funct:run()
 									break
 								end
 								if poiskform:find('off') or poiskform:find('akk') then
@@ -2305,7 +2342,6 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 									end
 									admin_form.sett = true
 									wait_accept_form()
-									funct:run()
 									break
 								end
 								if spisok[i] == 'ban' then
@@ -2315,16 +2351,15 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 								if admin_form.probid and sampIsPlayerConnected(admin_form.probid) then
 									admin_form.bool = true
 									admin_form.timer = os.clock()
-									nickid = sampGetPlayerNickname(admin_form.probid)
+									admin_form.nickid = sampGetPlayerNickname(admin_form.probid)
 									if (poiskform.sub(poiskform, 2)):find('//') then
 										admin_form.styleform = true
 									end
 									admin_form.sett = true
 									wait_accept_form()
-									funct:run()
 									break
 								else
-									st = {}
+									admin_form = {}
 									sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
 									break
 								end
@@ -2512,12 +2547,9 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			v = tostring(v)
 			if v == 'REFRESH' then
 				textdraw.refresh = id  -- записываем ид кнопки обновить в реконе
-				sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
-			elseif v:match('~') and v:match('0') then 
+			elseif v:match('~n~') and not v:match('~g~') then 
 				lua_thread.create(function()
-					wait(300)
 					textdraw.inforeport = id  -- инфо панель в реконе
-					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
 					while true do
 						inforeport = textSplit(sampTextdrawGetString(textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
 						for i = 4, #inforeport do
@@ -2549,37 +2581,39 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					end
 				end)
 			elseif v:match('(.+)%((%d+)%)') then
-				lua_thread.create(function()
-					wait(300)
-					textdraw.name_report = id
-					playerrecon = tonumber(string.match(v, '%((%d+)%)')) -- ник игрока в реконе
-					windows.recon_menu.v = true 
-					imgui.Process = true 
-					sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информация о никнейме игрока
-					if cfg.settings.keysync then
-						sampSendInputChat('/keysync ' .. playerrecon)
-					end
-				end)
+				textdraw.name_report = id
+				playerrecon = tonumber(string.match(v, '%((%d+)%)')) -- ник игрока в реконе
+				windows.recon_menu.v = true 
+				imgui.Process = true 
+				if cfg.settings.keysync then
+					sampSendInputChat('/keysync ' .. playerrecon)
+				end
 			elseif v == 'STATS' then
 				textdraw.stats = id
-				sampTextdrawSetPos(id, 2000, 0) 
 			elseif v == 'CLOSE' then
-				textdraw.close = id
-				sampTextdrawSetPos(id, 2000, 0)
+				lua_thread.create(function()
+					textdraw.close = id
+					wait(300)
+					sampTextdrawSetPos(textdraw.close, 2000, 0)
+					sampTextdrawSetPos(textdraw.stats, 2000, 0)
+					sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информация о никнейме игрока
+					sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
+					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
+				end)
 			end
 		end
 		if (id == 446 or id == 153 or id == 150 or id == 164 or id == 169 or id == 186
-			or id == 161 or id == 164 or id == 162 or id == 163 or id == 169
-			or id == 166 or id == 188 or id == 168 or id == 188 or id == 173
-			or id == 189 or id == 170 or id == 173 or id == 189 or id == 189
-			or id == 189 or id == 175 or id == 178 or id == 173 or id == 172
-			or id == 178 or id == 190 or id == 179 or id == 177 or id == 175
-			or id == 183 or id == 191 or id == 184 or id == 182 or id == 159
-			or id == 159 or id == 192 or id == 156 or id == 160 or id == 158
-			or id == 182 or id == 151 or id == 152 or id == 193 or id == 155
-			or id == 167 or id == 174 or id == 171 or id == 187 or id == 176
-			or id == 181 or id == 180 or id == 157 or id == 154 or id == 185
-			or id == 444 or id == 148 or id == 165 or id == 149) then
+				or id == 161 or id == 164 or id == 162 or id == 169
+				or id == 166 or id == 188 or id == 173 or id == 168
+				or id == 189 or id == 170 or id == 173 or id == 189
+				or id == 175 or id == 178 or id == 173 or id == 189
+				or id == 178 or id == 190 or id == 179 or id == 177 or id == 175
+				or id == 183 or id == 191 or id == 184 or id == 182 or id == 159
+				or id == 159 or id == 192 or id == 156 or id == 160 or id == 158
+				or id == 182 or id == 151 or id == 152 or id == 193 or id == 155
+				or id == 167 or id == 174 or id == 171 or id == 187 or id == 176
+				or id == 181 or id == 180 or id == 157 or id == 154 or id == 185
+				or id == 444 or id == 148 or id == 165 or id == 149) then
 			return false -- удаление лишних текстравов в реконе
 		end
 	end
@@ -2592,7 +2626,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				local rang = string.sub(string.gsub(string.match(admins[i], '(%(.+)%)'), '(%(%d+)%)', ''), 3) --{FFFFFF}N.E.O.N(0) | Уровень: {ff8587}18{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}60
 				admins[i] = string.gsub(admins[i], '{%w%w%w%w%w%w}', "")
 				local afk = string.match(admins[i], 'AFK: (.+)')
-				local name, id, _, lvl, _, _ = string.match(admins[i], '(.+)%((%d+)%) (%(.+)%) | Уровень: (%d+) | Выговоры: (%d+) из (%d+) | Репутация: (%d+)')
+				local name, id, _, lvl, _, _ = string.match(admins[i], '(.+)%((%d+)%) (%(.+)%) | Уровень: (%d+) | Выговоры: 0 из (%d+) | Репутация: (.+)')
 				local name, id, lvl = tostring(name), tostring(id), tostring(lvl)
 				admins[i] = string.gsub(admins[i], '| Выговоры: %d из %d |', "")
 				admins[i] = string.gsub(admins[i], 'Репутация: (.+)', "")
@@ -2639,7 +2673,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				while not sampIsDialogActive() do wait(0) end
 				local offstat = textSplit(text, '\n')
 				for k,v in pairs(offstat) do
-					wait(0)
 					if k == 12 then
 						v = string.sub(v, 17)
 						regip = v
@@ -2660,7 +2693,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		windows.fast_report.v = false
 	end
 	if dialogId == 2349 then -- окно с самим репортом.
-		answer, ansid, saveplayerrecon, windows.answer_player_report.v = {}, nil, nil, false
+		answer, ansid, saveplayerrecon, windows.answer_player_report.v, peremrep = {}, nil, nil, false, nil
 		local lineIndex = -1
 		for line in text:gmatch("[^\n]+") do
 			lineIndex = lineIndex + 1
@@ -2706,12 +2739,14 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		end)
 	end
 	if dialogId == 2350 then -- окно с возможностью принять или отклонить репорт
-		windows.fast_report.v = false
 		if ((#(u8:decode(buffer.text_ans.v)) ~= 0) and #answer == 0) or answer.moiotvet then
 			peremrep = (u8:decode(buffer.text_ans.v))
-			if #peremrep >= 80 then
+			if #peremrep > 80 then
 				setClipboardText(peremrep)
 				sampAddChatMessage(tag .. 'Ваш ответ оказался слишком длинным и сохранен в буффер обмена.', -1)
+				sampAddChatMessage(tag .. 'Вы можете попробовать отключить доп.опции для уменьшения количества символов.', -1)
+				sampCloseCurrentDialogWithButton(0)
+				peremrep = nil
 			elseif #peremrep <= 4 and not cfg.settings.mytextreport then
 				peremrep = (u8:decode(buffer.text_ans.v) .. '   ')
 			end
@@ -2725,9 +2760,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		end
 		if answer.rabotay then
 			peremrep = ('Начал(а) работу по вашей жалобе!')
-		end
-		if answer.ojid then
-			peremrep = ('Ожидайте, скоро всё будет.')
 		end
 		if answer.nakazan then
 			peremrep = ('Данный игрок уже был наказан.')
@@ -2797,33 +2829,45 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		if answer.uto4 then
 			peremrep = ('Обратитесь с данной проблемой на форум https://forumrds.ru')
 		end
+		windows.fast_report.v = false
 		if answer.otklon then
-			peremrep = nil
 			sampSendDialogResponse(dialogId, 1, 2, _)
-			setVirtualKeyDown(13, true)
-			setVirtualKeyDown(13, false)
+			sampCloseCurrentDialogWithButton(0)
+			return false
 		end
 		if peremrep then -- ждем нажатия клавиши
-			setVirtualKeyDown(13, true)
-			setVirtualKeyDown(13, false)
+			sampSendDialogResponse(dialogId, 1, 0, _)
+			return false
 		end
 	end
 	if dialogId == 2351 and peremrep then -- окно с ответом на репорт
 		lua_thread.create(function()
 			if cfg.settings.add_answer_report then
-				peremrep = peremrep .. ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport)
+				if (#peremrep + #cfg.settings.mytextreport + 6) < 80 then
+					peremrep = peremrep .. ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport)
+				else
+					setClipboardText(peremrep)
+					sampAddChatMessage(tag .. 'Ваш ответ оказался слишком длинным и сохранен в буффер обмена.', -1)
+					sampAddChatMessage(tag .. 'Вы можете попробовать отключить доп.опции для уменьшения количества символов.', -1)
+					peremrep = nil
+					sampCloseCurrentDialogWithButton(0)
+				end
 			end
 			if cfg.settings.on_color_report then
-				peremrep = cfg.settings.color_report .. peremrep
+				if (#peremrep + #cfg.settings.color_report) < 80 then
+					peremrep = cfg.settings.color_report .. peremrep
+				else
+					setClipboardText(peremrep)
+					sampAddChatMessage(tag .. 'Ваш ответ оказался слишком длинным и сохранен в буффер обмена.', -1)
+					sampAddChatMessage(tag .. 'Вы можете попробовать отключить доп.опции для уменьшения количества символов.', -1)
+					peremrep = nil
+					sampCloseCurrentDialogWithButton(0)
+				end
 			end
-			wait(50)
 			sampSendDialogResponse(dialogId, 1, _, peremrep)
-			setVirtualKeyDown(13, true)
-			setVirtualKeyDown(13, false)
-			while sampIsDialogActive() do
-				wait(0)
-			end
-			wait(400)
+			sampCloseCurrentDialogWithButton(0)
+			while sampIsDialogActive() do wait(0) end
+			wait(300)
 			if answer.rabotay then
 				sampSendChat('/re ' .. autorid)
 			end
@@ -2831,7 +2875,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				sampSendChat('/re ' .. reportid)
 			end
 			if answer.peredamrep then
-				sampSendChat('/a ' .. u8:decode(autor .. '[' .. autorid .. '] | ' .. textreport))
+				sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
 			end
 			if answer.nakajy then
 				if nakazatreport.oftop then
@@ -2869,6 +2913,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				timerans()
 			end
 		end)
+		return false
 	end
 end
 function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране.
@@ -2884,43 +2929,6 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 		end
 		return false
 	end
-end
-function wait_accept_form()
-	lua_thread.create(function()
-		while admin_form.sett do
-			wait(50)
-			if isKeyJustPressed(VK_U) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				if sampIsPlayerConnected(admin_form.idadmin) then
-					if admin_form.forumplease then
-						admin_form.cheater = string.match(admin_form.forma, '%d[%d.,]*')
-						sampSendChat('/ans ' .. admin_form.cheater .. ' Уважаемый игрок, Вы наказаны по форме администратора ' .. sampGetPlayerNickname(admin_form.idadmin))
-						wait(500)
-						sampSendChat('/ans ' .. admin_form.cheater .. ' Если Вы не согласны с наказанием, напишите жалобу на форум https://forumrds.ru')
-					end
-					if not admin_form.styleform then
-						wait(500)
-						sampSendChat(admin_form.forma .. ' // ' .. sampGetPlayerNickname(admin_form.idadmin))
-					else
-						wait(500)
-						sampSendChat(admin_form.forma)
-					end
-					wait(500)
-					sampSendChat('/a AT - Принято.')
-				else
-					sampAddChatMessage(tag .. 'Администратор не в сети.', -1)
-				end
-				admin_form.forma = nil
-				st = {}
-				break
-			end
-			if isKeyDown(VK_J) and not sampIsChatInputActive() and not sampIsDialogActive() then
-				sampAddChatMessage(tag .. 'форма отклонена', -1)
-				admin_form.forma = nil
-				st = {}
-				break
-			end
-		end
-	end)
 end
 function imgui.TextColoredRGB(text) -- цветной рендер админс
     local style = imgui.GetStyle()
@@ -3337,7 +3345,14 @@ function ScriptExport()
 	end)
 end
 
-function autoonline() while true do wait(61000) while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end wait(200) if not AFK then sampSendChat("/online") end end end
+function autoonline() 
+	while true do
+		wait(61000) 
+		while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end 
+		wait(200) 
+		if not AFK then sampSendChat("/online") end 
+	end 
+end
 
 function sampSendInputChat(text) -- отправка в чат через ф6
 	sampSetChatInputText(text)
@@ -3464,28 +3479,28 @@ function timerans()
 		end
 	end
 end
-function timer() -- таймер для автоформ
-	local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
-	while true do
-		wait(0)
-		if admin_form.bool and admin_form.timer and admin_form.sett then
-            timer = os.clock() - admin_form.timer
-			if admin_form.probid then
-				if sampIsPlayerConnected(admin_form.probid) then
-					renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{F0E68C}' .. admin_form.forma .. '{FFFFFF}' .. ' на игрока '.. '{F0E68C}' .. nickid .. '[' .. admin_form.probid .. ']'.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+function wait_accept_form()
+	lua_thread.create(function()
+		local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
+		while admin_form.forma do
+			wait(0)
+			if admin_form.bool and admin_form.timer and admin_form.sett then
+				timer = os.clock() - admin_form.timer 
+				if admin_form.probid then
+					if sampIsPlayerConnected(admin_form.probid) then
+						renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{F0E68C}' .. admin_form.forma .. '{FFFFFF}' .. ' на игрока '.. '{F0E68C}' .. admin_form.nickid .. '[' .. admin_form.probid .. ']'.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+					else
+						renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{F0E68C}' .. admin_form.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+					end
 				else
 					renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{F0E68C}' .. admin_form.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
 				end
-			else
-				renderFontDrawText(fonts, '{FFFFFF}' .. 'Нажми U чтобы принять или J чтобы отклонить\nФорма: ' .. '{F0E68C}' .. admin_form.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+				if timer>8 then
+					admin_form = {}
+				end
 			end
-            if timer>8 then
-				st = {}
-				admin_form.forma = nil
-				funct:terminate()
-            end
-        end
-	end
+		end
+	end)
 end
 function color() -- рандом префикс
     mcolor = ""
