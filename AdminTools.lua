@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 3.11 -- Версия скрипта
+local version = 3.1 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -2810,6 +2810,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			if cfg.settings.on_color_report then
 				peremrep = cfg.settings.color_report .. peremrep
 			end
+			wait(50)
 			sampSendDialogResponse(dialogId, 1, _, peremrep)
 			setVirtualKeyDown(13, true)
 			setVirtualKeyDown(13, false)
