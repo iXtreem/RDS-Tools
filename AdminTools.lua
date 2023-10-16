@@ -288,7 +288,7 @@ function main() -- основной сценарий скрипта
 	dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", getWorkingDirectory() .. '//AdminTools.ini', function(id, status)
 		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			--local AdminTools = inicfg.load(nil, getWorkingDirectory() .. '//AdminTools.ini')
+			local AdminTools = inicfg.load(nil, getWorkingDirectory() .. '//AdminTools.ini')
 			if AdminTools then
 				if AdminTools.script.version > version then
 					update_state = true
