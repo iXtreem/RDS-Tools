@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.1
+local version = 1.2
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -975,6 +975,7 @@ function imgui.OnDrawFrame()
                     wait(700)
                     mp = true
                     sampSendChat('/dmcount 3')
+                    wait(700)
                     sampAddChatMessage(tag .. 'ВЫКЛЮЧИТЕ ХУД, НАЖАВ F7',-1)
                     if cfg2.settings.wallhack then
                         sampSendChat('/wh')
@@ -988,9 +989,7 @@ function imgui.OnDrawFrame()
                 lua_thread.create(function()
                     sampSendChat('/mp')
                     wait(700)
-                    while not sampIsDialogActive(5343) do
-                        wait(0)
-                    end
+                    while not sampIsDialogActive(5343) do wait(0) end
                     sampSendDialogResponse(5343, 1, 0, nil)
                     wait(700)
                     sampCloseCurrentDialogWithButton(0)
@@ -1366,11 +1365,10 @@ function save()
     inicfg.save(cfg,directIni)
 end
 function radius()
-    while imgui.Process and not windows.stata_window_state.v do
+    local font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
+    while true do
         wait(1)
-        local playerid_to_stream = #(playersToStreamZone()) -1
-        local font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
-        renderFontDrawText(font_watermark, 'Игроков в радиусе: ' .. playerid_to_stream , sh*0.5, sw*0.5, 0xCCFFFFFF)
+        renderFontDrawText(font_watermark, 'Игроков в радиусе: ' .. #(playersToStreamZone()) -1 , sh*0.5, sw*0.5, 0xCCFFFFFF)
     end
 end
 
