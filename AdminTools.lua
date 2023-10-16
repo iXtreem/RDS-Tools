@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 3.1 -- Версия скрипта
+local version = 3.11 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -168,6 +168,7 @@ local nakazatreport = {}
 local answer = {}
 local adminchat = {}
 local ears = {}
+local inforeport = {}
 
 local spisok = { -- список для автоформ
 	'ban',
@@ -1371,7 +1372,7 @@ function imgui.OnDrawFrame()
 			answer.peredamrep = true
 		end
 		imgui.Tooltip('V')
-		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or isKeyDown(VK_G) then
+		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_G) then
 			if tonumber(autorid) then
 				windows.fast_rmute.v = not windows.fast_rmute.v
 			else
@@ -1408,11 +1409,12 @@ function imgui.OnDrawFrame()
 		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта')
 		if imadd.ToggleButton('##newcolor', checkbox.check_color_report) then
 			if cfg.settings.color_report then
-				cfg.settings.custom_answer_save = not cfg.settings.custom_answer_save
+				cfg.settings.on_color_report = not cfg.settings.on_color_report
 				save()
 			else
 				checkbox.check_color_report = imgui.ImBool(cfg.settings.on_color_report)
 				sampAddChatMessage(tag .. 'Цвет не указан. Сохраните выбранный вами HTML цвет через команду /color_report', -1)
+				sampAddChatMessage(tag .. 'Рекомендуется сначала ответить на репорт.',-1)
 			end
 		end
 		imgui.SameLine()
@@ -1580,12 +1582,10 @@ function imgui.OnDrawFrame()
 		end
 		imgui.End()
 	end
-	if windows.recon_menu.v and not sampIsPlayerConnected(playerrecon) then
-		windows.recon_menu.v = false
-	end
+	if windows.recon_menu.v and not sampIsPlayerConnected(playerrecon) then windows.recon_menu.v = false end
 	if windows.recon_menu.v then -- кастом рекон меню
 		windows.render_admins.v = false
-		imgui.SetNextWindowPos(imgui.ImVec2(tonumber(cfg.settings.position_recon_menu_x), tonumber(cfg.settings.position_recon_menu_y)))
+		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y))
 		imgui.Begin("##recon", windows.recon_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.ShowCursor = false
@@ -1615,47 +1615,45 @@ function imgui.OnDrawFrame()
 						sampSendChat('/re ' .. playerrecon + 1)
 						playerrecon = playerrecon + 1
 						wait(100)
-						while not sampIsPlayerConnected(playerrecon) and playerrecon <= sampGetMaxPlayerId() do
+						while not sampIsPlayerConnected(playerrecon + 1) and playerrecon + 1 <= sampGetMaxPlayerId() do
 							wait(100)
-							playerrecon = playerrecon + 1
-							sampSendChat('/re ' .. playerrecon)
+							playerrecon = (playerrecon + 1) + 1
+							sampSendChat('/re ' .. (playerrecon + 1))
 						end
 					end
 				end)
 			end
 			imgui.Separator()
-			if inforeport then
-				for i = 4, #inforeport do
-					if i == 4 then
-						imgui.Text(u8'Здоровье авто: ' .. inforeport[i])
-					end
-					if i == 5 then
-						imgui.Text(u8'Скорость: ' .. inforeport[i])
-					end
-					if i == 7 then -- gun
-						imgui.Text(u8'Оружие: ' .. inforeport[i])
-					end
-					if i == 8 then
-						imgui.Text(u8'Точность: ' .. inforeport[i])
-					end
-					if i == 6 then -- ping
-						imgui.Text('Ping: ' .. inforeport[i])
-					end
-					if i == 10 then -- afk
-						imgui.Text('AFK: ' .. inforeport[i])
-					end
-					if i == 12 then -- vip
-						imgui.Text(u8'VIP: ' .. inforeport[i])
-					end
-					if i == 15 then -- collision
-						imgui.Text(u8'Коллизия: ' .. inforeport[i])
-					end
-					if i == 14 then -- turbo
-						imgui.Text(u8'Турбо пакет: ' .. inforeport[i])
-					end
-					if i == 13 then -- passive mode
-						imgui.Text('Passive mode: ' .. inforeport[i])
-					end
+			for i = 4, #inforeport do
+				if i == 4 then
+					imgui.Text(u8'Здоровье авто: ' .. inforeport[i])
+				end
+				if i == 5 then
+					imgui.Text(u8'Скорость: ' .. inforeport[i])
+				end
+				if i == 7 then -- gun
+					imgui.Text(u8'Оружие: ' .. inforeport[i])
+				end
+				if i == 8 then
+					imgui.Text(u8'Точность: ' .. inforeport[i])
+				end
+				if i == 6 then -- ping
+					imgui.Text('Ping: ' .. inforeport[i])
+				end
+				if i == 10 then -- afk
+					imgui.Text('AFK: ' .. inforeport[i])
+				end
+				if i == 12 then -- vip
+					imgui.Text(u8'VIP: ' .. inforeport[i])
+				end
+				if i == 15 then -- collision
+					imgui.Text(u8'Коллизия: ' .. inforeport[i])
+				end
+				if i == 14 then -- turbo
+					imgui.Text(u8'Турбо пакет: ' .. inforeport[i])
+				end
+				if i == 13 then -- passive mode
+					imgui.Text('Passive mode: ' .. inforeport[i])
 				end
 			end
 			if imgui.Button(u8'Посмотреть статистику', imgui.ImVec2(250, 25)) then
@@ -2506,7 +2504,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 	if cfg.settings.on_custom_recon_menu then
 		for k,v in pairs(data) do
 			v = tostring(v)
-			if v == 'REFRESH' then 
+			if v == 'REFRESH' then
 				textdraw.refresh = id  -- записываем ид кнопки обновить в реконе
 				sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
 			elseif v:match('~') and v:match('0') then 
@@ -2544,10 +2542,10 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 						wait(1000)
 					end
 				end)
-			elseif v:match('(.+)%((%d+)%)') then 
+			elseif v:match('(.+)%((%d+)%)') then
 				lua_thread.create(function()
 					wait(300)
-					textdraw.name_report = id 
+					textdraw.name_report = id
 					playerrecon = tonumber(string.match(v, '%((%d+)%)')) -- ник игрока в реконе
 					windows.recon_menu.v = true 
 					imgui.Process = true 
@@ -2556,11 +2554,11 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 						sampSendInputChat('/keysync ' .. playerrecon)
 					end
 				end)
-			elseif v == 'STATS' then 
-				textdraw.stats = id 
+			elseif v == 'STATS' then
+				textdraw.stats = id
 				sampTextdrawSetPos(id, 2000, 0) 
-			elseif v == 'CLOSE' then 
-				textdraw.close = id 
+			elseif v == 'CLOSE' then
+				textdraw.close = id
 				sampTextdrawSetPos(id, 2000, 0)
 			end
 		end
@@ -2633,7 +2631,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		lua_thread.create(function()
 			if ipfind then
 				while not sampIsDialogActive() do wait(0) end
-				offstat = textSplit(text, '\n')
+				local offstat = textSplit(text, '\n')
 				for k,v in pairs(offstat) do
 					wait(0)
 					if k == 12 then
@@ -2648,6 +2646,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				ipfindclose = true
 				ipfind = nil
 				sampSendDialogResponse(dialogId,1,0)
+				local offstat = nil
 			end
 		end)
 	end
@@ -3449,14 +3448,8 @@ end
 function timerans()
 	while saveplayerrecon do
 		wait(500)
-		if not windows.recon_menu.v then
-			while not windows.recon_menu.v do
-				wait(0)
-			end
-		end
-		while windows.recon_menu.v do
-			wait(2000)
-		end
+		if not windows.recon_menu.v then while not windows.recon_menu.v do wait(0) end end
+		while windows.recon_menu.v do wait(2000) end
 		if saveplayerrecon then
 			if sampIsPlayerConnected(saveplayerrecon) then
 				imgui.Process = true
@@ -3475,7 +3468,7 @@ function timerans()
 end
 function timer() -- таймер для автоформ
 	local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
-	while admin_form.forma do
+	while true do
 		wait(0)
 		if admin_form.bool and admin_form.timer and admin_form.sett then
             timer = os.clock() - admin_form.timer
@@ -3491,6 +3484,7 @@ function timer() -- таймер для автоформ
             if timer>8 then
 				st = {}
 				admin_form.forma = nil
+				funct:terminate()
             end
         end
 	end
