@@ -293,13 +293,19 @@ function main() -- основной сценарий скрипта
 			if AdminTools then
 				if AdminTools.script.version > version then
 					update_state = true
+					sampAddChatMessage(tag .. 'Обнаружена новая версия основного скрипта - ' .. AdminTools.script.version, -1)
+					sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 				end
 				if cfg.settings.versionFS and cfg.settings.versionMP then
 					if AdminTools.script.versionMP > cfg.settings.versionMP then
 						update_state = true
+						sampAddChatMessage(tag .. 'Обнаружена новая плагина мероприятий - ' .. AdminTools.script.version, -1)
+						sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 					end
 					if AdminTools.script.versionFS > cfg.settings.versionFS then
 						update_state = true
+						sampAddChatMessage(tag .. 'Обнаружена новая версия быстрого спавна - ' .. AdminTools.script.version, -1)
+						sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 					end
 				else
 					sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1)
