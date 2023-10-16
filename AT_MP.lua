@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1
+local version = 1.1
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -16,10 +16,18 @@ local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
 local text_myprize = imgui.ImBuffer(256)
 local tag = '{FF0000}MP{F0E68C}: '
-local directIni = 'AdminTools.ini'
+local directIni = 'AT//AT_MP.ini'
 local anticrashmp = false
-local cfg = inicfg.load({
+local cfg2 = inicfg.load({
     settings = {
+        versionMP = version,
+        wallhack = true,
+        style = 0,
+    },
+}, 'AT//AT_main.ini')
+inicfg.save(cfg2, 'AT//AT_main.ini')
+local cfg = inicfg.load({
+    AT_MP = {
         adminstate = false,
         mynick = false,
         data = false,
@@ -42,22 +50,20 @@ local cfg = inicfg.load({
         0, -- mykick
         0, -- myonline
     },
-    
-}, directIni)
-inicfg.save(cfg,directIni) -- Если файла, или определенных настроек нет, добавляем их в файл AdminTools.ini
-
-local style_selected = imgui.ImInt(cfg.settings.style) -- Берём стандартное значение стиля из конфига
+}, 'AT//AT_MP.ini')
+inicfg.save(cfg,'AT//AT_MP.ini')
+local style_selected = imgui.ImInt(cfg2.settings.style) -- Берём стандартное значение стиля из конфига
 
 local checkbox = {
-    check_1 = imgui.ImBool(cfg.settings.adminstate),
-    check_2 = imgui.ImBool(cfg.settings.mynick),
-    check_3 = imgui.ImBool(cfg.settings.data),
-    check_4 = imgui.ImBool(cfg.settings.myreports),
-    check_5 = imgui.ImBool(cfg.settings.myonline),
-    check_6 = imgui.ImBool(cfg.settings.warningban),
-    check_7 = imgui.ImBool(cfg.settings.warningmute),
-    check_8 = imgui.ImBool(cfg.settings.warningjail),
-    check_9 = imgui.ImBool(cfg.settings.warningkick),
+    check_1 = imgui.ImBool(cfg.AT_MP.adminstate),
+    check_2 = imgui.ImBool(cfg.AT_MP.mynick),
+    check_3 = imgui.ImBool(cfg.AT_MP.data),
+    check_4 = imgui.ImBool(cfg.AT_MP.myreports),
+    check_5 = imgui.ImBool(cfg.AT_MP.myonline),
+    check_6 = imgui.ImBool(cfg.AT_MP.warningban),
+    check_7 = imgui.ImBool(cfg.AT_MP.warningmute),
+    check_8 = imgui.ImBool(cfg.AT_MP.warningjail),
+    check_9 = imgui.ImBool(cfg.AT_MP.warningkick),
     check_10 = imgui.ImBool(anticrashmp),
 }
 local windows = {
@@ -73,18 +79,17 @@ local windows = {
     static_window_state = imgui.ImBool(false)
 }
 function main()
-    cfg.settings.versionMP = version
-    inicfg.save(cfg, directIni)
     while not isSampAvailable() do wait(0) end
+    cfg2.settings.versionMP = version
+    inicfg.save(cfg2, 'AT//AT_main.ini')
     while not sampIsLocalPlayerSpawned() do wait(1000) end
-    font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
-    func = lua_thread.create_suspended(autoSave)
+    _, myid = sampGetPlayerIdByCharHandle(playerPed)
+    mynick = sampGetPlayerNickname(myid) 
     func1 = lua_thread.create_suspended(time)
     func2 = lua_thread.create_suspended(radius)
     func3 = lua_thread.create_suspended(find_weapon)
-    func:run()
     func1:run()
-    if cfg.settings.adminstate then
+    if cfg.AT_MP.adminstate then
         windows.stata_window_state.v = true
         imgui.Process = true
     end
@@ -111,134 +116,137 @@ end
 function sampev.onServerMessage(color,text)
     if mynick then
         if text:match('%[(%d+)%] ответил (.*)%[(%d+)%]: (.*)') and text:match(mynick) then
-            cfg.info[0] = cfg.info[0] + 1 
+            cfg.info[0] = cfg.info[0] + 1
+            save() 
         end
         if text:match('Администратор .+ забанил%(.+%) игрока .+ на .+ дней. Причина: .+') and text:match(mynick) then
             cfg.info[1] = cfg.info[1] + 1
+            save()
         end
         if text:match("Администратор .+ заткнул%(.+%) игрока .+ на .+ секунд. Причина: .+") and text:match(mynick) then
             cfg.info[2] = cfg.info[2] + 1
+            save()
         end
         if text:find("Администратор .+ посадил%(.+%) игрока .+ в тюрьму на .+ секунд. Причина: .+") and text:match(mynick) then
-            cfg.info[3] = cfg.info[3] + 1 
+            cfg.info[3] = cfg.info[3] + 1
+            save()
         end
         if text:find("Администратор .+ кикнул игрока .+. Причина: .+") and text:match(mynick) then
             cfg.info[4] = cfg.info[4] + 1
+            save()
         end
     end
 end
 function imgui.OnDrawFrame()
     if not windows.main_window_state.v and not windows.static_window_state.v and not windows.secondary_window_state.v and not windows.russkaya_window_state.v and not windows.stata_window_state.v and not windows.menu_window_state.v and not windows.corol_window_state.v and not windows.poliv_window_state.v and not windows.pryatki_window_state.v and not windows.sportzal_window_state.v then
-        if cfg.settings.adminstate then
+        if cfg.AT_MP.adminstate then
             windows.stata_window_state.v = true
         else
             imgui.Process = false
         end
     end
     if windows.static_window_state.v then
+        windows.stata_window_state.v = false
         imgui.ShowCursor = true
         imgui.SetNextWindowPos(imgui.ImVec2(sw*0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.Begin(u8"Статистика", windows.static_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         if imadd.ToggleButton('##activerstate', checkbox.check_1) then
-            cfg.settings.adminstate = not cfg.settings.adminstate
-			inicfg.save(cfg,directIni)
+            cfg.AT_MP.adminstate = not cfg.AT_MP.adminstate
+			save()
         end
         imgui.SameLine()
         imgui.Text(u8'Вкл/Выкл')
         imgui.Text(u8'Выберите пункты')
         if imadd.ToggleButton('##mynick', checkbox.check_2) then
-            cfg.settings.mynick = not cfg.settings.mynick
-			inicfg.save(cfg,directIni)
+            cfg.AT_MP.mynick = not cfg.AT_MP.mynick
+			save()
         end
         imgui.SameLine()
         imgui.Text(u8'Мой ник')
         imgui.SameLine()
         imgui.SetCursorPosX(150)
         if imadd.ToggleButton('##date', checkbox.check_3) then
-            cfg.settings.data = not cfg.settings.data
-			inicfg.save(cfg,directIni)
+            cfg.AT_MP.data = not cfg.AT_MP.data
+			save()
         end
         imgui.SameLine()
         imgui.Text(u8'Дата')
         if imadd.ToggleButton('##myreport', checkbox.check_4) then
-            cfg.settings.myreports = not cfg.settings.myreports
-			inicfg.save(cfg,directIni)
+            cfg.AT_MP.myreports = not cfg.AT_MP.myreports
+			save()
         end
         imgui.SameLine()
         imgui.Text(u8'Репорты за день')
         imgui.SameLine()
         imgui.SetCursorPosX(150)
         if imadd.ToggleButton('##myonline', checkbox.check_5) then
-            cfg.settings.myonline = not cfg.settings.myonline
-			inicfg.save(cfg,directIni)
+            cfg.AT_MP.myonline = not cfg.AT_MP.myonline
+			save()
         end
         imgui.SameLine()
         imgui.Text(u8'Онлайн за день')
         if imadd.ToggleButton('##ban', checkbox.check_6) then
-			cfg.settings.warningban = not cfg.settings.warningban
-            inicfg.save(cfg,directIni)
+			cfg.AT_MP.warningban = not cfg.AT_MP.warningban
+            save()
         end
         imgui.SameLine()
         imgui.Text(u8'Баны за день')
         imgui.SameLine()
         imgui.SetCursorPosX(150)
         if imadd.ToggleButton('##mute', checkbox.check_7) then
-            cfg.settings.warningmute = not cfg.settings.warningmute
-            inicfg.save(cfg,directIni)
+            cfg.AT_MP.warningmute = not cfg.AT_MP.warningmute
+            save()
         end
         imgui.SameLine()
         imgui.Text(u8'Муты за день')
 		if imadd.ToggleButton('##jail', checkbox.check_8) then
-            cfg.settings.warningjail = not cfg.settings.warningjail
-            inicfg.save(cfg,directIni)
+            cfg.AT_MP.warningjail = not cfg.AT_MP.warningjail
+            save()
         end
 		imgui.SameLine()
         imgui.Text(u8'Джайлы за день')
 		imgui.SameLine()
         imgui.SetCursorPosX(150)
         if imadd.ToggleButton('##kick', checkbox.check_9) then
-            cfg.settings.warningkick = not cfg.settings.warningkick
-            inicfg.save(cfg,directIni)
+            cfg.AT_MP.warningkick = not cfg.AT_MP.warningkick
+            save()
         end
         imgui.SameLine()
         imgui.Text(u8'Киков за день')
         if imgui.Button(u8'Сохранить позицию') then
-            local pos = imgui.GetWindowPos()
-			cfg.settings.staticposX = pos.x
-			cfg.settings.staticposY = pos.y
-			inicfg.save(cfg,directIni)
+			cfg.AT_MP.staticposX = imgui.GetWindowPos().x
+			cfg.AT_MP.staticposY = imgui.GetWindowPos().y
+			save()
             showCursor(false,false)
             thisScript():reload()
         end
+        windows.stata_window_state.v = false -- вырубаем статистику чтобы не было бага с мышью
         imgui.End()
     end
     if windows.stata_window_state.v then
+        imgui.SetNextWindowPos(imgui.ImVec2(cfg.AT_MP.staticposX, cfg.AT_MP.staticposY), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+        imgui.Begin("##AdminStata", windows.stata_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.ShowCursor = false
-        if windows.static_window_state.v then
-            windows.stata_window_state.v = false -- вырубаем статистику чтобы не было бага с мышью
-        end
-        imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.staticposX, cfg.settings.staticposY), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin("AdminStata", state_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         for i = 0, #cfg.info do
             if i == 0 then
-                if cfg.settings.mynick then
+                if cfg.AT_MP.mynick then
                     imgui.Text(mynick .. ' ('..myid ..')')
                 end
-                if cfg.settings.data then
+                if cfg.AT_MP.data then
                     imgui.Text(os.date('%H:%M | ') .. os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year)
                 end
-                if cfg.settings.myreports then
+                if cfg.AT_MP.myreports then
                     imgui.Text(u8'Репортов: ' .. cfg.info[0])
                 end
-            elseif cfg.settings.warningban and i == 1 then
+            elseif cfg.AT_MP.warningban and i == 1 then
                 imgui.Text(u8'Банов: ' .. cfg.info[1])
-            elseif cfg.settings.warningmute and i == 2 then
+            elseif cfg.AT_MP.warningmute and i == 2 then
                 imgui.Text(u8'Мутов: ' .. cfg.info[2])
-            elseif cfg.settings.warningjail and i == 3 then
+            elseif cfg.AT_MP.warningjail and i == 3 then
                 imgui.Text(u8'Джайлов: ' .. cfg.info[3])
-            elseif cfg.settings.warningkick and i == 4 then
+            elseif cfg.AT_MP.warningkick and i == 4 then
                 imgui.Text(u8'Киков: ' .. cfg.info[4])
-            elseif cfg.settings.myonline and i == 5 then
+            elseif cfg.AT_MP.myonline and i == 5 then
                 imgui.Text(u8'Онлайн: ' .. cfg.info[5] .. u8' мин.')
             end
         end
@@ -281,16 +289,16 @@ function imgui.OnDrawFrame()
             lua_thread.create(function()
                 windows.menu_window_state.v = false
                 sampSendChat('/mess 7 Победитель мероприятия - ' .. sampGetPlayerNickname(id) .. '[' .. id .. ']' .. ' поздравим его!')
-                wait(500)
+                wait(700)
                 sampSendChat('/mpwin ' .. id)
-                wait(500)
+                wait(700)
                 _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
                 sampSendChat('/tweap ' .. myid)
                 sampSendChat('/az')
-                wait(500)
+                wait(700)
                 sampSendChat('/delcarall')
                 showCursor(false,false)
-                if u8:decode(text_myprize.v) then
+                if #(u8:decode(text_myprize.v)) ~= 0 then
                     lua_thread.create(function()
                         wait(2000)
                         sampShowDialog(6405, "Выдать вознаграждение", "Пример: /giverub id 300\n/givescore 24 500000", "Выдать", nil, DIALOG_STYLE_INPUT) -- сам диалог
@@ -299,12 +307,12 @@ function imgui.OnDrawFrame()
                         if input then
                             sampSendChat(input)
                         end
-                        wait(500)
+                        wait(700)
                         sampSendInputChat('/spp')
                         thisScript():reload()
                     end)
                 else
-                    wait(500)
+                    wait(700)
                     sampSendInputChat('/spp')
                     thisScript():reload()
                 end
@@ -384,7 +392,7 @@ function imgui.OnDrawFrame()
                 lua_thread.create(function()
                     sampAddChatMessage(tag .. 'Ожидайте...', -1)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
@@ -393,14 +401,14 @@ function imgui.OnDrawFrame()
                     sampSendDialogResponse(5343, 1, 8, nil)
                     sampSendDialogResponse(5343, 1, 14, nil)
                     sampSendDialogResponse(16066, 1, 1, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(1)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16066, 1, 2, nil)
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     while not sampIsDialogActive() do
                         wait(0)
@@ -410,16 +418,16 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendDialogResponse(5344, 1, _, 'Русская Рулетка')
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     while sampIsDialogActive() do
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Русская Рулетка, для телепорта вводи /tpmp')
-                    wait(500)
+                    wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
                     end
@@ -439,18 +447,18 @@ function imgui.OnDrawFrame()
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Русская Рулетка!')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 /try удачно - убит, /try неудачно - жив. Побеждает самый везучий.')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Запрещено: /passive, /fly, /gt, DM, /s /r /anim /jp, выходить из строя и любая другая помеха игрокам.')
                     wait(1000)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 0, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
                     sampSendInputChat('/stw ' .. myid)
@@ -459,29 +467,42 @@ function imgui.OnDrawFrame()
                     sbor = false
                 end)
             end
+            if imgui.Button(u8'Прекратить набор', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do
+                        wait(0)
+                    end
+                    sampSendDialogResponse(5343, 1, 0, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    thisScript():reload()
+                end)
+            end
         end
         if mp then
             if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 2, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
             if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 3, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
@@ -518,25 +539,25 @@ function imgui.OnDrawFrame()
                 lua_thread.create(function()
                     sampAddChatMessage(tag .. 'Ожидайте...', -1)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 4, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(5343, 1, 4, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(5343, 1, 14, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16066, 1, 1, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(1)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16066, 1, 2, nil)
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     while not sampIsDialogActive() do
                         wait(0)
@@ -546,16 +567,16 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendDialogResponse(5344, 1, _, 'Король дигла')
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     while sampIsDialogActive() do
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Король дигла, для телепорта вводи /tpmp')
-                    wait(500)
+                    wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
                     end
@@ -575,20 +596,20 @@ function imgui.OnDrawFrame()
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Король Дигла!')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Я вызываю двух человек, которые начинают стреляться по моей команде, побеждает сильнейший')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     wait(1000)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 0, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
                     sampSendInputChat('/stw')
@@ -597,47 +618,60 @@ function imgui.OnDrawFrame()
                     sbor = false
                 end)
             end
+            if imgui.Button(u8'Прекратить набор', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do
+                        wait(0)
+                    end
+                    sampSendDialogResponse(5343, 1, 0, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    thisScript():reload()
+                end)
+            end
         end
         if mp then
             if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 2, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
             if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 3, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
             if imgui.Button(u8'Поделить всех на команды', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 15, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16075 , 1, 0, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
@@ -654,9 +688,9 @@ function imgui.OnDrawFrame()
             if player1 and player2 then
                 if imgui.Button(u8'Начать PVP', imgui.ImVec2(280, 30)) then
                     sampSendChat('/mess 3 На арену выходят игроки ' .. sampGetPlayerNickname(player1) .. ' и ' .. sampGetPlayerNickname(player2))
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 3 Начинаю отсчет в 10 секунд, после него можно начинать огонь!')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/dmcount 10')
                     player1 = nil
                     player2 = nil
@@ -702,25 +736,25 @@ function imgui.OnDrawFrame()
                         sampCloseCurrentDialogWithButton(0)
                     end
                     sampSendChat('/tpcor 1575.5280761719 -1238.5983886719 277.87603759766 0 990')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/tpcor 1575.5280761719 -1238.5983886719 277.87603759766 0 990')
                     wait(2000)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 14, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16066, 1, 1, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(1)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16066, 1, 2, nil)
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     while not sampIsDialogActive() do
                         wait(0)
@@ -730,16 +764,16 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendDialogResponse(5344, 1, _, 'Поливалка')
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     while sampIsDialogActive() do
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Поливалка, для телепорта вводи /tpmp')
-                    wait(500)
+                    wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
                     end
@@ -759,40 +793,53 @@ function imgui.OnDrawFrame()
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Поливалка!')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Вы разбегаетесь по всей крыше, я пытаюсь вас сбить, последний выживший - побеждает')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/veh 601 1 1')
                     while getClosestCarId() == '-1' do
                         wait(0)
                     end
                     sampSendChat('/mess 7 Разбегаемся!')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/s')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/dmcount 8')
                     wait(2000)
                     sampSendChat('/entercar ' .. getClosestCarId())
-                    wait(500)
+                    wait(700)
                     sampAddChatMessage(tag .. 'ПОЗИЦИЯ БЫЛА СОХРАНЕНА, ЕСЛИ УПАДЁТЕ ИСПОЛЬЗУЙТЕ /r', -1)
                     sampAddChatMessage(tag .. 'ПОЗИЦИЯ БЫЛА СОХРАНЕНА, ЕСЛИ УПАДЁТЕ ИСПОЛЬЗУЙТЕ /r', -1)
                     sampAddChatMessage(tag .. 'ПОЗИЦИЯ БЫЛА СОХРАНЕНА, ЕСЛИ УПАДЁТЕ ИСПОЛЬЗУЙТЕ /r', -1)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(5343, 1, 0, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     mp = true
                     showCursor(false,false)
                     sbor = false
+                end)
+            end
+            if imgui.Button(u8'Прекратить набор', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do
+                        wait(0)
+                    end
+                    sampSendDialogResponse(5343, 1, 0, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    thisScript():reload()
                 end)
             end
         end
@@ -800,24 +847,24 @@ function imgui.OnDrawFrame()
             if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 2, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
             if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 3, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
@@ -851,25 +898,25 @@ function imgui.OnDrawFrame()
                 lua_thread.create(function()
                     sampAddChatMessage(tag .. ' Ожидайте...', -1)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 5, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(5343, 1, 5, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(5343, 1, 14, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16066, 1, 1, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(1)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16066, 1, 2, nil)
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     while not sampIsDialogActive() do
                         wait(0)
@@ -879,16 +926,16 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendDialogResponse(5344, 1, _, 'Прятки')
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     while sampIsDialogActive() do
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Прятки, для телепорта вводи /tpmp')
-                    wait(500)
+                    wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
                      end
@@ -906,35 +953,48 @@ function imgui.OnDrawFrame()
                 end
             end
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
-                if cfg.settings.wallhack then
-                    sampSendInputChat('/wh')
-                end
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Прятки!')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Вы разбегаетесь по всему кораблю, я отправляюсь на ваши поиски, побеждает последний выживший.')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     wait(1000)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 0, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
                     sampSendInputChat('/stw ' .. myid)
-                    wait(500)
+                    wait(700)
                     mp = true
                     sampSendChat('/dmcount 3')
-                    sampAddChatMessage(tag .. 'ВЫКЛЮЧИТЕ ХУД, НАЖАВ F7')
+                    sampAddChatMessage(tag .. 'ВЫКЛЮЧИТЕ ХУД, НАЖАВ F7',-1)
+                    if cfg2.settings.wallhack then
+                        sampSendChat('/wh')
+                    end
                     func2:run()
                     showCursor(false,false)
                     sbor = false
+                end)
+            end
+            if imgui.Button(u8'Прекратить набор', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do
+                        wait(0)
+                    end
+                    sampSendDialogResponse(5343, 1, 0, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    thisScript():reload()
                 end)
             end
         end
@@ -942,24 +1002,24 @@ function imgui.OnDrawFrame()
             if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 2, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
             if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(230, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 3, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
@@ -998,24 +1058,24 @@ function imgui.OnDrawFrame()
                         sampCloseCurrentDialogWithButton(0)
                     end
                     sampSendChat('/tpcor 772.14721679688 5.5412063598633 1000.7802124023 5 990')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/tpcor 772.14721679688 5.5412063598633 1000.7802124023 5 990')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 14, nil)
                     sampSendDialogResponse(16066, 1, 1, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(1)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16066, 1, 2, nil)
                     while not sampIsDialogActive() do
                         wait(0)
                     end
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                     while not sampIsDialogActive() do
                         wait(0)
@@ -1025,16 +1085,16 @@ function imgui.OnDrawFrame()
                         wait(0)
                     end
                     sampSendDialogResponse(5344, 1, _, 'Бокс')
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     while sampIsDialogActive() do
                         wait(0)
                     end
                     sampSendChat('/mess 7 Начинается мероприятие Бокс, для телепорта вводи /tpmp')
-                    wait(500)
+                    wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
                     end
@@ -1054,22 +1114,22 @@ function imgui.OnDrawFrame()
             if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mess 7 Правила мероприятия Бокс!')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Я выбираю 2 человек, которые сражаются на ринге, побеждает сильнейший.')
-                    wait(500)
+                    wait(700)
                     sampSendChat('/mess 7 Запрещены: /passive, /fly, /gt, DM, /s /r /anim /jp и любая другая помеха игрокам.')
                     wait(1000)
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 0, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
                     sampSendInputChat('/stw ' .. myid)
                     mp = true
@@ -1077,47 +1137,60 @@ function imgui.OnDrawFrame()
                     sbor = false
                 end)
             end
+            if imgui.Button(u8'Прекратить набор', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do
+                        wait(0)
+                    end
+                    sampSendDialogResponse(5343, 1, 0, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    thisScript():reload()
+                end)
+            end
         end
         if mp then
             if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 2, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
             if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 3, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
             if imgui.Button(u8'Поделить всех на команды', imgui.ImVec2(280, 30)) then
                 lua_thread.create(function()
                     sampSendChat('/mp')
-                    wait(500)
+                    wait(700)
                     while not sampIsDialogActive(5343) do
                         wait(0)
                     end
                     sampSendDialogResponse(5343, 1, 15, nil)
-                    wait(500)
+                    wait(700)
                     sampSendDialogResponse(16075 , 1, 0, nil)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
-                    wait(500)
+                    wait(700)
                     sampCloseCurrentDialogWithButton(0)
                 end)
             end
@@ -1136,17 +1209,17 @@ function imgui.OnDrawFrame()
                     lua_thread.create(function()
                         sampAddChatMessage(tag .. 'Выдаю участникам мероприятия здоровье', -1)
                         sampSendChat('/mp')
-                        wait(500)
+                        wait(700)
                         while not sampIsDialogActive(5343) do
                             wait(0)
                         end
                         sampSendDialogResponse(5343, 1, 2, nil)
-                        wait(500)
+                        wait(700)
                         sampCloseCurrentDialogWithButton(0)
                         sampSendChat('/mess 3 На арену выходят игроки ' .. sampGetPlayerNickname(player1) .. ' и ' .. sampGetPlayerNickname(player2))
-                        wait(500)
+                        wait(700)
                         sampSendChat('/mess 3 Начинаю отсчет в 10 секунд, после него можно начинать.')
-                        wait(500)
+                        wait(700)
                         sampSendChat('/dmcount 10')
                         player1 = nil
                         player2 = nil
@@ -1220,6 +1293,7 @@ function time()
     while true do
         wait(60000)
         cfg.info[5] = cfg.info[5] + 1
+        save()
     end
 end
 function sampSendInputChat(text) -- отправка в чат через ф6
@@ -1288,21 +1362,16 @@ function playersToStreamZone() -- игроки в радиусе
 	end
 	return streaming_player
 end
+function save()
+    inicfg.save(cfg,directIni)
+end
 function radius()
     while imgui.Process and not windows.stata_window_state.v do
         wait(1)
         local playerid_to_stream = #(playersToStreamZone()) -1
+        local font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
         renderFontDrawText(font_watermark, 'Игроков в радиусе: ' .. playerid_to_stream , sh*0.5, sw*0.5, 0xCCFFFFFF)
     end
-end
-
-function autoSave()
-	while true do
-        _, myid = sampGetPlayerIdByCharHandle(playerPed)
-        mynick = sampGetPlayerNickname(myid) 
-		inicfg.save(cfg, directIni)
-        wait(30000) -- сохранение каждые 30 секунд
-	end
 end
 
 sampRegisterChatCommand('state', function()
@@ -1310,7 +1379,7 @@ sampRegisterChatCommand('state', function()
     imgui.Process = windows.static_window_state.v
 end)
 sampRegisterChatCommand('mpoff', function()
-    thisScript():reload()
+    thisScript():unload()
 end)
 
 function style(id) -- ТЕМЫ
