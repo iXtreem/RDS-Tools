@@ -375,7 +375,7 @@ end
 										0 - статический объект
 										2 - ped
 										3 - car
-										4 - динамический объект НАЕБАЛОВО СУКА
+										4 - динамический объект
 ]]
 
 function samp.onSendBulletSync(data)
@@ -450,7 +450,7 @@ function join_argb(a, r, g, b)
 end
 
 function save()
-    inicfg.save(cfg, "AdminTools.ini")
+    inicfg.save(cfg, "AT//AT_Trassera.ini")
 end
 
 function style(id) -- ТЕМЫ
