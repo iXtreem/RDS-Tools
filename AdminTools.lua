@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 3.1 -- Версия скрипта
+local version = 3.11 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -3321,27 +3321,18 @@ function ScriptExport()
 		if cfg.settings.wallhack then
 			sampSendInputChat('/wh ')
 		end
-		wait(300)
+		wait(500)
 		sampSendInputChat('/fsoff')
-		wait(300)
+		wait(500)
 		sampSendInputChat('/mpoff')
 		imgui.Process = false
 		showCursor(false,false)
 		thisScript():unload()
 	end)
 end
-function autoonline()
-	while true do
-		wait(61000)
-		while sampIsDialogActive() or sampIsChatInputActive() do
-			wait(0)
-		end
-		wait(200)
-		if not AFK then
-			sampSendChat("/online")
-		end
-	end
-end
+
+function autoonline() while true do wait(61000) while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end wait(200) if not AFK then sampSendChat("/online") end end end
+
 function sampSendInputChat(text) -- отправка в чат через ф6
 	sampSetChatInputText(text)
 	sampSetChatInputEnabled(true)
