@@ -742,6 +742,8 @@ function imgui.OnDrawFrame()
 				windows.fast_key.v = true
 			end
 			if imgui.Button(u8"Сбросить все значения.", imgui.ImVec2(410, 24)) then
+				cfg.settings.fast_key_ans = 'None'
+				cfg.settings.fast_key_addText = 'None'
 				for k,v in pairs(cfg.binder_key) do cfg.binder_key[k] = nil end
 				save()
 			end
@@ -763,8 +765,9 @@ function imgui.OnDrawFrame()
 					save()
 				end
 			end
+			imgui.CenterText(u8'[Мои быстрые клавиши]')
 			for k, v in pairs(cfg.binder_key) do
-				imgui.CenterText(u8('[Клавиша '..k..'] ='))
+				imgui.Text(u8('[Клавиша '..k..'] ='))
 				imgui.SameLine()
 				imgui.Text(u8(v))
 			end
@@ -2253,7 +2256,7 @@ function imgui.OnDrawFrame()
 			end
 		end
 		imgui.SameLine()
-		if imgui.Button(u8'Удалить', imgui.ImVec2(140,24)) and #u8:decode(buffer.new_binder_key.v) ~= 0 then
+		if imgui.Button(u8'Удалить', imgui.ImVec2(151,24)) and #u8:decode(buffer.new_binder_key.v) ~= 0 then
 			for k,v in pairs(cfg.binder_key) do
 				if u8:decode(buffer.new_binder_key.v) == v then
 					cfg.binder_key[k] = nil
@@ -2843,7 +2846,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 	if dialogId == 2351 and peremrep then -- окно с ответом на репорт
 		lua_thread.create(function()
 			if cfg.settings.add_answer_report then
-				if (#peremrep + #cfg.settings.mytextreport + 6) < 80 then
+				if (#peremrep + #cfg.settings.mytextreport) < 80 then
 					peremrep = peremrep .. ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport)
 				else
 					setClipboardText(peremrep)
@@ -2861,10 +2864,13 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					sampAddChatMessage(tag .. 'Ваш ответ оказался слишком длинным и сохранен в буффер обмена.', -1)
 					sampAddChatMessage(tag .. 'Вы можете попробовать отключить доп.опции для уменьшения количества символов.', -1)
 					peremrep = nil
+					answer = {}
 					sampCloseCurrentDialogWithButton(0)
 				end
 			end
-			sampSendDialogResponse(dialogId, 1, _, peremrep)
+			if peremrep then
+				sampSendDialogResponse(dialogId, 1, _, peremrep)
+			end
 			sampCloseCurrentDialogWithButton(0)
 			while sampIsDialogActive() do wait(0) end
 			wait(300)
@@ -2904,7 +2910,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end
 				nakazatreport = {}
 			end
-			peremrep = nil
 			buffer.text_ans.v = ''
 			if not saveplayerrecon and (tonumber(autorid) and answer.slejy) and cfg.settings.answer_player_report then
 				saveplayerrecon = autorid
