@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 0.7
+local version = 0.8
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -96,7 +96,14 @@ local checked_test3 = imgui.ImBool(cfg.AT_FastSpawn.spawn)
 local secondary_window_state = imgui.ImBool(false)
 local main_window_state = imgui.ImBool(false)
 
-
+function sampev.onServerMessage(color,text)
+	if text:match('Вы успешно авторизовались!') then
+		start_click_shift = true
+	end 
+	if text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") and text:match(nick) then
+		access_alogin = true
+	end
+end
 function main()
 	while not isSampAvailable() do wait(0) end
 	cfg2.settings.versionFS = version
@@ -105,24 +112,23 @@ function main()
 	nick = sampGetPlayerNickname(id)
 	if cfg.AT_FastSpawn.spawn then
 		while not sampIsLocalPlayerSpawned() do
-			wait(1000)
 			if not sampIsChatInputActive() and not sampIsDialogActive() and start_click_shift then
 				setVirtualKeyDown(16, true)
 				wait(50)
 				setVirtualKeyDown(16, false) 
 			end
+			wait(200)
 		end
 		start_click_shift = nil
 	end
-	while sampIsDialogActive() or sampIsChatInputActive() do
-		wait(0)
-	end
-	wait(8000)
+	wait(3000)
 	if autorizate and cfg.AT_FastSpawn.parolalogin and cfg.AT_FastSpawn.autoalogin and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
-		while sampIsDialogActive() or sampIsChatInputActive() do
-			wait(0)
+		while not access_alogin do
+			while sampIsDialogActive() do wait(0) end
+			sampSendChat('/alogin ' .. cfg.AT_FastSpawn.parolalogin)
+			wait(3000)
 		end
-		sampSendChat('/alogin ' .. cfg.AT_FastSpawn.parolalogin)
+		access_alogin = nil
 	end
 	if autorizate and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
 		for i = 0, #cfg.command do
@@ -137,12 +143,6 @@ function main()
 	end
 end
 
-
-function sampev.OnServerMessange(color,text)
-	if text:match('Вы успешно авторизовались!') then
-		start_click_shift = true
-	end
-end
 
 function sampSendInputChat(text) -- отправка в чат через ф6
 	sampSetChatInputText(text)
@@ -225,9 +225,9 @@ function save()
 end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
     if (dialogId == 658 or dialogId == 657) and cfg.AT_FastSpawn.spawn then
-        setVirtualKeyDown(13, true)
-        setVirtualKeyDown(13, false)
+		sampSendDialogResponse(dialogId, 1, 0, _)
 		autorizate = true
+		return false
     end
     if dialogId == 1 and cfg.AT_FastSpawn.autorizate and cfg.AT_FastSpawn.parolaccount and not inputpassword then
 		_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
@@ -235,8 +235,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 		if cfg.AT_FastSpawn.nickname == nick and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() then
 			printStyledString('authorization ...', 1000, 7)
 			sampSendDialogResponse(dialogId, 1, _, cfg.AT_FastSpawn.parolaccount)
-			setVirtualKeyDown(13, true)
-			setVirtualKeyDown(13, false)
+			sampCloseCurrentDialogWithButton(0)
 			inputpassword = true
 		end
     end
