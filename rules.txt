@@ -172,7 +172,6 @@ SCRIPT/tool - открыть меню скрипта
 SCRIPT/wh - вкл/выкл функцию WallHack
 SCRIPT/color_report - назначить цвет ответа на репорт
 SCRIPT/autoprefix - автоматическая выдача префикса (работает от рендера /admins
-SCRIPT/prfcpec - Выдать префикс Спец.Администратора
 SCRIPT/newprf_ma - Изменить префикс Мл.Администратора
 SCRIPT/newprf_a - Изменить префикс Администратора
 SCRIPT/newprf_sa - Изменить префикс Ст.Администратора
@@ -185,6 +184,7 @@ SCRIPT/prfsa - Выдать префикс ст.администратору
 SCRIPT/prfpga - Выдать префикс ПГА
 SCRIPT/prfzga - Выдать префикс ЗГА
 SCRIPT/prfga - Выдать префикс ГА
+SCRIPT/prfcpec - Выдать префикс Спец.Администратора
 SCRIPT/n - Не наблюдаю нарушений от игрока
 SCRIPT/nak - игрок наказан
 SCRIPT/fo - обратитесь на форум
