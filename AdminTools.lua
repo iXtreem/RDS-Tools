@@ -78,7 +78,7 @@ local cfg = inicfg.load({
 		autoprefix = true,
 	},
 	customotvet = {},
-	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое'},
+	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое', ''},
 	mat = {'бля', 'хуй', 'пизд', 'ахуе', 'пидр', 'пидор'},
 	myflood = {},
 	my_command = {},
@@ -256,15 +256,6 @@ end
 function main() -- основной сценарий скрипта
 	while not isSampAvailable() do wait(0) end
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
-	if sampGetCurrentServerAddress() == '46.174.52.246' then
-		sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1)
-	elseif sampGetCurrentServerAddress() == '46.174.49.170' then
-		sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1)
-		server03 = true
-	else
-		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-	--	ScriptExport()
-	end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", getWorkingDirectory() .. '//AdminTools.ini', function(id, status)
 		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -282,12 +273,12 @@ function main() -- основной сценарий скрипта
 				if cfg.settings.versionFS and cfg.settings.versionMP then
 					if AdminTools.script.versionMP > cfg.settings.versionMP then
 						update_state = true
-						sampAddChatMessage(tag .. 'Обнаружена новая плагина мероприятий - ' .. AdminTools.script.versionMP, -1)
+						sampAddChatMessage(tag .. 'Обнаружено обновление дополнительных плагинов.', -1)
 						sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 					end
 					if AdminTools.script.versionFS > cfg.settings.versionFS then
 						update_state = true
-						sampAddChatMessage(tag .. 'Обнаружена новая версия быстрого спавна - ' .. AdminTools.script.versionFS, -1)
+						sampAddChatMessage(tag .. 'Обнаружено обновление дополнительных плагинов.', -1)
 						sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 					end
 				else
@@ -298,6 +289,14 @@ function main() -- основной сценарий скрипта
 			local AdminTools = nil
 		end
     end)
+	if sampGetCurrentServerAddress() == '46.174.52.246' then
+		if not update_state then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1) end
+	elseif sampGetCurrentServerAddress() == '46.174.49.170' then if not update_state then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1) end
+		server03 = true
+	else
+		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
+		ScriptExport()
+	end
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
 	if not doesCharExist(getWorkingDirectory() .. "\\config\\AT\\rules.txt") then
 		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "//config//AT//rules.txt", function(id, status)  end)
@@ -307,6 +306,7 @@ function main() -- основной сценарий скрипта
 		for line in rules:lines() do pravila[#pravila + 1] = u8:decode(line);end
 		rules:close()
 	end
+	local rules = nil
 	--------------------============ ОБЩИЙ ФАЙЛ ДЛЯ ПРОЧИХ СОХРАНЕНИЙ =====================---------------------------------
 	lua_thread.create(inputChat)
 	func = lua_thread.create_suspended(autoonline)
@@ -434,13 +434,13 @@ function imgui.OnDrawFrame()
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
-		imgui.Text('           ')
+		imgui.Text('               ')
 		imgui.SameLine()
 		if imgui.Button(fa.ICON_ADDRESS_BOOK, imgui.ImVec2(30, 30)) then uu2() menu2[1] = true end imgui.SameLine()
 		if imgui.Button(fa.ICON_COGS, imgui.ImVec2(30, 30)) then uu2() menu2[3] = true end imgui.SameLine()
 		if imgui.Button(fa.ICON_PENCIL_SQUARE, imgui.ImVec2(30, 30)) then uu2() menu2[4] = true end imgui.SameLine()
 		if imgui.Button(fa.ICON_CALENDAR_CHECK_O, imgui.ImVec2(30, 30)) then uu2() menu2[5] = true end imgui.SameLine()
-		if imgui.Button(fa.ICON_SEARCH, imgui.ImVec2(30, 30)) then uu2() menu2[6] = true end imgui.SameLine()
+		--if imgui.Button(fa.ICON_SEARCH, imgui.ImVec2(30, 30)) then uu2() menu2[6] = true end imgui.SameLine()
 		if imgui.Button(fa.ICON_RSS, imgui.ImVec2(30, 30)) then uu2() menu2[7] = true end imgui.SameLine()
 		if imgui.Button(fa.ICON_BOOKMARK, imgui.ImVec2(30, 30)) then uu2() menu2[2] = true end imgui.SameLine()
 		if imgui.Button(fa.ICON_CLOUD, imgui.ImVec2(30, 30)) then uu2() menu2[8] = true end
@@ -1120,12 +1120,8 @@ function imgui.OnDrawFrame()
 				end
 			end
 		end
-		if menu2[6] then
-			imgui.CenterText(u8'Используй /pravila')
-			if imgui.Button(u8'Открыть правила') then
-				sampSendInputChat('/pravila')
-			end
-		end
+		--if menu2[6] then
+		--end
 		if menu2[8] then
 			imgui.CenterText(u8'Добавить мат (Enter или кнопкой)')
 			imgui.SameLine()
