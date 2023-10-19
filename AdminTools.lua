@@ -78,7 +78,7 @@ local cfg = inicfg.load({
 		autoprefix = true,
 	},
 	customotvet = {},
-	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое', ''},
+	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое'},
 	mat = {'бля', 'хуй', 'пизд', 'ахуе', 'пидр', 'пидор'},
 	myflood = {},
 	my_command = {},
@@ -1652,7 +1652,7 @@ function imgui.OnDrawFrame()
 		if imgui.Button(u8'<- Назад') then
 			lua_thread.create(function()
 				if control_player_recon < sampGetMaxPlayerId() then
-					control_player_recon = control_player_recon + 1
+					control_player_recon = control_player_recon - 1
 					sampSendChat('/re ' .. control_player_recon)
 					while not sampIsPlayerConnected(control_player_recon) do 
 						wait(0)
