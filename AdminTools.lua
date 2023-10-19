@@ -78,7 +78,7 @@ local cfg = inicfg.load({
 		autoprefix = true,
 	},
 	customotvet = {},
-	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое'},
+	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое', ''},
 	mat = {'бля', 'хуй', 'пизд', 'ахуе', 'пидр', 'пидор'},
 	myflood = {},
 	my_command = {},
@@ -2826,11 +2826,11 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 	end
 	if dialogId == 2351 and peremrep then -- окно с ответом на репорт
 		lua_thread.create(function()
+			windows.fast_report.v = false
 			sampSendDialogResponse(dialogId, 1, _, peremrep)
 			sampCloseCurrentDialogWithButton(0)
 			while sampIsDialogActive() do wait(0) end
 			wait(300)
-			windows.fast_report.v = false
 			if answer.rabotay then
 				sampSendChat('/re ' .. autorid)
 			end
@@ -3538,7 +3538,6 @@ function isKeysDown(keylist, pressed)
 end
 ---------------===================== Определенение ID нажатой клавиши
 function update()
-	update_state = nil
 	imgui.Process = false
 	showCursor(false,false)
 	local dlstatus = require('moonloader').download_status
