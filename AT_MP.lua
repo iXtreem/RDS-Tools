@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.3
+local version = 1.4
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -16,12 +16,10 @@ local sw, sh = getScreenResolution()
 local text_buffer = imgui.ImBuffer(256)
 local text_myprize = imgui.ImBuffer(256)
 local tag = '{FF0000}MP{F0E68C}: '
-local directIni = 'AT//AT_MP.ini'
 local anticrashmp = false
 local cfg2 = inicfg.load({
     settings = {
         versionMP = version,
-        wallhack = true,
         style = 0,
     },
 }, 'AT//AT_main.ini')
@@ -53,7 +51,6 @@ local cfg = inicfg.load({
 }, 'AT//AT_MP.ini')
 inicfg.save(cfg,'AT//AT_MP.ini')
 local style_selected = imgui.ImInt(cfg2.settings.style) -- Берём стандартное значение стиля из конфига
-
 local checkbox = {
     check_1 = imgui.ImBool(cfg.AT_MP.adminstate),
     check_2 = imgui.ImBool(cfg.AT_MP.mynick),
@@ -82,13 +79,14 @@ function main()
     while not isSampAvailable() do wait(0) end
     cfg2.settings.versionMP = version
     inicfg.save(cfg2, 'AT//AT_main.ini')
+    cfg2 = nil
     while not sampIsLocalPlayerSpawned() do wait(1000) end
     _, myid = sampGetPlayerIdByCharHandle(playerPed)
     mynick = sampGetPlayerNickname(myid) 
     func1 = lua_thread.create_suspended(time)
+    func1:run()
     func2 = lua_thread.create_suspended(radius)
     func3 = lua_thread.create_suspended(find_weapon)
-    func1:run()
     if cfg.AT_MP.adminstate then
         windows.stata_window_state.v = true
         imgui.Process = true
@@ -977,9 +975,7 @@ function imgui.OnDrawFrame()
                     sampSendChat('/dmcount 3')
                     wait(700)
                     sampAddChatMessage(tag .. 'ВЫКЛЮЧИТЕ ХУД, НАЖАВ F7',-1)
-                    if cfg2.settings.wallhack then
-                        sampSendChat('/wh')
-                    end
+                    sampAddChatMessage(tag .. 'ВЫКЛЮЧИТЕ WALLHACK ЕСЛИ ОН У ВАС ВКЛЮЧЕН, КОМАНДОЙ /wh', -1)
                     func2:run()
                     showCursor(false,false)
                     sbor = false
@@ -1362,7 +1358,7 @@ function playersToStreamZone() -- игроки в радиусе
 	return streaming_player
 end
 function save()
-    inicfg.save(cfg,directIni)
+    inicfg.save(cfg,'AT//AT_MP.ini')
 end
 function radius()
     local font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
