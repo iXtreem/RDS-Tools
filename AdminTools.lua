@@ -78,7 +78,7 @@ local cfg = inicfg.load({
 		autoprefix = true,
 	},
 	customotvet = {},
-	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое', ''},
+	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое'},
 	mat = {'бля', 'хуй', 'пизд', 'ахуе', 'пидр', 'пидор'},
 	myflood = {},
 	my_command = {},
@@ -3538,6 +3538,7 @@ function isKeysDown(keylist, pressed)
 end
 ---------------===================== Определенение ID нажатой клавиши
 function update()
+	update_state = nil
 	imgui.Process = false
 	showCursor(false,false)
 	local dlstatus = require('moonloader').download_status
