@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 0.8
+local version = 0.9
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -18,6 +18,7 @@ local cfg2 = inicfg.load({
 	},
 }, 'AT//AT_main.ini')
 inicfg.save(cfg2, 'AT//AT_main.ini')
+local style_list = {u8'0.5 сек', u8'1 сек', u8'1.5 сек.', u8'2 сек', u8'3 сек'}
 local cfg = inicfg.load({
 	AT_FastSpawn = {
         spawn = true,
@@ -76,18 +77,19 @@ local inputCommand = {
 	[9] = imgui.ImBuffer(u8(cfg.command[9]), 256),
 	[10] = imgui.ImBuffer(u8(cfg.command[10]), 256),
 }
+
 local inputWait = {
-	[0] = imgui.ImBuffer(u8(cfg.wait_command[0]), 256),
-	[1] = imgui.ImBuffer(u8(cfg.wait_command[1]), 256),
-	[2] = imgui.ImBuffer(u8(cfg.wait_command[2]), 256),
-	[3] = imgui.ImBuffer(u8(cfg.wait_command[3]), 256),
-	[4] = imgui.ImBuffer(u8(cfg.wait_command[4]), 256),
-	[5] = imgui.ImBuffer(u8(cfg.wait_command[5]), 256),
-	[6] = imgui.ImBuffer(u8(cfg.wait_command[6]), 256),
-	[7] = imgui.ImBuffer(u8(cfg.wait_command[7]), 256),
-	[8] = imgui.ImBuffer(u8(cfg.wait_command[8]), 256),
-	[9] = imgui.ImBuffer(u8(cfg.wait_command[9]), 256),
-	[10] = imgui.ImBuffer(u8(cfg.wait_command[10]), 256),
+	[0] = imgui.ImInt(cfg.wait_command[0]),
+	[1] = imgui.ImInt(cfg.wait_command[1]),
+	[2] = imgui.ImInt(cfg.wait_command[2]),
+	[3] = imgui.ImInt(cfg.wait_command[3]),
+	[4] = imgui.ImInt(cfg.wait_command[4]),
+	[5] = imgui.ImInt(cfg.wait_command[5]),
+	[6] = imgui.ImInt(cfg.wait_command[6]),
+	[7] = imgui.ImInt(cfg.wait_command[7]),
+	[8] = imgui.ImInt(cfg.wait_command[8]),
+	[9] = imgui.ImInt(cfg.wait_command[9]),
+	[10] = imgui.ImInt(cfg.wait_command[10]),
 }
 local checked_test = imgui.ImBool(cfg.AT_FastSpawn.autorizate)
 local checked_test2 = imgui.ImBool(cfg.AT_FastSpawn.autoalogin)
@@ -97,7 +99,7 @@ local secondary_window_state = imgui.ImBool(false)
 local main_window_state = imgui.ImBool(false)
 
 function sampev.onServerMessage(color,text)
-	if text:match('Вы успешно авторизовались!') then
+	if text == ('Вы успешно авторизовались!') then
 		start_click_shift = true
 	end 
 	if text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") and text:match(nick) then
@@ -108,6 +110,7 @@ function main()
 	while not isSampAvailable() do wait(0) end
 	cfg2.settings.versionFS = version
 	inicfg.save(cfg2,'AT//AT_main.ini')
+	cfg2 = nil
 	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	nick = sampGetPlayerNickname(id)
 	if cfg.AT_FastSpawn.spawn then
@@ -124,7 +127,8 @@ function main()
 	wait(3000)
 	if autorizate and cfg.AT_FastSpawn.parolalogin and cfg.AT_FastSpawn.autoalogin and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
 		while not access_alogin do
-			while sampIsDialogActive() do wait(0) end
+			wait(0)
+			while sampIsDialogActive() do wait(100) sampCloseCurrentDialogWithButton(0) end
 			sampSendChat('/alogin ' .. cfg.AT_FastSpawn.parolalogin)
 			wait(3000)
 		end
@@ -132,11 +136,15 @@ function main()
 	end
 	if autorizate and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
 		for i = 0, #cfg.command do
-			if #(tostring(cfg.command[i])) ~= 0 and #(tostring(cfg.wait_command[i])) ~= 0 then
-				wait(tonumber(cfg.wait_command[i]))
-				while sampIsDialogActive() or sampIsChatInputActive() do
-					wait(0)
-				end
+			if cfg.wait_command[i] == 0 then press_wait = 500
+			elseif cfg.wait_command[i] == 1 then press_wait = 1000
+			elseif cfg.wait_command[i] == 2 then press_wait = 1500
+			elseif cfg.wait_command[i] == 3 then press_wait = 2000
+			elseif cfg.wait_command[i] == 4 then press_wait = 2500
+			elseif cfg.wait_command[i] == 5 then press_wait = 3000 end
+			if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
+				wait(press_wait)
+				while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
 				sampSendInputChat(cfg.command[i])
 			end
 		end
@@ -194,9 +202,11 @@ function imgui.OnDrawFrame()
     end
 	if secondary_window_state.v then
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.SetNextWindowSize(imgui.ImVec2(193, 300), imgui.Cond.FirstUseEver)
-		imgui.Begin(u8'Добавить команды', secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.Begin(u8'Добавить команды', secondary_window_state, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.Text(u8'      Команда')
+		imgui.SameLine()
+		imgui.Text(u8'           Задержка')
 		for i = 0, #inputCommand do
 			imgui.PushItemWidth(100)
 			if imgui.InputText('##inputcommand' .. tostring(i), inputCommand[i]) then
@@ -205,10 +215,14 @@ function imgui.OnDrawFrame()
 			end
 			imgui.PopItemWidth()
 			imgui.SameLine()
-			imgui.SetCursorPosX(135)
-			imgui.PushItemWidth(50)
-			if imgui.InputText('##wait' .. tostring(i), inputWait[i]) then
-				cfg.wait_command[i] = tonumber(u8:decode(inputWait[i].v))
+			imgui.PushItemWidth(80)
+			if imgui.Combo("##selected" .. tostring(i), inputWait[i], style_list, 5) then
+				if inputWait[i].v == 0 then cfg.wait_command[i] = 0
+				elseif inputWait[i].v == 1 then cfg.wait_command[i] = 1
+				elseif inputWait[i].v == 2 then cfg.wait_command[i] = 2
+				elseif inputWait[i].v == 3 then cfg.wait_command[i] = 3
+				elseif inputWait[i].v == 4 then cfg.wait_command[i] = 4
+				elseif inputWait[i].v == 5 then cfg.wait_command[i] = 5 end
 				save()
 			end
 			imgui.PopItemWidth()
@@ -218,21 +232,20 @@ function imgui.OnDrawFrame()
 end
 function save()
 	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	nick = sampGetPlayerNickname(id)
 	cfg.AT_FastSpawn.server = sampGetCurrentServerAddress()
-	cfg.AT_FastSpawn.nickname = nick
+	cfg.AT_FastSpawn.nickname = sampGetPlayerNickname(id)
 	inicfg.save(cfg, directIni)
 end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
     if (dialogId == 658 or dialogId == 657) and cfg.AT_FastSpawn.spawn then
 		sampSendDialogResponse(dialogId, 1, 0, _)
+		sampCloseCurrentDialogWithButton(0)
 		autorizate = true
 		return false
     end
     if dialogId == 1 and cfg.AT_FastSpawn.autorizate and cfg.AT_FastSpawn.parolaccount and not inputpassword then
 		_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-		nick = sampGetPlayerNickname(id)
-		if cfg.AT_FastSpawn.nickname == nick and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() then
+		if cfg.AT_FastSpawn.nickname == sampGetPlayerNickname(id) and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() then
 			printStyledString('authorization ...', 1000, 7)
 			sampSendDialogResponse(dialogId, 1, _, cfg.AT_FastSpawn.parolaccount)
 			sampCloseCurrentDialogWithButton(0)
@@ -240,6 +253,9 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 		end
     end
 end
+
+
+
 sampRegisterChatCommand('fs', function()
     main_window_state.v = not main_window_state.v
     imgui.Process = main_window_state.v
