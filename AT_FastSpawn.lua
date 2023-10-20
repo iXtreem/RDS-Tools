@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 0.9
+local version = 1
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -18,7 +18,7 @@ local cfg2 = inicfg.load({
 	},
 }, 'AT//AT_main.ini')
 inicfg.save(cfg2, 'AT//AT_main.ini')
-local style_list = {u8'0.5 сек', u8'1 сек', u8'1.5 сек.', u8'2 сек', u8'3 сек'}
+local style_list = {u8'0.5 сек', u8'1 сек', u8'1.5 сек', u8'2 сек', u8'3 сек'}
 local cfg = inicfg.load({
 	AT_FastSpawn = {
         spawn = true,
@@ -61,7 +61,7 @@ inicfg.save(cfg,directIni)
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
 local buffer = {}
 local sw, sh = getScreenResolution()
-local style_selected = imgui.ImInt(cfg.AT_FastSpawn.style)
+local style_selected = imgui.ImInt(cfg2.settings.style)
 local text_buffer = imgui.ImBuffer(4096)
 local text_buffer2 = imgui.ImBuffer(4096)
 local inputCommand = {
@@ -145,7 +145,7 @@ function main()
 			if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
 				wait(press_wait)
 				while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
-				sampSendInputChat(cfg.command[i])
+				sampSendChat(cfg.command[i])
 			end
 		end
 	end
