@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 1
+local version = 1.0
 local imgui = require 'imgui' 
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
