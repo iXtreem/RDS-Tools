@@ -257,7 +257,8 @@ SCRIPT[ban блокировка аккаунта]
 SCRIPT
 SCRIPT/ch - читы
 SCRIPT/bosk - оскорбление проекта
-SCRIPT/obm - Обман/развод/obh - обход бана
+SCRIPT/obm - Обман/развод
+SCRIPT/obh - обход бана
 SCRIPT/nmb - Неадекватное поведение(3 дня)
 SCRIPT/oskhelper - Нарушение правил хелпера
 SCRIPT/reklama - реклама')
