@@ -260,38 +260,36 @@ function main() -- основной сценарий скрипта
 	while not isSampAvailable() do wait(0) end
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
 	local dlstatus = require('moonloader').download_status
-    downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", getWorkingDirectory() .. '//AdminTools.ini', function(id, status)
-		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			local AdminTools = inicfg.load(nil, getWorkingDirectory() .. '//AdminTools.ini')
-			if AdminTools then
-				if AdminTools.script.main then
-					sampAddChatMessage(tag .. 'Обнаружено новое {808080}обязательное {F0E68C}обновление скрипта! Произвожу самообновление.', -1)
-					update()
-				end
-				if AdminTools.script.version > version then
-					update_state = true
-					sampAddChatMessage(tag .. 'Обнаружена новая версия основного скрипта - ' .. AdminTools.script.version, -1)
-					sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
-				end
-				if cfg.settings.versionFS and cfg.settings.versionMP then
-					if AdminTools.script.versionMP > cfg.settings.versionMP then
-						update_state = true
-						sampAddChatMessage(tag .. 'Обнаружено обновление дополнительных плагинов.', -1)
-						sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
-					end
-					if AdminTools.script.versionFS > cfg.settings.versionFS then
-						update_state = true
-						sampAddChatMessage(tag .. 'Обнаружено обновление дополнительных плагинов.', -1)
-						sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
-					end
-				else
-					sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1)
-				end
+    downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", getWorkingDirectory() .. '//AdminTools.ini', function(id, status) end)
+	local AdminTools = inicfg.load(nil, getWorkingDirectory() .. '//AdminTools.ini')
+	if AdminTools then
+		if AdminTools.script.version > version then
+			update_state = true
+			if AdminTools.script.main then
+				sampAddChatMessage(tag .. 'Обнаружено новое {808080}обязательное {F0E68C}обновление скрипта! Произвожу самообновление.', -1)
+				update()
+			else
+				sampAddChatMessage(tag .. 'Обнаружена новая версия основного скрипта - ' .. AdminTools.script.version, -1)
+				sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 			end
-			os.remove(getWorkingDirectory() .. "/AdminTools.ini" )
-			local AdminTools = nil
 		end
-    end)
+		if cfg.settings.versionFS and cfg.settings.versionMP then
+			if AdminTools.script.versionMP > cfg.settings.versionMP then
+				update_state = true
+				sampAddChatMessage(tag .. 'Обнаружено обновление дополнительных плагинов.', -1)
+				sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
+			end
+			if AdminTools.script.versionFS > cfg.settings.versionFS then
+				update_state = true
+				sampAddChatMessage(tag .. 'Обнаружено обновление дополнительных плагинов.', -1)
+				sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
+			end
+		else
+			sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1)
+		end
+	end
+	os.remove(getWorkingDirectory() .. "/AdminTools.ini" )
+	local AdminTools = nil
 	if sampGetCurrentServerAddress() == '46.174.52.246' then
 		if not update_state then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1) end
 	elseif sampGetCurrentServerAddress() == '46.174.49.170' then if not update_state then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1) end
