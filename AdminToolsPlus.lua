@@ -1,8 +1,9 @@
 require 'lib.moonloader'
-script_name 'AdminTools Plus+' 
+script_name 'AT Plus+' 
 script_author 'Neon4ik'
+script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 0.6
+local version = 0.7
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -17,7 +18,6 @@ local sw, sh = getScreenResolution()
 local selected_item = imgui.ImInt(1)
 local selected_item2 = imgui.ImInt(0)
 local inicfg = require 'inicfg'
-local directIni = 'ATPlus.ini'
 local offadmins = {}
 local cfg = inicfg.load({
     settings = {
@@ -25,6 +25,13 @@ local cfg = inicfg.load({
 		prefixa = '87CEEB',
 		prefixsa = 'FF4500',
 		delete_point = true,
+		auto_al = false,
+		auto_hello = false,
+		hello_text = 'Здравствуйте, _, желаю Вам приятного администрирования :3',
+		warning_report = false,
+		count_warning = 3,
+		mytext_warning_report = 'Уважаемые администраторы, срочно возьмите репорт!!!',
+		number_report = 3
     },
 	listNoResult = {
 		'N.E.O.N',
@@ -32,8 +39,9 @@ local cfg = inicfg.load({
 		'Coder',
 		'Kintzel.'
 	},
-}, directIni)
-inicfg.save(cfg, directIni)
+}, 'AT//ATPlus.ini')
+inicfg.save(cfg, 'AT//ATPlus.ini')
+
 local buffer = {
 	PrefixMa = imgui.ImBuffer(cfg.settings.prefixma, 256),
 	PrefixA = imgui.ImBuffer(cfg.settings.prefixa, 256),
@@ -42,10 +50,17 @@ local buffer = {
 	text_buffer2 = imgui.ImBuffer(1024),
 	text_buffer3 = imgui.ImBuffer(1024),
 	delete_admin = imgui.ImBuffer(1024),
+	hello_admin = imgui.ImBuffer(u8(cfg.settings.hello_text),1024),
+	mytext = imgui.ImBuffer(u8(cfg.settings.mytext_warning_report),1024)
 }
 local checkbox = {
 	delete_point = imgui.ImBool(cfg.settings.delete_point),
+	auto_hello = imgui.ImBool(cfg.settings.auto_hello),
+	auto_al = imgui.ImBool(cfg.settings.auto_al),
+	warning_report = imgui.ImBool(cfg.settings.warning_report),
 }
+local style_selected = imgui.ImInt(0)
+local style_selected2 = imgui.ImInt(0)
 local makeadmin = {}
 local kai = {}
 local newlvl = 1
@@ -65,6 +80,15 @@ function main()
 			os.remove(getWorkingDirectory() .. "//AdminToolsPlus.ini")
 		end
     end)
+	while true do
+		wait(100)
+		if isPauseMenuActive() or isGamePaused() then
+			AFK = true
+		end
+		if AFK and not (isPauseMenuActive() or isGamePaused()) then
+			AFK = false
+		end
+	end
 end
 function imgui.OnDrawFrame()
 	if not main_window_state.v and not secondary_window_state.v and not dektor_window_state.v then
@@ -76,37 +100,48 @@ function imgui.OnDrawFrame()
 		imgui.Begin("AdminTools+", dektor_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-		imgui.SetCursorPosX(10)
-		imgui.Text(u8'Мл.Администратор')
-		imgui.SameLine()
-		imgui.SetCursorPosX(150)
-		imgui.PushItemWidth(100)
-		if imgui.InputText('   ', buffer.PrefixMa) then
-			cfg.settings.prefixma = buffer.PrefixMa.v
-			inicfg.save(cfg,directIni)	
+		if imgui.Checkbox(u8'Авто-напоминание /al', checkbox.auto_al) then
+			cfg.settings.auto_al = not cfg.settings.auto_al
+			save()
 		end
-		imgui.PopItemWidth()
-		imgui.SetCursorPosX(10)
-		imgui.Text(u8'Администратор')
-		imgui.SameLine()
-		imgui.SetCursorPosX(150)
-		imgui.PushItemWidth(100)
-		if imgui.InputText(' ', buffer.PrefixA) then
-			cfg.settings.prefixa = buffer.PrefixA.v
-			inicfg.save(cfg,directIni)	
+		if imgui.Checkbox(u8'Приветствие администраторов', checkbox.auto_hello) then
+			cfg.settings.auto_hello = not cfg.settings.auto_hello
+			save()
 		end
-		imgui.PopItemWidth()
-		imgui.Text(u8'Ст.Администратор')
-		imgui.SameLine()
-		imgui.SetCursorPosX(150)
-		imgui.PushItemWidth(100)
-		if imgui.InputText('  ', buffer.PrefixSa) then
-			cfg.settings.prefixsa = buffer.PrefixSa.v
-			inicfg.save(cfg,directIni)	
+		if cfg.settings.auto_hello then
+			if imgui.InputText('##autohello', buffer.hello_admin) then
+				cfg.settings.hello_text = u8:decode(buffer.hello_admin.v)
+				save()
+			end
+			imgui.TextWrapped(u8'Ник администратора обозначается символом _')
 		end
-		imgui.PopItemWidth()
-		imgui.Text(u8'/prfma - Выдать префикс МА\n/prfa - Выдать префикс  А\n/prfsa - Выдать префикс СА\n/prfpga - Выдать префикс ПГА\n/prfzga - Выдать префикс ЗГА\n/prfga - Выдать префикс ГА\n/prfcpec - Выдать префикс спеца')
-		if imgui.Button(u8'Подвести итоги недели') then
+		if imgui.Checkbox(u8'Напоминание о репорте в /a', checkbox.warning_report) then
+			cfg.settings.warning_report = not cfg.settings.warning_report
+			save()
+		end
+		if cfg.settings.warning_report then
+			imgui.Text(u8'Кол-во повторов сообщения: ')
+			imgui.SameLine()
+			imgui.PushItemWidth(50)
+			if imgui.Combo("##selected", style_selected2, {'1', '2', '3', '4', '5'}, style_selected2) then
+				cfg.settings.count_warning = style_selected2.v + 1
+				save()
+			end
+			imgui.PopItemWidth()
+			imgui.Text(u8'Триггер (кол-во репортов): ')
+			imgui.SameLine()
+			imgui.PushItemWidth(50)
+			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, style_selected) then
+				cfg.settings.number_report = style_selected.v + 2
+				save()
+			end
+			imgui.PopItemWidth()
+			if imgui.InputText('##mytext', buffer.mytext) then
+				cfg.settings.mytext_warning_report = u8:decode(buffer.mytext.v)
+				save()
+			end
+		end
+		if imgui.Button(u8'Подвести итоги недели', imgui.ImVec2(230,24)) then
 			main_window_state.v = not main_window_state.v
 			dektor_window_state.v = not dektor_window_state.v
 		end
@@ -133,7 +168,7 @@ function imgui.OnDrawFrame()
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		if imadd.ToggleButton('##antipoint', checkbox.delete_point) then
 			cfg.settings.delete_point = not cfg.settings.delete_point
-			inicfg.save(cfg,directIni)
+			save()
 		end
 		imgui.SameLine()
 		imgui.Text(u8'Удалять точки в центре ников')
@@ -142,22 +177,19 @@ function imgui.OnDrawFrame()
             if not sampIsDialogActive() then
 				sampSendChat('/offadmins')
 				sampAddChatMessage(tag .. 'Пройдите весь список, нажав клавишу: Далее.', -1)
-			else
-				sampAddChatMessage(tag .. 'Диалог закрыть стоило бы.', -1)
+			else sampAddChatMessage(tag .. 'Диалог закрыть стоило бы.', -1)
 			end
         end
 		if imgui.Button(u8'Пробить топ администрации', imgui.ImVec2(250, 25)) then
             if not sampIsDialogActive() then
 				sampSendChat('/topadm')
-			else
-				sampAddChatMessage(tag .. 'Диалог закрыть стоило бы.', -1)
+			else sampAddChatMessage(tag .. 'Диалог закрыть стоило бы.', -1)
 			end
         end
 		if imgui.Button(u8'Выбрать диапазон баллов', imgui.ImVec2(250, 25)) then
 			if offadmins and topadm then
 				secondary_window_state.v = not secondary_window_state.v
-			else
-				sampAddChatMessage(tag .. 'Вы ещё не прошлись по спискам администраторов.', -1)
+			else sampAddChatMessage(tag .. 'Вы ещё не прошлись по спискам администраторов.', -1)
 			end
 		end
 		imgui.Text(u8'После выставления всех параметров.')
@@ -202,7 +234,7 @@ function imgui.OnDrawFrame()
 		imgui.PushItemWidth(50)
 		imgui.InputText(u8'##1', buffer.text_buffer2)
 		imgui.PopItemWidth()
-		imgui.SetCursorPosY(40)
+		imgui.SameLine()
 		imgui.SetCursorPosX(80)
 		imgui.Text(u8'До:')
 		imgui.SetCursorPosX(75)
@@ -387,6 +419,43 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 end
+function sampev.onServerMessage(color,text)
+	if cfg.settings.auto_hello and text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") and not AFK then
+		local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+		local autorizate_admin = text:match('%[(%d+)%]') 
+		if autorizate_admin ~= myid then
+			lua_thread.create(function()
+				while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
+				sampSendChat('/a ' .. string.gsub(cfg.settings.hello_text, '_', sampGetPlayerNickname(autorizate_admin)))
+			end)
+		end
+		return true
+	end --[A] Andy.(85) не авторизовался как администратор уже 1 минут(ы)
+	if cfg.settings.auto_al and not AFK and text:match('%[A%] (.+)%((%d+)%) не авторизовался как администратор уже') then --[A] Dirty_DeSanta(76) не авторизовался как администратор уже 1 минут(ы)
+		local autorizate_admin = text:match('((%d+)%)')
+		lua_thread.create(function()
+			while sampIsDialogActive() do wait(0) end
+			sampSendChat('/ans ' .. autorizate_admin .. ' Здравствуйте! Вы забыли ввести /alogin!')
+			wait(500)
+			sampSendChat('/ans ' .. autorizate_admin .. ' Введите команду /alogin и свой пароль, пожалуйста.')
+		end)
+		return true
+	end
+	if cfg.settings.warning_report and not AFK and text:match('Жалоба #(%d) | ') then
+		local number_report = tonumber(text:match('Жалоба #(%d) | '))
+		if number_report >= cfg.settings.number_report then
+			sampAddChatMessage('{FF0000}[AT]{FFFFFF} ' .. text, -1)
+			lua_thread.create(function()
+				for i = 0, cfg.settings.count_warning do
+					if not sampIsChatInputActive() then
+						sampSendChat('/a ' .. cfg.settings.mytext_warning_report)
+						wait(1000)
+					end
+				end
+			end)
+		end
+	end
+end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 	if dialogId == 4829 then
 		text = textSplit(text, '\n')
@@ -453,53 +522,15 @@ function textSplit(str, delim, plain)
     until not pos
     return tokens
 end
-function color() -- рандом префикс
-    mcolor = ""
-    math.randomseed( os.time() )
-    for i = 1, 6 do
-        local b = math.random(1, 16)
-        if b == 1 then
-            mcolor = mcolor .. "A"
-		elseif b == 2 then
-            mcolor = mcolor .. "B"
-        elseif b == 3 then
-            mcolor = mcolor .. "C"
-		elseif b == 4 then
-            mcolor = mcolor .. "D"
-        elseif b == 5 then
-            mcolor = mcolor .. "E"
-		elseif b == 6 then
-            mcolor = mcolor .. "F"
-		elseif b == 7 then
-            mcolor = mcolor .. "0"
-        elseif b == 8 then
-            mcolor = mcolor .. "1"
-        elseif b == 9 then
-            mcolor = mcolor .. "2"
-        elseif b == 10 then
-            mcolor = mcolor .. "3"
-        elseif b == 11 then
-            mcolor = mcolor .. "4"
-        elseif b == 12 then
-            mcolor = mcolor .. "5"
-        elseif b == 13 then
-            mcolor = mcolor .. "6"
-        elseif b == 14 then
-            mcolor = mcolor .. "7"
-        elseif b == 15 then
-            mcolor = mcolor .. "8"
-        elseif b == 16 then
-            mcolor = mcolor .. "9"
-		end
-    end
-    return mcolor
+function save()
+	inicfg.save(cfg, 'AT//ATPlus.ini')	
 end
 sampRegisterChatCommand('deladm', function(param)
 	if #param >= 3 then
 		for k, v in pairs(cfg.listNoResult) do
 			if cfg.listNoResult[k] == param then
 				cfg.listNoResult[k] = nil
-				inicfg.save(cfg,directIni)
+				save()
 				sampAddChatMessage(tag .. 'Выбранный вами администратор ' .. param .. ' был успешно удалено из списка', -1)
 				a = true
 				break
@@ -526,7 +557,7 @@ sampRegisterChatCommand('newadm', function(param)
 		end
 		if not a then
 			cfg.listNoResult[#cfg.listNoResult + 1] = param
-			inicfg.save(cfg,directIni)
+			save()
 			sampAddChatMessage(tag .. 'Выбранный вами администратор - ' .. param .. ' был успешно добавлен в исключения', -1)
 			a = nil
 		end
