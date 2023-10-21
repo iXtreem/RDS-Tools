@@ -132,7 +132,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Кол-во повторов сообщения: ')
 			imgui.SameLine()
 			imgui.PushItemWidth(50)
-			if imgui.Combo("##selected2", style_selected2, {'1', '2', '3', '4', '5'}, style_selected2.v) then
+			if imgui.Combo("##selected2", style_selected2, {'1', '2', '3', '4', '5'}, style_selected2) then
 				cfg.settings.count_warning = style_selected2.v + 1
 				save()
 			end
@@ -140,7 +140,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Триггер (кол-во репортов): ')
 			imgui.SameLine()
 			imgui.PushItemWidth(50)
-			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, style_selected.v) then
+			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, style_selected) then
 				cfg.settings.number_report = style_selected.v + 2
 				save()
 			end
