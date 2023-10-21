@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 0.6
+local version = 0.7
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -15,8 +15,6 @@ local main_window_state = imgui.ImBool(false)
 local secondary_window_state = imgui.ImBool(false)
 local tag = '{2F4F4F}AdminTools Plus+: {FF7F50}'
 local sw, sh = getScreenResolution()
-local selected_item = imgui.ImInt(1)
-local selected_item2 = imgui.ImInt(0)
 local inicfg = require 'inicfg'
 local offadmins = {}
 local cfg = inicfg.load({
@@ -69,7 +67,6 @@ local SendKai = -1
 
 function main()
 	while not isSampAvailable() do wait(0) end
-	sampAddChatMessage(tag .. 'Скрипт инициализирован. Активация: /atp', -1)
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.ini", getWorkingDirectory() .. "//AdminToolsPlus.ini", function(id, status)
 		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -80,6 +77,18 @@ function main()
 			os.remove(getWorkingDirectory() .. "//AdminToolsPlus.ini")
 		end
     end)
+	if update_state then
+		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.lua", thisScript().path, function(id, status)
+			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+				sampAddChatMessage(tag .. 'Основной скрипт успешно обновлен.', -1)
+				imgui.Process = false
+				showCursor(false,false)
+				sampAddChatMessage(tag .. 'Скрипт обновлен.', -1)
+				thisScript():reload()
+			end
+		end)
+	end
+	sampAddChatMessage(tag .. 'Скрипт инициализирован. Активация: /atp', -1)
 	while true do
 		wait(100)
 		if isPauseMenuActive() or isGamePaused() then
@@ -123,7 +132,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Кол-во повторов сообщения: ')
 			imgui.SameLine()
 			imgui.PushItemWidth(50)
-			if imgui.Combo("##selected2", style_selected2, {'1', '2', '3', '4', '5'}, 5) then
+			if imgui.Combo("##selected2", style_selected2, {'1', '2', '3', '4', '5'}, style_selected2.v) then
 				cfg.settings.count_warning = style_selected2.v + 1
 				save()
 			end
@@ -131,7 +140,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Триггер (кол-во репортов): ')
 			imgui.SameLine()
 			imgui.PushItemWidth(50)
-			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, 5) then
+			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, style_selected.v) then
 				cfg.settings.number_report = style_selected.v + 2
 				save()
 			end
@@ -144,20 +153,6 @@ function imgui.OnDrawFrame()
 		if imgui.Button(u8'Подвести итоги недели', imgui.ImVec2(230,24)) then
 			main_window_state.v = not main_window_state.v
 			dektor_window_state.v = not dektor_window_state.v
-		end
-		if update_state then
-			if imgui.Button(u8'Обновить скрипт') then
-				local dlstatus = require('moonloader').download_status
-				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.lua", thisScript().path, function(id, status)
-					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-						sampAddChatMessage(tag .. 'Основной скрипт успешно обновлен.')
-						imgui.Process = false
-						showCursor(false,false)
-						sampAddChatMessage(tag .. 'Скрипт обновлен.', -1)
-						thisScript():reload()
-					end
-				end)
-			end
 		end
 		imgui.End()
 	end
