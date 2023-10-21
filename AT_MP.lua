@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.4
+local version = 1.5
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
@@ -72,6 +72,7 @@ local windows = {
     poliv_window_state = imgui.ImBool(false),
     pryatki_window_state = imgui.ImBool(false),
     sportzal_window_state = imgui.ImBool(false),
+    custom_window_state = imgui.ImBool(false),
     stata_window_state = imgui.ImBool(false),
     static_window_state = imgui.ImBool(false)
 }
@@ -136,7 +137,7 @@ function sampev.onServerMessage(color,text)
     end
 end
 function imgui.OnDrawFrame()
-    if not windows.main_window_state.v and not windows.static_window_state.v and not windows.secondary_window_state.v and not windows.russkaya_window_state.v and not windows.stata_window_state.v and not windows.menu_window_state.v and not windows.corol_window_state.v and not windows.poliv_window_state.v and not windows.pryatki_window_state.v and not windows.sportzal_window_state.v then
+    if not windows.main_window_state.v and not windows.static_window_state.v and not windows.secondary_window_state.v and not windows.russkaya_window_state.v and not windows.stata_window_state.v and not windows.menu_window_state.v and not windows.corol_window_state.v and not windows.poliv_window_state.v and not windows.pryatki_window_state.v and not windows.sportzal_window_state.v and not windows.custom_window_state.v then
         if cfg.AT_MP.adminstate then
             windows.stata_window_state.v = true
         else
@@ -228,7 +229,7 @@ function imgui.OnDrawFrame()
         for i = 0, #cfg.info do
             if i == 0 then
                 if cfg.AT_MP.mynick then
-                    imgui.Text(mynick .. ' ('..myid ..')')
+                    imgui.Text(mynick .. ' | ID: '..myid)
                 end
                 if cfg.AT_MP.data then
                     imgui.Text(os.date('%H:%M | ') .. os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year)
@@ -359,6 +360,22 @@ function imgui.OnDrawFrame()
             windows.sportzal_window_state.v = true
             windows.secondary_window_state.v = false
         end
+        if not custom then
+            if imgui.Button(u8'Мое мероприятие', imgui.ImVec2(230, 30)) then
+                custom = imgui.ImBuffer(256)
+                sampAddChatMessage(tag .. 'Введите название вашего мероприятия.', -1)
+            end
+        else
+            if imgui.Button(u8'Подтвердить', imgui.ImVec2(230, 30)) then
+                if custom and #(u8:decode(custom.v)) ~= 0 then
+                    windows.custom_window_state.v = true
+                    windows.secondary_window_state.v = false
+                else
+                    sampAddChatMessage(tag .. 'Поле ввода с названием мероприятия не заполнено.', -1)
+                end
+            end
+        end
+        if custom then imgui.InputText('##custom', custom) end
         imgui.InputTextMultiline("##Текст оглашения приза", text_myprize, imgui.ImVec2(230,25))
         imgui.Tooltip(u8('Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp'))
         if imadd.ToggleButton('##find_weapon', checkbox.check_10) then
@@ -684,15 +701,17 @@ function imgui.OnDrawFrame()
                 end
             end
             if player1 and player2 then
-                if imgui.Button(u8'Начать PVP', imgui.ImVec2(280, 30)) then
-                    sampSendChat('/mess 3 На арену выходят игроки ' .. sampGetPlayerNickname(player1) .. ' и ' .. sampGetPlayerNickname(player2))
-                    wait(700)
-                    sampSendChat('/mess 3 Начинаю отсчет в 10 секунд, после него можно начинать огонь!')
-                    wait(700)
-                    sampSendChat('/dmcount 10')
-                    player1 = nil
-                    player2 = nil
-                end
+                lua_thread.create(function()
+                    if imgui.Button(u8'Начать PVP', imgui.ImVec2(280, 30)) then
+                        sampSendChat('/mess 3 На арену выходят игроки ' .. sampGetPlayerNickname(player1) .. ' и ' .. sampGetPlayerNickname(player2))
+                        wait(700)
+                        sampSendChat('/mess 3 Начинаю отсчет в 10 секунд, после него можно начинать огонь!')
+                        wait(700)
+                        sampSendChat('/dmcount 10')
+                        player1 = nil
+                        player2 = nil
+                    end
+                end)
             else
                 if imgui.Button(u8'Начать PVP', imgui.ImVec2(280, 30)) then
                     sampAddChatMessage(tag .. ' Нажми правой кнопкой мыши + 1 на желаемого игрока и добавь его в скрипт', -1)
@@ -1256,6 +1275,126 @@ function imgui.OnDrawFrame()
         end
         imgui.End()
     end
+    if windows.custom_window_state.v then
+        imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+        imgui.Begin("##custom_mp", windows.custom_window_state, imgui.WindowFlags.NoResize+ imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+        imgui.ShowCursor = false
+        if not sbor and not mp then
+            imgui.Text(u8'ВАЖНО! Активация/деактивация курсора - F')
+            imgui.Text(u8'Взаимодействие с игроками:')
+            imgui.Text(u8'Правая кнопка мыши + 1')
+            imgui.Text(u8'САМОСТОЯТЕЛЬНО РАССКАЗАТЬ ПРАВИЛА')
+            imgui.Text(u8'Выберите нужное вам местоположение ...')
+            imgui.Text(u8'И нажмите "начать сбор игроков."')
+            if imgui.Button(u8'Начать сбор игроков', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampAddChatMessage(tag .. 'Ожидайте...', -1)
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do wait(0) end
+                    sampSendDialogResponse(5343, 1, 14, nil)
+                    wait(700)
+                    sampSendDialogResponse(16066, 1, 1, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(1)
+                    wait(700)
+                    sampSendDialogResponse(16066, 1, 2, nil)
+                    while not sampIsDialogActive() do wait(0) end
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    while not sampIsDialogActive() do wait(0) end
+                    sampSendDialogResponse(5343, 1, 0, nil)
+                    wait(700)
+                    while not sampIsDialogActive() do wait(0) end
+                    sampSendDialogResponse(5344,1,0,u8:decode(custom.v))
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    wait(700)
+                    while sampIsDialogActive() do wait(0) end
+                    sampSendChat('/mess 7 Начинается мероприятие ' .. u8:decode(custom.v) .. ', для телепорта вводи /tpmp')
+                    wait(700)
+                    if #(u8:decode(text_myprize.v)) ~= 0 then
+                        sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                    end
+                    showCursor(false,false)
+                    sbor = true
+                end)
+            end
+        end
+        if sbor then
+            if imgui.Button(u8'Напомнить про мероприятие', imgui.ImVec2(230, 30)) then
+                if #(u8:decode(text_myprize.v)) ~= 0 then
+                    sampSendChat('/mess 7 Телепорт на мероприятие всё ещё открыт! Приз: ' .. u8:decode(text_myprize.v) .. '. вводи /tpmp!')
+                else
+                    sampSendChat('/mess 7 Телепорт всё ещё открыт, не упусти шанс поучавствовать на мероприятии, вводи /tpmp')
+                end
+            end
+            if imgui.Button(u8'Начать мероприятие', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do wait(0) end
+                    sampSendDialogResponse(5343, 1, 0, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    mp = true
+                    showCursor(false,false)
+                    sbor = false
+                end)
+            end
+            if imgui.Button(u8'Прекратить набор', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do wait(0) end
+                    sampSendDialogResponse(5343, 1, 0, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                    thisScript():reload()
+                end)
+            end
+        end
+        if mp then
+            if imgui.Button(u8'Выдать всем хп', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do wait(0) end
+                    sampSendDialogResponse(5343, 1, 2, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                end)
+            end
+            if imgui.Button(u8'Обеззаружить всех', imgui.ImVec2(230, 30)) then
+                lua_thread.create(function()
+                    sampSendChat('/mp')
+                    wait(700)
+                    while not sampIsDialogActive(5343) do wait(0) end
+                    sampSendDialogResponse(5343, 1, 3, nil)
+                    wait(700)
+                    sampCloseCurrentDialogWithButton(0)
+                end)
+            end
+            if imgui.Button(u8'Завершить МП досрочно', imgui.ImVec2(230, 30)) then
+                showCursor(false,false)
+                showCursor(false,false)
+                thisScript():reload()
+            end
+        end
+        if isKeyJustPressed(VK_F) and not sampIsChatInputActive() and not sampIsDialogActive() then
+            if cursor then
+                cursor = false
+                showCursor(false,false)
+            else
+                showCursor(true,false)
+                cursor = true
+            end
+        end
+        imgui.End()
+    end
 end
 
 function imgui.Tooltip(text)
@@ -1299,7 +1438,7 @@ function sampSendInputChat(text) -- отправка в чат через ф6
 end
 
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-    if dialogId == 5343 and (not windows.main_window_state.v and not windows.secondary_window_state.v and not windows.russkaya_window_state.v and not windows.menu_window_state.v and not windows.corol_window_state.v and not windows.poliv_window_state.v and not windows.pryatki_window_state.v and not windows.sportzal_window_state.v) then
+    if dialogId == 5343 and (not windows.main_window_state.v and not windows.custom_window_state.v and not windows.secondary_window_state.v and not windows.russkaya_window_state.v and not windows.menu_window_state.v and not windows.corol_window_state.v and not windows.poliv_window_state.v and not windows.pryatki_window_state.v and not windows.sportzal_window_state.v) then
         windows.main_window_state.v = true
         imgui.Process = true
     end
@@ -1382,16 +1521,11 @@ function style(id) -- ТЕМЫ
     local colors = style.Colors
     local clr = imgui.Col
     local ImVec4 = imgui.ImVec4
-
-    style.WindowRounding = 2.0
-    style.WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
-    style.ChildWindowRounding = 2.0
-    style.FrameRounding = 2.0
-    style.ItemSpacing = imgui.ImVec2(5.0, 4.0)
-    style.ScrollbarSize = 13.0
-    style.ScrollbarRounding = 0
-    style.GrabMinSize = 8.0
-    style.GrabRounding = 1.0
+    style.IndentSpacing = 25.0
+    style.GrabMinSize = 15.0
+    style.GrabRounding = 7.0
+    style.ChildWindowRounding = 8.0
+    style.FrameRounding = 6.0
     if id == 0 then -- Темно-Синяя
 		colors[clr.Text]                 = ImVec4(1.00, 1.00, 1.00, 1.00)
 		colors[clr.TextDisabled]         = ImVec4(0.73, 0.75, 0.74, 1.00)
