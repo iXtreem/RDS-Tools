@@ -741,9 +741,8 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.Text(u8(v))
 			end
-			if imgui.Button(u8"Сбросить все значения.", imgui.ImVec2(410, 24)) then
+			if imgui.Button(u8"Сбросить значения.", imgui.ImVec2(410, 24)) then
 				for k,v in pairs(cfg.binder_key) do cfg.binder_key[k] = nil end
-				cfg.settings.fast_key_wallhack = 'None'
 				save()
 			end
 		end
@@ -2533,13 +2532,13 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			for i = 1, #text - 1 do
 				local _,weapon, patron = text[i]:match('(%d+)	Weapon: (%d+)     Ammo: (.+)')
 				if (text[i]:find('-')) or (weapon == '0' and patron ~= '0') then
-					wait(500)
-					setVirtualKeyDown(119, true) -- screenshot F8
-					setVirtualKeyDown(119, false)
 					sampAddChatMessage(tag .. 'Оружие (ID): ' .. weapon..'. Патроны: '..patron, -1)
 					if notify_report then
 						notify_report.addNotify('{66CDAA}[AT] Анти-чит', 'Оружие (ID): ' .. weapon..'\nПатроны: '..patron, 2,2,10)
 					end
+					wait(500)
+					setVirtualKeyDown(119, true) -- screenshot F8
+					setVirtualKeyDown(119, false)
 					player_cheater = true
 					break
 				end
