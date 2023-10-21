@@ -57,8 +57,8 @@ local checkbox = {
 	auto_al = imgui.ImBool(cfg.settings.auto_al),
 	warning_report = imgui.ImBool(cfg.settings.warning_report),
 }
-local style_selected = imgui.ImInt(0)
-local style_selected2 = imgui.ImInt(0)
+local style_selected2 = imgui.ImInt(cfg.settings.count_warning-1)
+local style_selected = imgui.ImInt(cfg.settings.number_report-2)
 local makeadmin = {}
 local kai = {}
 local newlvl = 1
