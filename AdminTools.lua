@@ -3,7 +3,7 @@ require 'lib.sampfuncs'
 script_name 'AdminTool'  
 script_author 'Neon4ik' 
 script_properties("work-in-pause") 
-local version = 3.4 -- Версия скрипта СОЗДАТЬ ОТДЕЛЬНЫЙ ФАЙЛ ДЛЯ СОХРАНЕНИЯ СТИЛЯ
+local version = 3.41 -- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui = require 'imgui' 
@@ -141,7 +141,7 @@ local buffer = {
 	newmat = imgui.ImBuffer(256),
 	newosk = imgui.ImBuffer(256),
 	add_new_text = imgui.ImBuffer(u8(cfg.settings.mytextreport), 256),
-	bloknotik = imgui.ImBuffer(cfg.settings.bloknotik, 4096),
+	bloknotik = imgui.ImBuffer(u8(cfg.settings.bloknotik), 4096),
 	new_flood_mess = imgui.ImBuffer(4096),
 	title_flood_mess = imgui.ImBuffer(256),
 	new_command_title = imgui.ImBuffer(256),
@@ -162,7 +162,6 @@ local menu2 = {true, -- основное меню
 }
 local textdraw = {} -- узнаем ид текстравов для взаимодействия с ними
 local style_selected = imgui.ImInt(cfg.settings.style)
-local style_list = {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8"Бирюзовая тема", u8"Розовая тема", u8"Голубая тема"}
 local selected_item = imgui.ImInt(cfg.settings.size_adminchat)
 local font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
 local font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
@@ -173,6 +172,7 @@ local adminchat = {}
 local ears = {}
 local inforeport = {}
 local pravila = {}
+
 local spisok_in_form = { -- список для автоформ
 	'ban',
 	'jail',
@@ -190,12 +190,10 @@ local spisokproject = { -- список проектов за который идет автомут
 	'монсер',
 	'арз',
 	'arz',
-	'радмир',
-	'родина рп'
 }
 local spisokoskrod = { -- список оск.род за который идет автомут
 	'mq',
-	'rnq'
+	'rnq',
 }
 local spisokrz = { -- список примерного розжига
 	'слава укр',
@@ -296,7 +294,7 @@ function main() -- основной сценарий скрипта
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		ScriptExport()
+	--	ScriptExport()
 	end
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
 	if not doesCharExist(getWorkingDirectory() .. "\\config\\AT\\rules.txt") then
@@ -704,7 +702,7 @@ function imgui.OnDrawFrame()
 				end
 			end
 			imgui.SameLine()
-			if imgui.Button(u8'Сбросить', imgui.ImVec2(200,24)) then
+			if imgui.Button(u8'Сброcить', imgui.ImVec2(200,24)) then
 				cfg.settings.fast_key_ans = 'None'
 				save()
 			end
@@ -725,14 +723,14 @@ function imgui.OnDrawFrame()
 			imgui.CenterText(u8"Вкл/выкл WallHack")
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.fast_key_wallhack))
-			if imgui.Button(u8"Coxрaнить.", imgui.ImVec2(200, 24)) then
+			if imgui.Button(u8"Coxрaнить. ", imgui.ImVec2(200, 24)) then
 				if getDownKeysText() and not getDownKeysText():find('+') then
 					cfg.settings.fast_key_wallhack = getDownKeysText()
 					save()
 				end
 			end
 			imgui.SameLine()
-			if imgui.Button(u8'Сбросить', imgui.ImVec2(200,24)) then
+			if imgui.Button(u8'Сбрoсить', imgui.ImVec2(200,24)) then
 				cfg.settings.fast_key_wallhack = 'None'
 				save()
 			end
@@ -745,6 +743,7 @@ function imgui.OnDrawFrame()
 			end
 			if imgui.Button(u8"Сбросить все значения.", imgui.ImVec2(410, 24)) then
 				for k,v in pairs(cfg.binder_key) do cfg.binder_key[k] = nil end
+				cfg.settings.fast_key_wallhack = 'None'
 				save()
 			end
 		end
@@ -1262,7 +1261,7 @@ function imgui.OnDrawFrame()
 			end
 			imgui.CenterText(u8'Выберите тему оформления')
 			imgui.PushItemWidth(400)
-			if imgui.Combo("##selected", style_selected, style_list, style_selected) then
+			if imgui.Combo("##selected", style_selected, {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8"Бирюзовая тема", u8"Розовая тема", u8"Голубая тема"}, style_selected) then
 				style(style_selected.v) -- Применяем сразу же выбранный стиль
 				cfg.settings.style = style_selected.v 
 				save()
@@ -1613,7 +1612,7 @@ function imgui.OnDrawFrame()
 				elseif i == 15 then imgui.Text(u8'Коллизия: ' .. inforeport[i]) end
 			end
 			if imgui.Button(u8'Посмотреть первую статистику', imgui.ImVec2(250, 25)) then
-				sampAddChatMessage(tag .. 'У вас открыт диалог, закройте его.', -1)
+				sampSendChat('/statpl ' .. sampGetPlayerNickname(control_player_recon))
 			end
 			if imgui.Button(u8'Посмотреть вторую статистику', imgui.ImVec2(250, 25)) then
 				sampSendClickTextdraw(textdraw.stats)
@@ -1622,7 +1621,7 @@ function imgui.OnDrawFrame()
 				sampSendChat('/offstats ' .. sampGetPlayerNickname(control_player_recon))
 				sampSendDialogResponse(16196, 1, 0)
 			end
-			if isKeyJustPressed(VK_R) and not sampIsChatInputActive() and not sampIsDialogActive() then
+			if isKeyJustPressed(VK_R) and not (sampIsChatInputActive() and sampIsDialogActive()) then
 				sampSendClickTextdraw(textdraw.refresh)
 				if cfg.settings.keysync then
 					lua_thread.create(function()
@@ -1821,25 +1820,7 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.PushItemWidth(20)
 		if imgui.Combo('##color', selected_item, {'1', '2', '3', '4', '5', '6', '7', '8', '9'}, 9) then
-			if selected_item.v == 0 then
-			  	cfg.settings.size_adminchat = 9
-			elseif selected_item.v == 1 then
-				cfg.settings.size_adminchat = 10
-			elseif selected_item.v == 2 then
-				cfg.settings.size_adminchat = 11
-			elseif selected_item.v == 3 then
-				cfg.settings.size_adminchat = 12
-			elseif selected_item.v == 4 then
-				cfg.settings.size_adminchat = 13
-			elseif selected_item.v == 5 then
-				cfg.settings.size_adminchat = 14
-			elseif selected_item.v == 6 then
-				cfg.settings.size_adminchat = 15
-			elseif selected_item.v == 7 then
-				cfg.settings.size_adminchat = 16
-			elseif selected_item.v == 8 then
-				cfg.settings.size_adminchat = 17
-			end
+			cfg.settings.size_adminchat = selected_item.v + 9
 			save()
 			font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
 		end
@@ -1875,25 +1856,7 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.PushItemWidth(20)
 		if imgui.Combo('##color2', selected_item, {'1', '2', '3', '4', '5', '6', '7', '8', '9'}, 9) then
-			if selected_item.v == 0 then
-			  	cfg.settings.size_ears = 9
-			elseif selected_item.v == 1 then
-				cfg.settings.size_ears = 10
-			elseif selected_item.v == 2 then
-				cfg.settings.size_ears = 11
-			elseif selected_item.v == 3 then
-				cfg.settings.size_ears = 12
-			elseif selected_item.v == 4 then
-				cfg.settings.size_ears = 13
-			elseif selected_item.v == 5 then
-				cfg.settings.size_ears = 14
-			elseif selected_item.v == 6 then
-				cfg.settings.size_ears = 15
-			elseif selected_item.v == 7 then
-				cfg.settings.size_ears = 16
-			elseif selected_item.v == 8 then
-				cfg.settings.size_ears = 17
-			end
+			cfg.settings.size_ears = selected_item.v + 9
 			save()
 			font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
 		end
@@ -2361,7 +2324,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendChat('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
 						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
 						end
 						return false
 					end
@@ -2373,7 +2336,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendChat('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
 						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
 						end
 						return false
 					end
@@ -2394,7 +2357,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
 						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
 						end
 						return false
 					end
@@ -2406,7 +2369,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampSendChat('/mute ' .. oskid .. ' 5000 Розжиг межнац.розни')
 						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n ' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
 						end
 						return false
 					end
@@ -2591,7 +2554,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					notify_report.addNotify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты', 2,2,10)
 				end
 			else
-				sampAddChatMessage(tag .. '[Проверка оружия] Пробил игрока ' .. title .. '[' .. sampGetPlayerIdByNickname(title) .. ']. Вердикт: чит не обнаружен.', -1)
+				sampAddChatMessage(tag .. 'Пробил игрока ' .. title .. '[' .. sampGetPlayerIdByNickname(title) .. ']. Читов не обнаружено.', -1)
 			end
 		end)
 	end
@@ -2761,7 +2724,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		end
 		lua_thread.create(function()
 			while not (answer.rabotay or answer.uto4 or answer.nakajy or answer.customans or answer.slejy or answer.jb or answer.ojid or answer.moiotvet or answer.uto4id or answer.nakazan or answer.otklon or answer.peredamrep) do -- ждем нажатия клавиши
-				wait(200)
+				wait(100)
 			end
 			sampSendDialogResponse(dialogId,1,0)
 		end)
@@ -3596,7 +3559,7 @@ sampRegisterChatCommand('wh' , function()
 		cfg.settings.wallhack = true
 		save()
 		if notify_report then
-			notify_report.addNotify('{66CDAA}[AT-WallHack]', 'Опция успешно включена\nДальность видимости игроков увеличена', 2, 2, 5)
+			notify_report.addNotify('{66CDAA}[AT-WallHack]', 'Опция успешно включена', 2, 2, 5)
 		end
 		checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		on_wallhack()
@@ -3604,7 +3567,7 @@ sampRegisterChatCommand('wh' , function()
 		cfg.settings.wallhack = false
 		save()
 		if notify_report then
-			notify_report.addNotify('{66CDAA}[AT-WallHack]', 'Опция успешно включена\nДальность видимости игроков сокращена', 2, 2, 5)
+			notify_report.addNotify('{66CDAA}[AT-WallHack]', 'Опция успешно выключена', 2, 2, 5)
 		end
 		checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		off_wallhack()
