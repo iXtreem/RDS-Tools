@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 0.7
+local version = 0.6
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -123,7 +123,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Кол-во повторов сообщения: ')
 			imgui.SameLine()
 			imgui.PushItemWidth(50)
-			if imgui.Combo("##selected", style_selected2, {'1', '2', '3', '4', '5'}, style_selected2) then
+			if imgui.Combo("##selected2", style_selected2, {'1', '2', '3', '4', '5'}, 5) then
 				cfg.settings.count_warning = style_selected2.v + 1
 				save()
 			end
@@ -131,7 +131,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Триггер (кол-во репортов): ')
 			imgui.SameLine()
 			imgui.PushItemWidth(50)
-			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, style_selected) then
+			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, 5) then
 				cfg.settings.number_report = style_selected.v + 2
 				save()
 			end
@@ -230,13 +230,11 @@ function imgui.OnDrawFrame()
 		imgui.Begin(u8"Настройки", secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-		imgui.Text(u8'От:')
+		imgui.Text(u8'От:              До:')
 		imgui.PushItemWidth(50)
 		imgui.InputText(u8'##1', buffer.text_buffer2)
 		imgui.PopItemWidth()
 		imgui.SameLine()
-		imgui.SetCursorPosX(80)
-		imgui.Text(u8'До:')
 		imgui.SetCursorPosX(75)
 		imgui.PushItemWidth(50)
 		imgui.InputText('##2', buffer.text_buffer3)
@@ -411,7 +409,7 @@ function imgui.OnDrawFrame()
 		imgui.PopItemWidth()
 		imgui.Text(u8'Добавить искл: /newadm')
 		imgui.Text(u8'Удалить искл: /deladm')
-		if imgui.Button(u8'Вывести исключения в чат') then
+		if imgui.Button(u8'Вывести исключения') then
 			for i = 2, #cfg.listNoResult do
 				sampAddChatMessage(cfg.listNoResult[i],-1)
 			end
@@ -422,7 +420,8 @@ end
 function sampev.onServerMessage(color,text)
 	if cfg.settings.auto_hello and text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") and not AFK then
 		local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-		local autorizate_admin = text:match('%[(%d+)%]') 
+		local autorizate_admin = text:match('%[(%d+)%]')
+		sampAddChatMessage(text, -1) 
 		if autorizate_admin ~= myid then
 			lua_thread.create(function()
 				while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
@@ -432,14 +431,14 @@ function sampev.onServerMessage(color,text)
 		return true
 	end --[A] Andy.(85) не авторизовался как администратор уже 1 минут(ы)
 	if cfg.settings.auto_al and not AFK and text:match('%[A%] (.+)%((%d+)%) не авторизовался как администратор уже') then --[A] Dirty_DeSanta(76) не авторизовался как администратор уже 1 минут(ы)
-		local autorizate_admin = text:match('((%d+)%)')
+		local _, autorizate_admin = text:match('(.+)%((%d+)%)')
+		sampAddChatMessage(text,-1)
 		lua_thread.create(function()
 			while sampIsDialogActive() do wait(0) end
 			sampSendChat('/ans ' .. autorizate_admin .. ' Здравствуйте! Вы забыли ввести /alogin!')
 			wait(500)
 			sampSendChat('/ans ' .. autorizate_admin .. ' Введите команду /alogin и свой пароль, пожалуйста.')
 		end)
-		return true
 	end
 	if cfg.settings.warning_report and not AFK and text:match('Жалоба #(%d) | ') then
 		local number_report = tonumber(text:match('Жалоба #(%d) | '))
@@ -449,7 +448,7 @@ function sampev.onServerMessage(color,text)
 				for i = 0, cfg.settings.count_warning do
 					if not sampIsChatInputActive() then
 						sampSendChat('/a ' .. cfg.settings.mytext_warning_report)
-						wait(1000)
+						wait(2000)
 					end
 				end
 			end)
