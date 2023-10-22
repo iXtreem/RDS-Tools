@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 0.8
+local version = 0.9
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -59,6 +59,8 @@ local checkbox = {
 }
 local style_selected2 = imgui.ImInt(cfg.settings.count_warning-1)
 local style_selected = imgui.ImInt(cfg.settings.number_report-2)
+local selected_item = imgui.ImInt(0)
+local selected_item2 = imgui.ImInt(0)
 local makeadmin = {}
 local kai = {}
 local newlvl = 1
@@ -221,13 +223,13 @@ function imgui.OnDrawFrame()
         imgui.End()
     end
 	if secondary_window_state.v then
-		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowPos(imgui.ImVec2(sw * 0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8"Настройки", secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.Text(u8'От:              До:')
 		imgui.PushItemWidth(50)
-		imgui.InputText(u8'##1', buffer.text_buffer2)
+		imgui.InputText('##1', buffer.text_buffer2)
 		imgui.PopItemWidth()
 		imgui.SameLine()
 		imgui.SetCursorPosX(75)
