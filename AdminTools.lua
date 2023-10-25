@@ -76,8 +76,8 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		autoprefix = true,
 	},
 	customotvet = {},
-	osk = {'лох', 'еблан', 'пидр', 'пидор', 'уебан', 'ебанат', 'крыса', 'долбае', 'долбое'},
-	mat = {'бля', 'хуй', 'пизд', 'ахуе', 'пидр', 'пидор'},
+	osk = {},
+	mat = {},
 	myflood = {},
 	my_command = {},
 	binder_key = {},
@@ -1980,11 +1980,11 @@ function imgui.OnDrawFrame()
 	end
 	if windows.new_position_adminchat.v then -- сохранение позиции админ чата
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8'Новая позиция рендера чата', windows.new_position_adminchat, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.Begin(u8'Админ-чат', windows.new_position_adminchat, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
-		imgui.CenterText(u8'Админ - чат')
+		imgui.CenterText(u8'Админ чат')
 		if imgui.Button(u8'Сохранить позицию ' .. fa.ICON_ARROWS) then
 			cfg.settings.position_adminchat_x = imgui.GetWindowPos().x
 			cfg.settings.position_adminchat_y = imgui.GetWindowPos().y
@@ -1994,7 +1994,15 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.PushItemWidth(20)
 		if imgui.Combo('##color', selected_item, {'1', '2', '3', '4', '5', '6', '7', '8', '9'}, 9) then
-			cfg.settings.size_adminchat = selected_item.v + 9
+			if selected_item.v == 0 then cfg.settings.size_adminchat = 9
+			elseif selected_item.v == 1 then cfg.settings.size_adminchat = 10
+			elseif selected_item.v == 2 then cfg.settings.size_adminchat = 11
+			elseif selected_item.v == 3 then cfg.settings.size_adminchat = 12
+			elseif selected_item.v == 4 then cfg.settings.size_adminchat = 13
+			elseif selected_item.v == 5 then cfg.settings.size_adminchat = 14
+			elseif selected_item.v == 6 then cfg.settings.size_adminchat = 15
+			elseif selected_item.v == 7 then cfg.settings.size_adminchat = 16
+			elseif selected_item.v == 8 then cfg.settings.size_adminchat = 17 end
 			save()
 			font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
 		end
@@ -2007,7 +2015,6 @@ function imgui.OnDrawFrame()
 			elseif selected_item.v == 1 then cfg.settings.strok_admin_chat = 5
 			elseif selected_item.v == 2 then cfg.settings.strok_admin_chat = 8
 			elseif selected_item.v == 3 then cfg.settings.strok_admin_chat = 11 end
-			--========= Обнуление чата если выбранное кол-во меньше имеющегося ======-----
 			if #adminchat > cfg.settings.strok_admin_chat then for i = #adminchat, cfg.settings.strok_admin_chat do adminchat[i] = nil end end
 			save()
 		end
@@ -2021,8 +2028,16 @@ function imgui.OnDrawFrame()
 		imgui.Text(u8'Размер: ')
 		imgui.SameLine()
 		imgui.PushItemWidth(20)
-		if imgui.Combo('##color2', selected_item_ears, {'1', '2', '3', '4', '5', '6', '7', '8', '9'}, 9) then
-			cfg.settings.size_ears = selected_item_ears.v + 1
+		if imgui.Combo('##color2', selected_item, {'1', '2', '3', '4', '5', '6', '7', '8', '9'}, 9) then
+			if selected_item.v == 0 then cfg.settings.size_ears = 9
+			elseif selected_item.v == 1 then cfg.settings.size_ears = 10
+			elseif selected_item.v == 2 then cfg.settings.size_ears = 11
+			elseif selected_item.v == 3 then cfg.settings.size_ears = 12
+			elseif selected_item.v == 4 then cfg.settings.size_ears = 13
+			elseif selected_item.v == 5 then cfg.settings.size_ears = 14
+			elseif selected_item.v == 6 then cfg.settings.size_ears = 15
+			elseif selected_item.v == 7 then cfg.settings.size_ears = 16
+			elseif selected_item.v == 8 then cfg.settings.size_ears = 17 end
 			save()
 			font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
 		end
@@ -2030,14 +2045,13 @@ function imgui.OnDrawFrame()
 		imgui.Text(u8'Кол-во строк: ')
 		imgui.SameLine()
 		imgui.PushItemWidth(20)
-		if imgui.Combo('##stroki2', selected_item_ears, {'3', '6', '9', '12', '15','20'}, 6) then -- счет на -1 число, т.к счет идет с 0
-			if selected_item_ears.v == 0 then cfg.settings.strok_ears = 2
-			elseif selected_item_ears.v == 1 then cfg.settings.strok_ears = 5
-			elseif selected_item_ears.v == 2 then cfg.settings.strok_ears = 8
-			elseif selected_item_ears.v == 3 then cfg.settings.strok_ears = 11
-			elseif selected_item_ears.v == 4 then cfg.settings.strok_ears = 14
-			elseif selected_item_ears.v == 5 then cfg.settings.strok_ears = 19 end
-			----============ Если кол-во строк в чате меньше чем выбрано пользователем - сброс чата =================
+		if imgui.Combo('##stroki2', selected_item, {'3', '6', '9', '12', '15','20'}, 6) then -- счет на -1 число, т.к счет идет с 0
+			if selected_item.v == 0 then cfg.settings.strok_ears = 2
+			elseif selected_item.v == 1 then cfg.settings.strok_ears = 5
+			elseif selected_item.v == 2 then cfg.settings.strok_ears = 8
+			elseif selected_item.v == 3 then cfg.settings.strok_ears = 11
+			elseif selected_item.v == 4 then cfg.settings.strok_ears = 14
+			elseif selected_item.v == 5 then cfg.settings.strok_ears = 19 end
 			if #ears > cfg.settings.strok_ears then for i = #ears, cfg.settings.strok_ears do ears[i] = nil end end
 			save()
 		end
