@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 3.5 										-- Версия скрипта
+local version = 3.51 										-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -407,8 +407,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		td 		= 		'/jail _ 300 car in /trade',
 		jm 		= 		'/jail _ 300 Нарушение правил МП',
 		dz 		= 		'/jail _ 300 ДМ/ДБ в зеленой зоне',
-		dz2 	= 		'/jail _ 600 ДМ/ДБ в зеленой зоне x2',
-		dz3 	= 		'/jail _ 900 ДМ/ДБ в зеленой зоне x3',
 		dk 		= 		'/jail _ 900 ДБ Ковш в зеленой зоне',
 		jc 		= 		'/jail _ 900 Использование сторонних скриптов/ПО',
 		sh 		= 		'/jail _ 900 SpeedHack/FlyCar',
@@ -1606,162 +1604,68 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 	if windows.recon_ban_menu.v then
-		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8"Выдать блокировку аккаунта", windows.recon_ban_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.4), sh * 0.4), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowSize(imgui.ImVec2(265, 400), imgui.Cond.FirstUseEver)
+		imgui.Begin(u8"Выдать блокировку аккаунта", windows.recon_ban_menu, imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.CenterText(u8'Выберите причину')
-		if imgui.Button(u8'Читы', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/ch ' .. control_player_recon)
-			windows.recon_ban_menu.v = false
-		end
-		if imgui.Button(u8'Многочисленные нарушения (3)', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/iban ' .. control_player_recon .. ' 3 Неадекватное поведение')
-			windows.recon_ban_menu.v = false
-		end
-		if imgui.Button(u8'Нарушение правил хелпера', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/oskhelper ' .. control_player_recon)
-			windows.recon_ban_menu.v = false
-		end
-		if imgui.Button(u8'Оскорбление проекта', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/bosk ' .. control_player_recon)
-			windows.recon_ban_menu.v = false
-		end
-		if imgui.Button(u8'Реклама', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/reklama ' .. control_player_recon)
-			windows.recon_ban_menu.v = false
-		end
-		if imgui.Button(u8'Обман', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/obm ' .. control_player_recon)
-			windows.recon_ban_menu.v = false
-		end
-		if imgui.Button(u8'Название банды', imgui.ImVec2(250, 25)) then
-			sampSendChat('/ban ' .. control_player_recon .. ' 7 Название банды')
-			windows.recon_ban_menu.v = false
+		for k,v in pairs(basic_command.ban) do
+			local name = string.gsub(string.gsub(string.gsub(v, '/ban _ (%d+) ', ''), '/siban _ (%d+) ', ''), '/iban _ (%d+) ', '')
+			if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
+				sampSendChat(string.gsub(v, '_', control_player_recon))
+				windows.recon_ban_menu.v = false
+			end
 		end
 		imgui.End()
 	end
 	if windows.recon_jail_menu.v then 
-		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8"Посадить игрока в тюрьму", windows.recon_jail_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.4), sh * 0.4), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowSize(imgui.ImVec2(265, 400), imgui.Cond.FirstUseEver)
+		imgui.Begin(u8"Посадить игрока в тюрьму", windows.recon_jail_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.CenterText(u8'Выберите причину')
-		if imgui.Button(u8'DM/DB in ZZ', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/dz ' .. control_player_recon)
-			windows.recon_jail_menu.v = false
-		end
-		if imgui.Button(u8"Злоупотребление VIP'ом", imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/zv ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_jail_menu.v = false
-		end
-		if imgui.Button(u8'Spawn Kill', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/sk ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_jail_menu.v = false
-		end
-		if imgui.Button(u8'Car in trade/ZZ', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/td ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_jail_menu.v = false
-		end
-		if imgui.Button(u8'Чит', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/jcb ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_jail_menu.v = false
-		end
-		if imgui.Button(u8'Чит безвредный', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/jc ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_jail_menu.v = false
-		end
-		if imgui.Button(u8'ДБ ковш в зеленой зоне', imgui.ImVec2(250, 25)) then
-			sampSendChat('/jail ' .. control_player_recon .. ' ДБ ковш в зеленой зоне')
-			showCursor(false,false)
-			windows.recon_jail_menu.v = false
+		for k,v in pairs(basic_command.jail) do
+			local name = string.gsub(v, '/jail _ (%d+) ', '')
+			if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
+				sampSendChat(string.gsub(v, '_', control_player_recon))
+				windows.recon_jail_menu.v = false
+			end
 		end
 		imgui.End()
 	end
 	if windows.recon_mute_menu.v then 
-		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8"Заблокировать чат игроку", windows.recon_mute_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.4), sh * 0.4), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowSize(imgui.ImVec2(265, 400), imgui.Cond.FirstUseEver)
+		imgui.Begin(u8"Заблокировать чат игроку", windows.recon_mute_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.CenterText(u8'Выберите причину')
-		if imgui.Button(u8'Оскорбление/Унижение', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/ok ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8"Мат", imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/m ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8"Флуд", imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/fd ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8'Попрошайничество', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/po ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8'Оскорбление/Упоминание родных', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/or ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8'Оскорбление администрации', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/oa ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8'Клевета на администрацию', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/kl ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8'Злоупотребление символами', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/zs ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8'Выдача себя за администратора', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/ia ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
-		end
-		if imgui.Button(u8'Упоминание сторонних проектов', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/up ' .. control_player_recon)
-			showCursor(false,false)
-			windows.recon_mute_menu.v = false
+		for k,v in pairs(basic_command.mute) do
+			local name = string.gsub(v, '/mute _ (%d+) ', '')
+			if not name:find('x(%d+)') and not name:find('х(%d+)') then
+				if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
+					sampSendChat(string.gsub(v, '_', control_player_recon))
+					windows.recon_mute_menu.v = false
+				end
+			end
 		end
 		imgui.End()
 	end
 	if windows.recon_kick_menu.v then 
-		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8"Кикнуть игрока с сервера", windows.recon_kick_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.4), sh * 0.4), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowSize(imgui.ImVec2(265, 400), imgui.Cond.FirstUseEver)
+		imgui.Begin(u8"Кикнуть игрока с сервера", windows.recon_kick_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.CenterText(u8'Выберите причину')
-		if imgui.Button(u8'AFK /arena', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/cafk ' .. control_player_recon)
-			windows.recon_menu.v = false
-		end
-		if imgui.Button(u8"Nick 1/3", imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/kk1 ' .. control_player_recon)
-			windows.recon_menu.v = false
-		end
-		if imgui.Button(u8"Nick 2/3", imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/kk2 ' .. control_player_recon)
-			windows.recon_menu.v = false
-		end
-		if imgui.Button(u8'Nick 3/3', imgui.ImVec2(250, 25)) then
-			sampSendInputChat('/kk3 ' .. control_player_recon)
-			windows.recon_menu.v = false
+		for k,v in pairs(basic_command.kick) do
+			local name = string.gsub(v, '/kick _ ', '')
+			if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
+				sampSendChat(string.gsub(v, '_', control_player_recon))
+				windows.recon_kick_menu.v = false
+			end
 		end
 		imgui.End()
 	end
@@ -2431,93 +2335,114 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		return false --
 	end
 	if cfg.settings.automute and not AFK then 
-        text = text:rlower(text:lower()) .. ' '
+		text = text:rlower(text:lower()) .. ' '
 		if cfg.settings.smart_automute then
 			if text:match('жалоба') then
 				oskid = tonumber(text:match('%[(%d+)%]'))
 				for i = 0, #spisokoskrod do
 					if text:match('}'..tostring(spisokoskrod[i])) or text:match('%s'..tostring(spisokoskrod[i])) then
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampSendChat('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+						if not sampIsDialogActive() then
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampSendChat('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
+							if notify_report then
+								notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+							end
+							return false
+						else
+							sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
 						end
-						return false
 					end
 				end
 				for i = 0, #spisokrz do
 					if text:match('}'..tostring(spisokrz[i])) or text:match('%s'..tostring(spisokrz[i])) then
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampSendChat('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
-						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+						if not sampIsDialogActive() then
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampSendChat('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
+							if notify_report then
+								notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+							end
+							return false
+						else
+							sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
 						end
-						return false
 					end
 				end
 			end
 		end
-        if (text:match("(.*)%((%d+)%):%s(.+)") or text:match("(.*)%[(%d+)%]:%s(.+)")) and not text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)") and not text:match('написал %[(%d+)%]:') and not text:match('ответил (.*)%[(%d+)%]: (.*)') and not text:match('жалоба') then
-            if text:match('%((%d+)%)') then
-                oskid = text:match('%((%d+)%)')
-            else
-                oskid = text:match('%[(%d+)%]')
-            end
+		if (text:match("(.*)%((%d+)%):%s(.+)") or text:match("(.*)%[(%d+)%]:%s(.+)")) and not text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)") and not text:match('написал %[(%d+)%]:') and not text:match('ответил (.*)%[(%d+)%]: (.*)') and not text:match('жалоба') then
+			if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)')
+			else oskid = text:match('%[(%d+)%]') end
 			if cfg.settings.smart_automute then
 				for i = 0, #spisokoskrod do
 					if text:match('%s'.. tostring(spisokoskrod[i])) or text:match('}'..tostring(spisokoskrod[i])) then
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+						if not sampIsDialogActive() then
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
+							if notify_report then
+								notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
+							end
+							return false
+						else
+							sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
 						end
-						return false
 					end
 				end
 				for i = 0, #spisokrz do
 					if text:match('}'..tostring(spisokrz[i])) or text:match('%s'..tostring(spisokrz[i])) then
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampSendChat('/mute ' .. oskid .. ' 5000 Розжиг межнац.розни')
-						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+						if not sampIsDialogActive() then
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampSendChat('/mute ' .. oskid .. ' 5000 Розжиг межнац.розни')
+							if notify_report then
+								notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
+							end
+							return false
+						else
+							sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
 						end
-						return false
 					end
 				end
 				for i = 0, #spisokproject do
 					if text:match('%s' .. tostring(spisokproject[i])) or text:match('}' .. tostring(spisokproject[i])) then
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampSendInputChat('/up ' .. oskid)
-						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(spisokproject[i]), 2,1,10)
+						if not sampIsDialogActive() then
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+							sampAddChatMessage('=======================================================', 0x00FF00)
+							sampSendInputChat('/up ' .. oskid)
+							if notify_report then
+								notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(spisokproject[i]), 2,1,10)
+							end
+							return false
+						else
+							sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
 						end
-						return false
 					end
 				end
 			end
-            for i = 0, #cfg.osk do
-                if text:match('%s'..tostring(cfg.osk[i])) or text:match('}'..tostring(cfg.osk[i])) and not text:match('я ' .. tostring(cfg.osk[i])) then
+			for i = 0, #cfg.osk do
+				if text:match('%s'..tostring(cfg.osk[i])) or text:match('}'..tostring(cfg.osk[i])) and not text:match('я ' .. tostring(cfg.osk[i])) then
 					if cfg.settings.smart_automute then
 						for d = 0, #spisokor do
 							if text:match('%s'.. tostring(spisokor[d])) or text:match('}'..tostring(spisokor[d])) then
-								sampAddChatMessage('=======================================================', 0x00FF00)
-								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-								sampAddChatMessage('=======================================================', 0x00FF00)
-								sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
-								if notify_report then
-									notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+								if not sampIsDialogActive() then
+									sampAddChatMessage('=======================================================', 0x00FF00)
+									sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+									sampAddChatMessage('=======================================================', 0x00FF00)
+									sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
+									if notify_report then
+										notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+									end
+									return false
+								else
+									sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
 								end
-								return false
 							end
 						end
 					end
@@ -2529,35 +2454,43 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.osk[i]), 2,1,10)
 					end
 					return false
-                end
-            end
-            for i = 0, #cfg.mat do
-                if text:match('%s'.. tostring(cfg.mat[i])) or text:match('}'..tostring(cfg.mat[i])) then
+				end
+			end
+			for i = 0, #cfg.mat do
+				if text:match('%s'.. tostring(cfg.mat[i])) or text:match('}'..tostring(cfg.mat[i])) then
 					if cfg.settings.smart_automute then
 						for d = 0, #spisokor do
 							if text:match('%s'.. tostring(spisokor[d])) or text:match('}'..tostring(spisokor[d])) then
-								sampAddChatMessage('=======================================================', 0x00FF00)
-								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-								sampAddChatMessage('=======================================================', 0x00FF00)
-								sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
-								if notify_report then
-									notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+								if not sampIsDialogActive() then
+									sampAddChatMessage('=======================================================', 0x00FF00)
+									sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+									sampAddChatMessage('=======================================================', 0x00FF00)
+									sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
+									if notify_report then
+										notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
+									end
+									return false
+								else
+									sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
 								end
-								return false
 							end
 						end
 					end
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampSendChat('/mute ' .. oskid .. ' 300 Нецензурная лексика')
-					if notify_report then
-						notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]), 2,1,10)
-					end						
-					return false
-                end
-            end
-        end
+					if not sampIsDialogActive() then
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampSendChat('/mute ' .. oskid .. ' 300 Нецензурная лексика')
+						if notify_report then
+							notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(cfg.mat[i]), 2,1,10)
+						end						
+						return false
+					else
+						sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
+					end
+				end
+			end
+		end
 	end
 end
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
@@ -2596,10 +2529,9 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					mobile_player = false
 					sampSendChat('/tonline ' .. control_player_recon)
 				end)
-			elseif v == 'STATS' then textdraw.stats = id
-			elseif v == 'CLOSE' then
+			elseif v == 'STATS' then 
+				textdraw.stats = id
 				lua_thread.create(function()
-					textdraw.close = id
 					wait(700)
 					windows.recon_menu.v = true
 					windows.menu_in_recon.v = true
@@ -2611,6 +2543,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
 					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
 				end)
+			elseif v == 'CLOSE' then textdraw.close = id
 			elseif v == 'BAN' then return false
 			elseif v == 'MUTE' then return false
 			elseif v == 'KICK' then return false
@@ -2801,8 +2734,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			sampSendDialogResponse(dialogId, 1, _, peremrep)
 			sampCloseCurrentDialogWithButton(0)
 			while sampIsDialogActive() do wait(0) end
-			if answer.control_player then sampSendChat('/re ' .. autorid)
-			elseif answer.slejy then sampSendChat('/re ' .. reportid)
+			if answer.control_player or answer.slejy then sampSendChat('/re ' .. autorid)
 			elseif answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
 			elseif answer.nakajy then
 				if nakazatreport.oftop then sampSendChat('/rmute ' .. autorid .. ' 120 Оффтоп в /report')
@@ -2818,18 +2750,17 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			buffer.text_ans.v = ''
 			if not copies_player_recon and tonumber(autorid) and cfg.settings.answer_player_report then
 				copies_player_recon = autorid
-				ansid = reportid
 				while not windows.recon_menu.v do wait(0) end
 				while windows.recon_menu.v do wait(2000) end
 				if copies_player_recon and copies_player_recon ~= control_player_recon then
 					if sampIsPlayerConnected(copies_player_recon) then
 						imgui.Process, windows.answer_player_report.v = true, true
 						showCursor(false,false)
-						for i = 0, 10 do wait(500) if ansid ~= control_player_recon then ansid = nil copies_player_recon = nil end end
-						if windows.answer_player_report.v then windows.answer_player_report.v = false copies_player_recon, ansid = nil, nil end
+						wait(5500)
+						if windows.answer_player_report.v then windows.answer_player_report.v = false copies_player_recon = nil end
 					else sampAddChatMessage(tag .. 'Игрок, написавший репорт, находится вне сети.', -1) end
 				end
-			else copies_player_recon, ansid = nil,nil end
+			else copies_player_recon = nil end
 		end)
 		return false
 	end
@@ -2897,7 +2828,7 @@ end
 function autoonline() 
 	while true do
 		wait(61000) 
-		while sampIsDialogActive() or sampIsChatInputActive() do wait(300) end 
+		while sampIsDialogActive() do wait(300) end 
 		if not AFK then sampSendChat("/online") end 
 	end 
 end
