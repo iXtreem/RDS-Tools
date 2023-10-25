@@ -145,7 +145,7 @@ function main()
 			if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
 				wait(press_wait)
 				while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
-				sampSendChat(cfg.command[i])
+				sampSendInputChat(cfg.command[i])
 			end
 		end
 	end
