@@ -1519,8 +1519,10 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.Text(u8'<< Следить')
 		if imgui.IsItemClicked(0) then -- Если нажмет ЛКМ на текст
-			answer.rabotay = true
-			answer.control_player = true
+			if tonumber(autorid) then
+				answer.rabotay = true
+				answer.control_player = true
+			else sampAddChatMessage(tag .. 'Он не в сети, собрались уйти в слежку за небом?', -1) end
 		end
 		imgui.TextWrapped(u8('Жалоба: ' .. textreport))
 		if isKeyJustPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end
