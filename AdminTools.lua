@@ -163,10 +163,9 @@ local ears = {}													-- Все /ears сообщения хранятся тут
 local inforeport = {}											-- Вся информация о игроке в реконе хранится тут
 local pravila = {}												-- Правила/команды хранятся тут (/ahelp)
 local textdraw_delete = {  										-- Текстдравы из рекон меню, подлежащие удалению (заменить при обнове)
-	446, 153, 150, 164, 169, 186, 161, 164, 162, 169, 166, 188, 173, 168, 189, 170, 173, 189,
-	175, 178, 173, 189, 178, 190, 179, 177, 175, 183, 191, 184, 182, 159, 159, 192, 156, 160,
-	158, 182, 151, 152, 193, 155, 167, 174, 171, 187, 176, 181, 180, 157, 154, 185, 148, 165, 
-	149, 144, 146, 141, 163, 172, 147, 142, 143, 145
+	144, 146, 141, 155, 153, 152, 154, 160, 179, 159, 157, 164, 180, 161,
+	169, 181, 166, 168, 174, 182, 171, 173, 150, 183, 183, 147, 149, 142,
+	143, 184, 176, 145, 158, 162, 163, 167, 172, 148
 }
 ---================= Задаем шрифт админ-чата =====================------------
 local font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
@@ -2597,7 +2596,10 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
 					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
 				end)
-			end
+			elseif v == 'BAN' then return false
+			elseif v == 'MUTE' then return false
+			elseif v == 'KICK' then return false
+			elseif v == 'JAIL' then return false end
 		end
 		------=========== Удаляем лишние текстдравы, сравнивая их с массивом =======---------------
 		for i = 0, #textdraw_delete do if id == textdraw_delete[i] then return false end end
