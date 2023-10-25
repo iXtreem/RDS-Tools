@@ -2553,9 +2553,6 @@ function sampev.onShowTextDraw(id, data) -- —читываем серверные текстдравы
 			if v == 'REFRESH' then textdraw.refresh = id  -- записываем ид кнопки обновить в реконе
 			elseif v:match('~n~') then
 				if not v:match('~g~') then 
-					windows.recon_menu.v = true
-					windows.menu_in_recon.v = true
-					imgui.Process = true
 					textdraw.inforeport = id  -- инфо панель в реконе
 					lua_thread.create(function()
 						while sampIsPlayerConnected(control_player_recon) do
@@ -2588,6 +2585,9 @@ function sampev.onShowTextDraw(id, data) -- —читываем серверные текстдравы
 				lua_thread.create(function()
 					textdraw.close = id
 					wait(700)
+					windows.recon_menu.v = true
+					windows.menu_in_recon.v = true
+					imgui.Process = true
 					if cfg.settings.keysync then keysync(control_player_recon) end
 					sampTextdrawSetPos(textdraw.close, 2000, 0)
 					sampTextdrawSetPos(textdraw.stats, 2000, 0)
