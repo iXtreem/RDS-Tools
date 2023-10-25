@@ -1559,10 +1559,10 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Tooltip('G')
 		imgui.SameLine()
-		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or isKeyDown(VK_V) then
+		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or isKeyDown(VK_B) then
 			answer.uto4id = true
 		end
-		imgui.Tooltip('V')
+		imgui.Tooltip('B')
 		imgui.SameLine()
 		if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or isKeyDown(VK_F) then
 			answer.uto4 = true
@@ -2778,12 +2778,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end  
 			elseif answer.jb then peremrep = ('Напишите жалобу на forumrds.ru')
 			elseif answer.peredamrep then peremrep = ('Передам ваш репорт.')
-			elseif answer.rabotay then
-				if not reportid then peremrep = ('Начал(а) работу по вашей жалобе.')
-				elseif reportid and reportid ~= myid then
-					if not sampIsPlayerConnected(reportid) then peremrep = ('Указанный вами игрок под ' .. reportid .. ' ID находится вне сети.')
-					else peremrep = ('Начал(а) работу по вашей жалобе.') end
-				elseif reportid == myid then peremrep = ('Начал(а) работу по вашей жалобе.') end
+			elseif answer.rabotay then peremrep = ('Начал(а) работу по вашей жалобе.')
 			elseif answer.customans then peremrep = answer.customans
 			elseif answer.uto4 then peremrep = ('Обратитесь с данной проблемой на форум https://forumrds.ru')
 			elseif answer.otklon then sampSendDialogResponse(dialogId, 1, 2, _) return false end
