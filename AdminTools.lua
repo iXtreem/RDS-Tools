@@ -2583,6 +2583,8 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 							--=========== Название ВИП =======--------
 							wait(1000)
 						end
+						windows.recon_menu.v = false
+						windows.menu_in_recon.v = false
 					end)
 				else return false end
 			elseif v:match('(.+)%((%d+)%)') then
