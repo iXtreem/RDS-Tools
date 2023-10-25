@@ -1871,8 +1871,6 @@ function imgui.OnDrawFrame()
 		imgui.SetCursorPosX(40)
 		if imgui.Button(u8'Выйти') or (isKeyJustPressed(VK_Q) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 			sampSendClickTextdraw(textdraw.close)
-			windows.recon_menu.v = false
-			windows.menu_in_recon.v = false
 		end
 		imgui.Tooltip(u8'Q')
 		imgui.SameLine()
