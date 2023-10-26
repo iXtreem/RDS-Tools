@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 3.51 										-- Версия скрипта
+local version = 3.52 										-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -42,7 +42,6 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		render_admins_positionX = sw - 300,
 		render_admins_positionY = sh - 300,
 		render_admins = false,
-		render_ears = false,
 		mytextreport = ' // Приятной игры на RDS <3',
 		position_recon_menu_x = sw - 270,
 		position_recon_menu_y = 0,
@@ -131,9 +130,9 @@ local checkbox = {
 	check_smart_automute = imgui.ImBool(cfg.settings.smart_automute),
 	check_on_custom_recon_menu = imgui.ImBool(cfg.settings.on_custom_recon_menu),
 	check_on_custom_answer = imgui.ImBool(cfg.settings.on_custom_answer),
-	check_render_ears = imgui.ImBool(cfg.settings.render_ears),
 	check_color_report = imgui.ImBool(cfg.settings.on_color_report),
 	checked_radio_button = imgui.ImInt(1),
+	check_render_ears = imgui.ImBool(false),
 }
 
 ------=================== Ввод данных в ImGui окне ===================----------------------
@@ -152,6 +151,7 @@ local buffer = {
 	find_rules = imgui.ImBuffer(256),
 	new_binder_key = imgui.ImBuffer(2056),
 }
+local render_ears = false 										-- Рендер /ears чата, настройка при входе в игру
 local menu = {true, false} 										-- переключение окон в рекон меню [True = окно активно при запуке]
 local menu2 = {true, false, false, false, false, false, false} 	-- переключение окон основное меню [True = окно активно при запуске]
 local textdraw = {} 											-- узнаем ид текстравов для взаимодействия с ними
@@ -473,6 +473,7 @@ for k,v in pairs(basic_command.ans) do sampRegisterChatCommand(k, function(param
 for k,v in pairs(basic_command.mute) do  sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
 for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.kick) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 for k,v in pairs(basic_command.ban) do sampRegisterChatCommand(k, function(param)  if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 --============= Регистрация тех же команд из массива, но для выдачи в ОФФЛАЙНЕ (окончание f) ===============================--
 for k,v in pairs(basic_command.mute) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(v, '_', param), '/mute', '/muteoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
@@ -781,8 +782,13 @@ function imgui.OnDrawFrame()
 			imgui.SameLine()
 			imgui.Text(u8'Кастом ответ на репорт')
 			if imadd.ToggleButton("##renderEars", checkbox.check_render_ears) then
-				if cfg.settings.render_ears then ears = {} end
-				sampSendChat('/ears')
+				if not sampIsDialogActive() then
+					if render_ears then ears = {} end
+					sampSendChat('/ears')
+				else 
+					checkbox.check_render_ears = imgui.ImBool(render_ears) 
+					save() 
+				end
 			end
 			imgui.SameLine()
 			imgui.Text(u8'Рендер /ears')
@@ -1691,7 +1697,7 @@ function imgui.OnDrawFrame()
 			if mobile_player then imgui.Text(fa.ICON_MOBILE)
 			else imgui.Text(fa.ICON_DESKTOP) end
 			imgui.Separator()
-			------================== Информация о игроке ===================---------
+
 			if #inforeport == 15 then
 				imgui.Text(u8'Здоровье авто: ' .. inforeport[4])
 				imgui.Text(u8'Скорость: ' .. inforeport[5])
@@ -1704,7 +1710,7 @@ function imgui.OnDrawFrame()
 				imgui.Text(u8'Турбо пакет: ' .. inforeport[14])
 				imgui.Text(u8'Коллизия: ' .. inforeport[15])
 			end
-			------================== Информация о игроке ===================---------
+
 			if imgui.Button(u8'Посмотреть первую статистику', imgui.ImVec2(250, 25)) then
 				sampSendChat('/statpl ' .. sampGetPlayerNickname(control_player_recon))
 			end
@@ -1806,7 +1812,7 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		if imgui.Button(u8'Обновить') or (isKeyJustPressed(VK_R) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 			sampSendClickTextdraw(textdraw.refresh)
-			printStyledString('update...', 500, 6)
+			printStyledString('update...', 200, 6)
 			if cfg.settings.keysync then
 				lua_thread.create(function()
 					wait(1000)
@@ -2243,16 +2249,17 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		end 
 	end
 	if text:match('%[Информация%] {FFFFFF}Теперь вы не видите сообщения игроков') then
-		cfg.settings.render_ears = false
+		render_ears = false
 		save()
-		checkbox.check_render_ears = imgui.ImBool(cfg.settings.render_ears)
+		checkbox.check_render_ears = imgui.ImBool(false)
+		ears = {}
 		if notify_report then notify_report.addNotify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно приостановлено', 2,2,6) end
 		return false
 	end
 	if text:match('%[Информация%] {FFFFFF}Теперь вы видите сообщения игроков') then
-		cfg.settings.render_ears = true
+	    render_ears = true
 		save()
-		checkbox.check_render_ears = imgui.ImBool(cfg.settings.render_ears)
+		checkbox.check_render_ears = imgui.ImBool(true)
 		if notify_report then notify_report.addNotify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано', 2,2,6) end
 		return false
 	end
@@ -2307,7 +2314,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			end
 		end
 	end
-	if cfg.settings.render_ears and (text:match('NEARBY CHAT: ') or text:match('SMS: ')) then
+	if render_ears and (text:match('NEARBY CHAT: ') or text:match('SMS: ')) then
 		local text = string.gsub(text, 'NEARBY CHAT:', '{4682B4}AT-NEAR:{FFFFFF}')
 		local text = string.gsub(text, 'SMS:', '{4682B4}AT-SMS:{FFFFFF}')
 		local text = string.gsub(text, ' отправил ', '')
