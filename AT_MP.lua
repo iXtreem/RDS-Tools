@@ -414,6 +414,10 @@ function imgui.OnDrawFrame()
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
                     end
+                    if anticrashmp then
+                        wait(700)
+                        sampSendChat('/mess 12 Предупреждаю заранее! Запрещено любое оружие, буду наказывать!')
+                    end
                     showCursor(false,false)
                 end)
             end
@@ -546,6 +550,10 @@ function imgui.OnDrawFrame()
                     wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                    end
+                    if anticrashmp then
+                        wait(700)
+                        sampSendChat('/mess 12 Предупреждаю заранее! Запрещено любое оружие, буду наказывать!')
                     end
                     showCursor(false,false)
                 end)
@@ -723,6 +731,10 @@ function imgui.OnDrawFrame()
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
                     end
+                    if anticrashmp then
+                        wait(700)
+                        sampSendChat('/mess 12 Предупреждаю заранее! Запрещено любое оружие, буду наказывать!')
+                    end
                     showCursor(false,false)
                 end)
             end
@@ -830,6 +842,7 @@ function imgui.OnDrawFrame()
             imgui.Text(u8'Взаимодействие с игроками:')
             imgui.Text(u8'Правая кнопка мыши + 1')
             if imgui.Button(u8'Начать сбор игроков', imgui.ImVec2(230, 30)) then
+                sbor = true
                 lua_thread.create(function()
                     sampAddChatMessage(tag .. ' Ожидайте...', -1)
                     sampSendChat('/mp')
@@ -863,9 +876,12 @@ function imgui.OnDrawFrame()
                     wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
-                     end
+                    end
+                    if anticrashmp then
+                        wait(700)
+                        sampSendChat('/mess 12 Предупреждаю заранее! Запрещено любое оружие, буду наказывать!')
+                    end
                     showCursor(false,false)
-                    sbor = true
                 end)
             end
         end
@@ -904,7 +920,6 @@ function imgui.OnDrawFrame()
                     sampAddChatMessage(tag .. 'ВЫКЛЮЧИТЕ WALLHACK ЕСЛИ ОН У ВАС ВКЛЮЧЕН, КОМАНДОЙ /wh', -1)
                     func2:run()
                     showCursor(false,false)
-                    
                 end)
             end
             if imgui.Button(u8'Прекратить набор', imgui.ImVec2(230, 30)) then
@@ -1002,6 +1017,10 @@ function imgui.OnDrawFrame()
                     wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                    end
+                    if anticrashmp then
+                        wait(700)
+                        sampSendChat('/mess 12 Предупреждаю заранее! Запрещено любое оружие, буду наказывать!')
                     end
                     showCursor(false,false)
                 end)
@@ -1190,6 +1209,10 @@ function imgui.OnDrawFrame()
                     wait(700)
                     if #(u8:decode(text_myprize.v)) ~= 0 then
                         sampSendChat('/mess 12 Приз данного мероприятия составит ' .. u8:decode(text_myprize.v) .. '. Телепорт ещё открыт! /tpmp')
+                    end
+                    if anticrashmp then
+                        wait(700)
+                        sampSendChat('/mess 12 Предупреждаю заранее! Запрещено любое оружие, буду наказывать!')
                     end
                     showCursor(false,false)
                 end)
