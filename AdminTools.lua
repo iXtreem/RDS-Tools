@@ -2552,7 +2552,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				lua_thread.create(function()
 					while not (sampTextdrawIsExists(textdraw[0]) and sampTextdrawIsExists(textdraw[1]) and sampTextdrawIsExists(textdraw[2]) and
 					sampTextdrawIsExists(textdraw[3]) and sampTextdrawIsExists(textdraw[4]) and sampTextdrawIsExists(textdraw[5])) do wait(100) end
-					wait(250)
+					wait(300)
 					windows.recon_menu.v = true
 					windows.menu_in_recon.v = true
 					imgui.Process = true
@@ -2740,11 +2740,13 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		end
 		if peremrep then
 			if #peremrep > 80 then sampAddChatMessage(tag .. 'Ваш ответ оказался слишком длинный, попробуйте сократить текст.',-1) peremrep = nil end
-			if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = peremrep .. ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport) end
-			if cfg.settings.on_color_report and (#peremrep + #(cfg.settings.color_report)) < 80 then peremrep = cfg.settings.color_report .. peremrep end
-			if #peremrep < 3 then peremrep = peremrep .. '    ' end
-			if cfg.settings.custom_answer_save and answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_ans.v) save() end	
-			sampSendDialogResponse(dialogId, 1, 0)
+			if peremrep then
+				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = peremrep .. ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport) end
+				if cfg.settings.on_color_report and (#peremrep + #(cfg.settings.color_report)) < 80 then peremrep = cfg.settings.color_report .. peremrep end
+				if #peremrep < 3 then peremrep = peremrep .. '    ' end
+				if cfg.settings.custom_answer_save and answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_ans.v) save() end	
+				sampSendDialogResponse(dialogId, 1, 0)
+			end
 			return false
 		end
 	end
