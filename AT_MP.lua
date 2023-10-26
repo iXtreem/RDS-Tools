@@ -1299,18 +1299,20 @@ function imgui.Tooltip(text)
     end
 end
 function find_weapon()
-    _, myid = sampGetPlayerIdByCharHandle(playerPed)
+    local _, myid = sampGetPlayerIdByCharHandle(playerPed)
     while windows.secondary_window_state.v do wait(300) end
     wait(15000)
     while true do
         wait(2000)
         local playerzone = playersToStreamZone()
         for _,v in pairs(playerzone) do
-            _, handle = sampGetCharHandleBySampPlayerId(v) 
+            local _, handle = sampGetCharHandleBySampPlayerId(v) 
             if v ~= myid then
                 if getCurrentCharWeapon(handle) ~= 0 then
-                    sampAddChatMessage(tag .. 'Обнаружена попытка слива мп. Игрок: ' .. sampGetPlayerNickname(v) .. '[' .. v .. ']. Оружие: ' .. (require 'game.weapons').get_name(getCurrentCharWeapon(handle)) , -1)
-                    sampSendChat('/jail ' .. v .. ' 300 Оружие на мероприятии')
+                    if not (sampTextdrawIsExists(168) or sampTextdrawIsExists(144)) then
+                        sampAddChatMessage(tag .. 'Обнаружена попытка слива мп. Игрок: ' .. sampGetPlayerNickname(v) .. '[' .. v .. ']. Оружие: ' .. (require 'game.weapons').get_name(getCurrentCharWeapon(handle)) , -1)
+                        sampSendChat('/jail ' .. v .. ' 300 Оружие на мероприятии')
+                    end
                 end
             end
         end
