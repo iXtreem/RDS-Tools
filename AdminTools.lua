@@ -2540,7 +2540,7 @@ function sampev.onShowTextDraw(id, data) -- —читываем серверные текстдравы
 				else return false end
 			elseif v:match('(.+)%((%d+)%)') then
 				textdraw.name_report = id
-				control_player_recon = string.match(v, '%((%d+)%)') -- ник игрока в реконе
+				control_player_recon = tonumber(string.match(v, '%((%d+)%)')) -- ник игрока в реконе
 				lua_thread.create(function()
 					wait(1000)
 					while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
