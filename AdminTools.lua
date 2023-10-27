@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 3.61 										-- Версия скрипта
+local version = 3.62 										-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -826,7 +826,7 @@ function imgui.OnDrawFrame()
 				windows.menu_tools.v = false
 				showCursor(true,false)
 			end
-			if false then
+			if not server03 then
 				if imgui.Button(u8'Автоматическая отправка форм', imgui.ImVec2(410, 24)) then
 					windows.auto_form.v = true
 				end
@@ -1556,42 +1556,42 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Tooltip('Enter')
 		imgui.Separator()
-		if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or isKeyDown(VK_Q) then
+		if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or (isKeyDown(VK_Q) and not sampIsChatInputActive()) then
 			answer.rabotay = true
 		end
 		imgui.Tooltip('Q')
 		imgui.SameLine()
-		if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or isKeyDown(VK_E) then
+		if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or (isKeyDown(VK_E) and not sampIsChatInputActive()) then
 			answer.slejy = true
 		end
 		imgui.Tooltip('E')
 		imgui.SameLine()
-		if imgui.Button(u8'Список своих', imgui.ImVec2(120, 25)) or isKeyDown(VK_R) then
+		if imgui.Button(u8'Список своих', imgui.ImVec2(120, 25)) or (isKeyDown(VK_R) and not sampIsChatInputActive()) then
 			windows.custom_ans.v = not windows.custom_ans.v
 		end
 		imgui.Tooltip('R')
 		imgui.SameLine()
-		if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or isKeyDown(VK_V) then
+		if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or (isKeyDown(VK_V) and not sampIsChatInputActive()) then
 			answer.peredamrep = true
 		end
 		imgui.Tooltip('V')
-		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or isKeyJustPressed(VK_G) then
+		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or (isKeyJustPressed(VK_G) and not sampIsChatInputActive()) then
 			if tonumber(autorid) then windows.fast_rmute.v = not windows.fast_rmute.v
 			else sampAddChatMessage(tag .. 'Данный игрок не в сети. Используйте /rmuteoff', -1) end
 		end
 		imgui.Tooltip('G')
 		imgui.SameLine()
-		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or isKeyDown(VK_B) then
+		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or (isKeyDown(VK_B) and not sampIsChatInputActive()) then
 			answer.uto4id = true
 		end
 		imgui.Tooltip('B')
 		imgui.SameLine()
-		if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or isKeyDown(VK_F) then
+		if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or (isKeyDown(VK_F) and not sampIsChatInputActive()) then
 			answer.uto4 = true
 		end
 		imgui.Tooltip('F')
 		imgui.SameLine()
-		if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or isKeyDown(VK_Y) then
+		if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or (isKeyDown(VK_Y) and not sampIsChatInputActive()) then
 			answer.otklon = true
 		end
 		imgui.Tooltip('Y')
@@ -2267,10 +2267,10 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
 					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					sampSendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid),-1)
-				else sampSendChat('/a ' .. command) end
+					send_rpc_command('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+				else send_rpc_command('/a ' .. command) end
 				return false
-			else sampAddChatMessage(tag .. 'Указанный вами ID не обнаружен.', -1) end
+			end
 		end
 	end
 	if cfg.settings.forma_na_jail then
@@ -2279,25 +2279,22 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
 					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					sampSendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid),-1)
-				else sampSendChat('/a ' .. command) end
+					send_rpc_command('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+				else send_rpc_command('/a ' .. command) end
 				return false
-			else sampAddChatMessage(tag .. 'Указанный вами ID не обнаружен.', -1) end
+		 	end
 		end
 	end
 	if cfg.settings.forma_na_mute then
 		if command:match('mute (%d+) (%d+) .+') then
-			wait(500)
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
 					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					sampSendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
-				else
-					sampSendChat('/a ' .. command)
-				end
-			else sampAddChatMessage(tag .. 'Указанный вами ID не обнаружен.', -1) end
-			return false
+					send_rpc_command('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+				else send_rpc_command('/a ' .. command) end
+				return false
+			end
 		end
 	end
 	if cfg.settings.forma_na_kick then
@@ -2306,12 +2303,20 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
 					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					sampSendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid),-1)
-				else sampSendChat('/a ' .. command) end
+					send_rpc_command('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+				else send_rpc_command('/a ' .. command) end
 				return false
-			else sampAddChatMessage(tag .. 'Указанный вами ID не обнаружен.', -1) end
+			end
 		end
 	end
+end
+function send_rpc_command(text)
+    local bs = raknetNewBitStream()
+    local rn = require 'samp.raknet'
+    raknetBitStreamWriteInt32(bs, #text)
+    raknetBitStreamWriteString(bs, text)
+    raknetSendRpc(rn.RPC.SERVERCOMMAND, bs)
+    raknetDeleteBitStream(bs)
 end
 function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 	if text:match("Администратор (.+) заткнул%(.+%) игрока (.+) на (.+) секунд. Причина: .+") then
@@ -2848,7 +2853,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			sampSendDialogResponse(dialogId, 1, _, peremrep)
 			sampCloseCurrentDialogWithButton(0)
 			while sampIsDialogActive() do wait(0) end
-			if answer.control_player or answer.slejy then sampSendChat('/re ' .. autorid)
+			if answer.control_player then sampSendChat('/re ' .. autorid)
+			elseif answer.slejy then sampSendChat('/re ' .. reportid)
 			elseif answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
 			elseif answer.nakajy then
 				if nakazatreport.oftop then sampSendChat('/rmute ' .. autorid .. ' 120 Оффтоп в /report')
