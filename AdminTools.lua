@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 3.6 										-- Версия скрипта
+local version = 3.61 										-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -73,6 +73,11 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		prefixa = '87CEEB',
 		prefixsa = 'FF4500',
 		autoprefix = true,
+		forma_na_ban = false,
+		forma_na_jail = false,
+		forma_na_kick = false,
+		forma_na_mute = false,
+		add_mynick_in_form = false,
 	},
 	customotvet = {},
 	osk = {},
@@ -105,6 +110,7 @@ local windows = {
 	new_position_adminchat = imgui.ImBool(false),
 	pravila = imgui.ImBool(false),
 	fast_key = imgui.ImBool(false),
+	auto_form = imgui.ImBool(false),
 }
 
 ------=================== Выставление своих настроек, кнопки со значение True/False ===================----------------------
@@ -121,10 +127,10 @@ local checkbox = {
 	check_form_jail = imgui.ImBool(cfg.settings.forma_na_jail),
 	check_form_mute = imgui.ImBool(cfg.settings.forma_na_mute),
 	check_form_kick = imgui.ImBool(cfg.settings.forma_na_kick),
+	check_add_mynick_form = imgui.ImBool(cfg.settings.add_mynick_in_form),
 	check_inputhelper = imgui.ImBool(cfg.settings.inputhelper),
 	check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 	check_add_answer_report = imgui.ImBool(cfg.settings.add_answer_report),
-	check_add_mynick_form = imgui.ImBool(cfg.settings.add_mynick_in_form),
 	check_notify_report = imgui.ImBool(cfg.settings.notify_report),
 	check_find_weapon_hack = imgui.ImBool(cfg.settings.find_warning_weapon_hack),
 	check_smart_automute = imgui.ImBool(cfg.settings.smart_automute),
@@ -819,6 +825,11 @@ function imgui.OnDrawFrame()
 				sampSendInputChat('/state')
 				windows.menu_tools.v = false
 				showCursor(true,false)
+			end
+			if false then
+				if imgui.Button(u8'Автоматическая отправка форм', imgui.ImVec2(410, 24)) then
+					windows.auto_form.v = true
+				end
 			end
 			imgui.CenterText(u8'Дополнительный текст команд')
 			imgui.PushItemWidth(410)
@@ -1530,7 +1541,7 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Text(fa.ICON_FILES_O)
 		if imgui.IsItemClicked(0) then 
-			setClipboardText(sampGetPlayerNickname(control_player_recon))
+			setClipboardText(sampGetPlayerNickname(autor))
 			sampAddChatMessage(tag .. 'Ник скопирован в буффер обмена.', -1)
 		end
 		imgui.TextWrapped(u8('Жалоба: ' .. textreport))
@@ -1697,7 +1708,7 @@ function imgui.OnDrawFrame()
 			imgui.SetCursorPosX(10)
 			if imgui.Button(fa.ICON_FILES_O) then
 				setClipboardText(sampGetPlayerNickname(control_player_recon))
-				sampAddChatMessage(tag .. 'Ник скопирован в буффер обмена.', -1)
+				sampAddChatMessage(tag .. 'Ник скопирован в буффер обмена. (ctrl + v)', -1)
 			end
 			imgui.SameLine()
 			imgui.Text(sampGetPlayerNickname(control_player_recon) .. '[' .. control_player_recon .. ']')
@@ -2201,6 +2212,36 @@ function imgui.OnDrawFrame()
 		imgui.PopFont()
 		imgui.End()
 	end
+	if windows.auto_form.v then
+		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.Begin(u8'Отправка формы', windows.auto_form, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.PushFont(fontsize)
+		imgui.CenterText(u8'Каких доступов у вас нет?')
+		if imgui.Checkbox('/ban', checkbox.check_form_ban) then
+			cfg.settings.forma_na_ban = not cfg.settings.forma_na_ban
+			save()
+		end
+		if imgui.Checkbox('/jail', checkbox.check_form_jail) then
+			cfg.settings.forma_na_jail = not cfg.settings.forma_na_jail
+			save()
+		end
+		if imgui.Checkbox('/mute', checkbox.check_form_mute) then
+			cfg.settings.forma_na_mute = not cfg.settings.forma_na_mute
+			save()
+		end
+		if imgui.Checkbox('/kick', checkbox.check_form_kick) then
+			cfg.settings.forma_na_kick = not cfg.settings.forma_na_kick
+			save()
+		end
+		if imgui.Checkbox(u8'Добавлять // мой ник', checkbox.check_add_mynick_form) then
+			cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
+			save()
+		end
+		imgui.PopFont()
+		imgui.End()
+	end
 end
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if cfg.settings.smart_automute then
@@ -2218,6 +2259,57 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 					end
 				end
 			end
+		end
+	end
+	if cfg.settings.forma_na_ban then
+		if command:match('ban (%d+) (%d+) (.+)') then
+			if sampIsPlayerConnected(command:match('(%d+)')) then
+				printStyledString('send forms ...', 1000, 4)
+				if cfg.settings.add_mynick_in_form then
+					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					sampSendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid),-1)
+				else sampSendChat('/a ' .. command) end
+				return false
+			else sampAddChatMessage(tag .. 'Указанный вами ID не обнаружен.', -1) end
+		end
+	end
+	if cfg.settings.forma_na_jail then
+		if command:match('jail (%d+) (%d+) (.+)') then
+			if sampIsPlayerConnected(command:match('(%d+)')) then
+				printStyledString('send forms ...', 1000, 4)
+				if cfg.settings.add_mynick_in_form then
+					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					sampSendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid),-1)
+				else sampSendChat('/a ' .. command) end
+				return false
+			else sampAddChatMessage(tag .. 'Указанный вами ID не обнаружен.', -1) end
+		end
+	end
+	if cfg.settings.forma_na_mute then
+		if command:match('mute (%d+) (%d+) .+') then
+			wait(500)
+			if sampIsPlayerConnected(command:match('(%d+)')) then
+				printStyledString('send forms ...', 1000, 4)
+				if cfg.settings.add_mynick_in_form then
+					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					sampSendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+				else
+					sampSendChat('/a ' .. command)
+				end
+			else sampAddChatMessage(tag .. 'Указанный вами ID не обнаружен.', -1) end
+			return false
+		end
+	end
+	if cfg.settings.forma_na_kick then
+		if command:match('kick (%d+) (.+)') then
+			if sampIsPlayerConnected(command:match('(%d+)')) then
+				printStyledString('send forms ...', 1000, 4)
+				if cfg.settings.add_mynick_in_form then
+					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					sampSendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid),-1)
+				else sampSendChat('/a ' .. command) end
+				return false
+			else sampAddChatMessage(tag .. 'Указанный вами ID не обнаружен.', -1) end
 		end
 	end
 end
@@ -2550,9 +2642,9 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			elseif v == 'STATS' then 
 				textdraw.stats = id
 				lua_thread.create(function()
-					while not (sampTextdrawIsExists(textdraw[0]) and sampTextdrawIsExists(textdraw[1]) and sampTextdrawIsExists(textdraw[2]) and
-					sampTextdrawIsExists(textdraw[3]) and sampTextdrawIsExists(textdraw[4]) and sampTextdrawIsExists(textdraw[5])) do wait(100) end
-					wait(300)
+					while not (sampTextdrawIsExists(textdraw.stats) and sampTextdrawIsExists(textdraw.close) and sampTextdrawIsExists(textdraw.refresh) and
+					sampTextdrawIsExists(textdraw.inforeport) and sampTextdrawIsExists(textdraw.name_report)) do wait(100) end
+					wait(200)
 					windows.recon_menu.v = true
 					windows.menu_in_recon.v = true
 					imgui.Process = true
