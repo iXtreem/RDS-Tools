@@ -267,7 +267,7 @@ function main()
 				update_main = true
 				update_fs = true
 				update_mp = true
-				--update()
+				update()
 			else
 				sampAddChatMessage(tag .. 'Обнаружена новая версия основного скрипта - ' .. AdminTools.script.version, -1)
 				sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
@@ -294,7 +294,7 @@ function main()
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		--ScriptExport()
+		ScriptExport()
 	end
 	if update_main or update_fs or update_mp then windows.update_script.v = true imgui.Process = true end
 	if cfg.mute_players.data ~= os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year then
@@ -2247,7 +2247,6 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 	if windows.update_script.v then
-		imgui.ShowCursor = false
 		imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 150, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8'Найдена новая версия скрипта', windows.update_script, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
@@ -3074,7 +3073,7 @@ function wait_accept_form()
 				if sampIsPlayerConnected(admin_form.idadmin) then
 					if not admin_form.styleform then wait(500) sampSendChat(admin_form.forma .. ' // ' .. sampGetPlayerNickname(admin_form.idadmin))
 					else wait(500) sampSendChat(admin_form.forma) end
-					wait(500)
+					wait(800)
 					sampSendChat('/a AT - Принято.')
 				else sampAddChatMessage(tag .. 'Администратор не в сети.', -1) end
 				admin_form = {}
@@ -3190,12 +3189,27 @@ function update() -- Обновление скрипта
 	local dlstatus = require('moonloader').download_status
 	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "//config//AT//rules.txt", function(id, status)  end)
 	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", getWorkingDirectory() .. "//resource//AT_Trassera.lua", function(id, status) end)
-	if update_mp then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", getWorkingDirectory() .. "//resource//AT_MP.lua", function(id, status) end) end
-	if update_fs then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", getWorkingDirectory() .. "//resource//AT_FastSpawn.lua", function(id, status) end) end
-	if update_main then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status) end) end
-	sampAddChatMessage(tag .. 'Скрипт получил {FF0000}актуальную {F0E68C}версию АТ',-1)
-	reloadScripts()
-
+	if update_mp then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", getWorkingDirectory() .. "//resource//AT_MP.lua", function(id, status)
+			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
+				if not (update_fs or update_main) then reloadScripts() end
+			end 
+		end) 
+	end
+	if update_fs then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", getWorkingDirectory() .. "//resource//AT_FastSpawn.lua", function(id, status)
+			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
+				if not (update_mp or update_main) then reloadScripts() end
+			end  
+		end) 
+	end
+	if update_main then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
+			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
+				reloadScripts()
+			end 
+		end) 
+	end
 end
 
 function render_adminchat()
