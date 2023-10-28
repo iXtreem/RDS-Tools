@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 3.7 										-- Версия скрипта
+local version = 3.65 										-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -264,7 +264,10 @@ function main()
 			update_main = true
 			if AdminTools.script.main then
 				sampAddChatMessage(tag .. 'Обнаружено новое {808080}обязательное {F0E68C}обновление скрипта! Произвожу самообновление.', -1)
-				update()
+				update_main = true
+				update_fs = true
+				update_mp = true
+				--update()
 			else
 				sampAddChatMessage(tag .. 'Обнаружена новая версия основного скрипта - ' .. AdminTools.script.version, -1)
 				sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
@@ -287,13 +290,13 @@ function main()
 	local AdminTools = nil
 	if sampGetCurrentServerAddress() == '46.174.52.246' then
 		sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3(/tool)', -1)
-	elseif sampGetCurrentServerAddress() == '46.174.49.170' then if not update_state then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1) end
+	elseif sampGetCurrentServerAddress() == '46.174.49.170' then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1)
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
 		--ScriptExport()
 	end
-	if update_main or update_fs or update_mp then windows.update_script.v end
+	if update_main or update_fs or update_mp then windows.update_script.v = true imgui.Process = true end
 	if cfg.mute_players.data ~= os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year then
 		cfg.mute_players = {} -- сброс значений умного автомута если наступил следующий день
 		cfg.mute_players.data = os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year
@@ -309,10 +312,10 @@ function main()
 	
 	--------------------============ АВТОМУТ =====================---------------------------------
 	local AutoMute_mat = io.open(getWorkingDirectory() .. "\\config\\AT\\mat.txt", "r")
-	if AutoMute_mat then sampAddChatMessage('da1',-1) for line in AutoMute_mat:lines() do line = u8:decode(line) if line and #(line) > 2 then table.insert(mat, line) end;end AutoMute_mat:close() end
+	if AutoMute_mat then for line in AutoMute_mat:lines() do line = u8:decode(line) if line and #(line) > 2 then table.insert(mat, line) end;end AutoMute_mat:close() end
 	
 	local AutoMute_osk = io.open(getWorkingDirectory() .. "\\config\\AT\\osk.txt", "r")
-	if AutoMute_osk then  sampAddChatMessage('da2',-1) for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then table.insert(osk, line) end;end AutoMute_osk:close() end
+	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then table.insert(osk, line) end;end AutoMute_osk:close() end
 	--------------------============ АВТОМУТ =====================---------------------------------
 	lua_thread.create(inputChat)
 	func = lua_thread.create_suspended(autoonline)
@@ -636,7 +639,7 @@ end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 
 function imgui.OnDrawFrame()
-	if not imgui.update_script.v and not windows.fast_key.v and not windows.render_admins.v and not windows.menu_tools.v and not windows.pravila.v and not windows.fast_report.v and not windows.recon_menu.v and not windows.new_position_recon_menu.v and not windows.new_position_keylogger.v and not windows.new_position_adminchat.v and not windows.answer_player_report.v then
+	if not windows.update_script.v and not windows.fast_key.v and not windows.render_admins.v and not windows.menu_tools.v and not windows.pravila.v and not windows.fast_report.v and not windows.recon_menu.v and not windows.new_position_recon_menu.v and not windows.new_position_keylogger.v and not windows.new_position_adminchat.v and not windows.answer_player_report.v then
 		showCursor(false,false)
 		imgui.Process = false
 		if cfg.settings.render_admins then sampSendChat('/admins') end
@@ -865,10 +868,6 @@ function imgui.OnDrawFrame()
 				if imgui.Button(u8'Сохранить позицию вирт.клавиш', imgui.ImVec2(410, 24)) then
 					windows.new_position_keylogger.v = not windows.new_position_keylogger.v 
 				end
-			end
-			if imgui.Button(u8'Обновить скрипт', imgui.ImVec2(410, 24)) then
-				if update_state then update()
-				else sampAddChatMessage(tag .. 'У вас установлена актуальная версия AT.', -1) end
 			end
 			if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(410, 24)) then
 				ScriptExport()
@@ -2248,14 +2247,20 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 	if windows.update_script.v then
-		imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 50, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8'Обновить скрипт', windows.auto_form, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.ShowCursor = false
+		imgui.SetNextWindowPos(imgui.ImVec2((sw/2)+(sw/3) - 150, (sh/2) - (sh/3) - 100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.Begin(u8'Найдена новая версия скрипта', windows.update_script, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
-		imgui.CenterText(u8'Не желаете обновиться? Найдена новая версия!')
-		imgui.Text(u8'Примечание к обновлению:')
-		imgui.TextWrapped(u8(update_info))
+		if update_info then
+			imgui.Text(u8'Примечание к обновлению:')
+			imgui.PopFont()
+			imgui.Text('\n')
+			imgui.TextWrapped(update_info)
+			imgui.Text('\n')
+			imgui.PushFont(fontsize)
+		end
 		if update_main then
 			if imgui.Button(u8'Обновить основной скрипт', imgui.ImVec2(400, 24)) then
 				sampAddChatMessage(tag .. 'Правильный выбор!', -1)
@@ -2277,9 +2282,9 @@ function imgui.OnDrawFrame()
 				update()
 			end
 		end
+		imgui.PopFont()
 		imgui.CenterText(u8'Клавиша ESC закрывает окно обновления')
 		if isKeyDown(VK_ESCAPE) then windows.update_script.v = false end
-		imgui.PopFont()
 		imgui.End()
 	end
 end
@@ -3187,12 +3192,10 @@ function update() -- Обновление скрипта
 	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", getWorkingDirectory() .. "//resource//AT_Trassera.lua", function(id, status) end)
 	if update_mp then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", getWorkingDirectory() .. "//resource//AT_MP.lua", function(id, status) end) end
 	if update_fs then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", getWorkingDirectory() .. "//resource//AT_FastSpawn.lua", function(id, status) end) end
-	if update_main then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status) end
-		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			sampAddChatMessage(tag .. 'Скрипт получил {FF0000}актуальную {F0E68C}версию АТ',-1)
-			reloadScripts()
-		end
-	end)
+	if update_main then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status) end) end
+	sampAddChatMessage(tag .. 'Скрипт получил {FF0000}актуальную {F0E68C}версию АТ',-1)
+	reloadScripts()
+
 end
 
 function render_adminchat()
