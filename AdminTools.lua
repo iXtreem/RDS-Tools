@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 3.65 										-- Версия скрипта
+local version = 3.8 										-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -268,21 +268,14 @@ function main()
 				update_fs = true
 				update_mp = true
 				update()
-			else
-				sampAddChatMessage(tag .. 'Обнаружена новая версия основного скрипта - ' .. AdminTools.script.version, -1)
-				sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 			end
 		end
 		if cfg.settings.versionFS and cfg.settings.versionMP then
 			if AdminTools.script.versionMP > cfg.settings.versionMP then
 				update_mp = true
-				sampAddChatMessage(tag .. 'Обнаружено обновление дополнительных плагинов.', -1)
-				sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 			end
 			if AdminTools.script.versionFS > cfg.settings.versionFS then
 				update_fs = true
-				sampAddChatMessage(tag .. 'Обнаружено обновление дополнительных плагинов.', -1)
-				sampAddChatMessage(tag .. 'Обновиться можно в меню F3 (/tool) - обновить скрипт', -1)
 			end
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
 	end
