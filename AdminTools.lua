@@ -2661,7 +2661,7 @@ function sampev.onShowTextDraw(id, data) -- —читываем серверные текстдравы
 				textdraw.stats = id
 				lua_thread.create(function()
 					while not (sampTextdrawIsExists(textdraw.refresh) and sampTextdrawIsExists(textdraw.inforeport) and sampTextdrawIsExists(textdraw.name_report)) do wait(100) end
-					wait(200)
+					wait(300)
 					windows.recon_menu.v = true
 					windows.menu_in_recon.v = true
 					imgui.Process = true
