@@ -802,18 +802,13 @@ function imgui.OnDrawFrame()
 			end
 			imgui.SameLine()
 			imgui.Text(u8'Рендер /ears')
-			imgui.Text('\n')
+			imgui.Text('\n\n\n\n')
 			imgui.Separator()
-			imgui.Text(u8'Разработчик скрипта - N.E.O.N [RDS 01].\nОбратная связь ниже\n')
-			imgui.Text('VK:')
+			imgui.Text(u8'Разработчик скрипта - N.E.O.N [RDS 01].')
+			imgui.Text(u8'Обратная связь: ')
 			imgui.SameLine()
 			if imgui.Link("https://vk.com/alexandrkob", u8"Нажми, чтобы открыть ссылку в браузере") then
 				os.execute(('explorer.exe "%s"'):format("https://vk.com/alexandrkob"))
-			end
-			imgui.Text(u8'Группа в VK:')
-			imgui.SameLine()
-			if imgui.Link("https://vk.com/club222702914", u8"Нажми, чтобы открыть ссылку в браузере") then
-				os.execute(('explorer.exe "%s"'):format("https://vk.com/club222702914"))
 			end
 		end
 		if menu2[3] then
