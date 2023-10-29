@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 3.8 										-- Версия скрипта
+local version = 3.81 										-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -14,6 +14,7 @@ local inicfg 			= require 'inicfg'					-- Сохранение/загрузка конфигов
 local encoding 			= require 'encoding'				-- Дешифровка на русский язык
 local vkeys 			= require 'vkeys' 					-- Работа с нажатием клавиш
 local ffi 				= require "ffi"						-- Работа с открытым чатом
+local fa 				= require 'faicons'					-- Иконки в imgui
 local mem 				= require "memory"					-- Работа с памятью игры
 local font 				= require ("moonloader").font_flag	-- Шрифты визуальных текстов на экране
 encoding.default 		= 'CP1251' 
@@ -216,7 +217,6 @@ local spisokproject = { -- список проектов за который идет автомут
 
 --------======================== Задаем шрифт и размер для имгуи текста ============--------------------
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local fa = require 'faicons'
 local fa_glyph_ranges = imgui.ImGlyphRanges( {fa.min_range, fa.max_range} )
 function imgui.BeforeDrawFrame()
     if not fontsize then  fontsize = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 17.0, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic()) end -- 17 razmer
@@ -479,40 +479,40 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	},
 }
 --------============= Инициализируем команды, указанные выше ===========================---------------------------
-for k,v in pairs(basic_command.help) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.ans) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then if cfg.settings.add_answer_report then sampSendChat(string.gsub(v, '_', param) .. cfg.settings.mytextreport) else sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.mute) do  sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
-for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.kick) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.ban) do sampRegisterChatCommand(k, function(param)  if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.help) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then send_rpc_command(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.ans) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then if cfg.settings.add_answer_report then send_rpc_command(string.gsub(v, '_', param) .. cfg.settings.mytextreport) else send_rpc_command(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.mute) do  sampRegisterChatCommand(k, function(param) if #param ~= 0 then send_rpc_command(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
+for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then send_rpc_command(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then send_rpc_command(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.kick) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then send_rpc_command(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.ban) do sampRegisterChatCommand(k, function(param)  if #param ~= 0 then send_rpc_command(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 --============= Регистрация тех же команд из массива, но для выдачи в ОФФЛАЙНЕ (окончание f) ===============================--
-for k,v in pairs(basic_command.mute) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(v, '_', param), '/mute', '/muteoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(v, '_', param) , '/rmute', '/rmuteoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(v, '_', param) , '/jail', '/jailakk') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.ban) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(string.gsub(v, '_', param) , '/siban', '/banoff') ,'/iban', '/banoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.mute) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then send_rpc_command(string.gsub(string.gsub(v, '_', param), '/mute', '/muteoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then send_rpc_command(string.gsub(string.gsub(v, '_', param) , '/rmute', '/rmuteoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then send_rpc_command(string.gsub(string.gsub(v, '_', param) , '/jail', '/jailakk') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.ban) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then send_rpc_command(string.gsub(string.gsub(string.gsub(v, '_', param) , '/siban', '/banoff') ,'/iban', '/banoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 --------============= Инициализируем команды ниже (особые свойства) ===========================---------------------------
-for k,v in pairs(cfg.my_command) do sampRegisterChatCommand(k, function(param) lua_thread.create(function() for a,b in pairs(textSplit(string.gsub(v, '_', param), '\n')) do if b:match('wait(%(%d+)%)') then wait(tonumber(b:match('%d+') .. '000')) else sampSendChat(b) end end end) end) end
+for k,v in pairs(cfg.my_command) do sampRegisterChatCommand(k, function(param) lua_thread.create(function() for a,b in pairs(textSplit(string.gsub(v, '_', param), '\n')) do if b:match('wait(%(%d+)%)') then wait(tonumber(b:match('%d+') .. '000')) else send_rpc_command(b) end end end) end) end
 
 -- Команда or (оск/упом родни) содержит название переменной, потому создается отдельно
-sampRegisterChatCommand('prfma', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Младший-Администратор ' .. cfg.settings.prefixma) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('prfa', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Администратор ' .. cfg.settings.prefixa) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('prfsa', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Ст.Администратор ' .. cfg.settings.prefixsa) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('prfpga', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Помощник Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('prfzga', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Заместитель Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('prfga', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Главный-Администратор ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('or', function(param) if #param ~= 0 then sampSendChat('/mute '..param..' 5000 Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
+sampRegisterChatCommand('prfma', function(param) if #param ~= 0 then send_rpc_command('/prefix ' .. param .. ' Младший-Администратор ' .. cfg.settings.prefixma) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('prfa', function(param) if #param ~= 0 then send_rpc_command('/prefix ' .. param .. ' Администратор ' .. cfg.settings.prefixa) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('prfsa', function(param) if #param ~= 0 then send_rpc_command('/prefix ' .. param .. ' Ст.Администратор ' .. cfg.settings.prefixsa) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('prfpga', function(param) if #param ~= 0 then send_rpc_command('/prefix ' .. param .. ' Помощник Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('prfzga', function(param) if #param ~= 0 then send_rpc_command('/prefix ' .. param .. ' Заместитель Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('prfga', function(param) if #param ~= 0 then send_rpc_command('/prefix ' .. param .. ' Главный-Администратор ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('or', function(param) if #param ~= 0 then send_rpc_command('/mute '..param..' 5000 Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
 sampRegisterChatCommand('wh' , function()
 	if not cfg.settings.wallhack then
 		cfg.settings.wallhack = true
 		save()
-		if notify_report then notify_report.addNotify('{66CDAA}[AT-WallHack]', 'Опция успешно включена', 2, 2, 5) end
+		notify('{66CDAA}[AT-WallHack]', 'Опция успешно включена')
 		checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		on_wallhack()
 	else
 		cfg.settings.wallhack = false
 		save()
-		if notify_report then notify_report.addNotify('{66CDAA}[AT-WallHack]', 'Опция успешно выключена', 2, 2, 5) end
+		notify('{66CDAA}[AT-WallHack]', 'Опция успешно выключена')
 		checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		off_wallhack()
 	end
@@ -612,14 +612,14 @@ sampRegisterChatCommand('sbanip', function()
 					local pri4ina = input
 					result, button, input = nil
 					find_ip_player = true
-					sampSendChat('/offstats ' .. nick_nakazyemogo)
+					send_rpc_command('/offstats ' .. nick_nakazyemogo)
 					while not regip do wait(100) end
 					wait(1000)
-					sampSendChat('/banoff ' .. nick_nakazyemogo .. ' ' .. nakazanie .. ' ' .. pri4ina)
+					send_rpc_command('/banoff ' .. nick_nakazyemogo .. ' ' .. nakazanie .. ' ' .. pri4ina)
 					wait(1000)
-					sampSendChat('/banip ' .. regip .. ' ' .. nakazanie .. ' ' .. pri4ina)
+					send_rpc_command('/banip ' .. regip .. ' ' .. nakazanie .. ' ' .. pri4ina)
 					wait(1000)
-					sampSendChat('/banip ' .. lastip .. ' ' .. nakazanie .. ' ' .. pri4ina)
+					send_rpc_command('/banip ' .. lastip .. ' ' .. nakazanie .. ' ' .. pri4ina)
 					lastip,regip,nick_nakazyemogo,pri4ina,nakazanie = nil
 				else sampAddChatMessage(tag .. 'Данные введены некорректно.',-1) end
 			else sampAddChatMessage(tag .. 'Данные введены некорректно.',-1) end
@@ -627,7 +627,7 @@ sampRegisterChatCommand('sbanip', function()
 	end)
 end)
 sampRegisterChatCommand('spp', function()
-	lua_thread.create(function() for _, v in pairs(playersToStreamZone()) do wait(500) sampSendChat('/aspawn ' .. v) end end)
+	lua_thread.create(function() for _, v in pairs(playersToStreamZone()) do wait(500) send_rpc_command('/aspawn ' .. v) end end)
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 
@@ -635,7 +635,7 @@ function imgui.OnDrawFrame()
 	if not windows.update_script.v and not windows.fast_key.v and not windows.render_admins.v and not windows.menu_tools.v and not windows.pravila.v and not windows.fast_report.v and not windows.recon_menu.v and not windows.new_position_recon_menu.v and not windows.new_position_keylogger.v and not windows.new_position_adminchat.v and not windows.answer_player_report.v then
 		showCursor(false,false)
 		imgui.Process = false
-		if cfg.settings.render_admins then sampSendChat('/admins') end
+		if cfg.settings.render_admins then send_rpc_command('/admins') end
 	end
 	if windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
 		windows.render_admins.v = false
@@ -794,7 +794,7 @@ function imgui.OnDrawFrame()
 			if imadd.ToggleButton("##renderEars", checkbox.check_render_ears) then
 				if not sampIsDialogActive() then
 					if render_ears then ears = {} end
-					sampSendChat('/ears')
+					send_rpc_command('/ears')
 				else 
 					checkbox.check_render_ears = imgui.ImBool(render_ears) 
 					save() 
@@ -815,14 +815,14 @@ function imgui.OnDrawFrame()
 			imgui.SetCursorPosX(8)
 			if imgui.Button(u8'Открыть настройки спавна', imgui.ImVec2(410, 24)) then
 				windows.menu_tools.v = false
-				sampSendInputChat('/fs')
+				sampProcessChatInput('/fs')
 			end
 			if imgui.Button(u8'Открыть настройки трассеров', imgui.ImVec2(410, 24)) then
 				windows.menu_tools.v = false
-				sampSendInputChat('/trassera')
+				sampProcessChatInput('/trassera')
 			end
 			if imgui.Button(u8'Открыть настройки админ-статистики', imgui.ImVec2(410, 24)) then
-				sampSendInputChat('/state')
+				sampProcessChatInput('/state')
 				windows.menu_tools.v = false
 				showCursor(true,false)
 			end
@@ -952,377 +952,377 @@ function imgui.OnDrawFrame()
 			imgui.CenterText(u8'Флуды об /gw')
 			if imgui.Button(u8'Aztecas vs Ballas', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Varios Los Aztecas vs Ballas Gang ##')
+					send_rpc_command('/mess 14 ## Varios Los Aztecas vs Ballas Gang ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Aztecas vs Grove', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Varios Los Aztecas vs Grove Street Gang ##')
+					send_rpc_command('/mess 14 ## Varios Los Aztecas vs Grove Street Gang ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Aztecas vs Vagos', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Varios Los Aztecas vs Vagos Gang ##')
+					send_rpc_command('/mess 14 ## Varios Los Aztecas vs Vagos Gang ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			if imgui.Button(u8'Aztecas vs Rifa', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Varios Los Aztecas vs The Rifa ##')
+					send_rpc_command('/mess 14 ## Varios Los Aztecas vs The Rifa ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Ballas vs Grove', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Ballas Gang vs Grove Street Gang ##')
+					send_rpc_command('/mess 14 ## Ballas Gang vs Grove Street Gang ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Ballas vs Vagos', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Ballas Gang vs Vagos Gang ##')
+					send_rpc_command('/mess 14 ## Ballas Gang vs Vagos Gang ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			if imgui.Button(u8'Ballas vs Rifa', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Ballas Gang vs The Rifa ##')
+					send_rpc_command('/mess 14 ## Ballas Gang vs The Rifa ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Grove vs Vagos', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Grove Street Gang vs Vagos Gang ##')
+					send_rpc_command('/mess 14 ## Grove Street Gang vs Vagos Gang ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Vagos vs Rifa', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 					wait(500)
-					sampSendChat('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
+					send_rpc_command('/mess 14 На данный момент проходит вооруженное сражение двух враждебных группировок.')
 					wait(500)
-					sampSendChat('/mess 14 ## Vagos Gang vs The Rifa ##')
+					send_rpc_command('/mess 14 ## Vagos Gang vs The Rifa ##')
 					wait(500)
-					sampSendChat('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
+					send_rpc_command('/mess 14 Помоги братьям отстоять свою территорию и защитить честь банды, вводи /gw!')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| GangWar |================-----------')
+					send_rpc_command('/mess 11 --------===================| GangWar |================-----------')
 				end)
 			end
 			imgui.CenterText(u8'Общие флуды')
 			if imgui.Button(u8'Спавн авто', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
+					send_rpc_command('/mess 10 --------===================| Spawn Auto |================-----------')
 					wait(500)
-					sampSendChat('/mess 15 Многоуважаемые дрифтеры и дрифтерши')
+					send_rpc_command('/mess 15 Многоуважаемые дрифтеры и дрифтерши')
 					wait(500)
-					sampSendChat('/mess 15 Через 15 секунд пройдёт респавн всего транспорта на сервере.')
+					send_rpc_command('/mess 15 Через 15 секунд пройдёт респавн всего транспорта на сервере.')
 					wait(500)
-					sampSendChat('/mess 15 Займите свои супер кары во избежания потери :3')
+					send_rpc_command('/mess 15 Займите свои супер кары во избежания потери :3')
 					wait(500)
-					sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
+					send_rpc_command('/mess 10 --------===================| Spawn Auto |================-----------')
 					wait(500)
-					sampSendChat('/delcarall')
+					send_rpc_command('/delcarall')
 					wait(500)
-					sampSendChat('/spawncars 15')
+					send_rpc_command('/spawncars 15')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'/trade', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 3 --------===================| Рынок |================-----------')
+					send_rpc_command('/mess 3 --------===================| Рынок |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 Мечтал приобрести акксессуары на свой скин?')
+					send_rpc_command('/mess 0 Мечтал приобрести акксессуары на свой скин?')
 					wait(500)
-					sampSendChat('/mess 0 Бегать с ручным попугайчиком на плече и светится как боженька?')
+					send_rpc_command('/mess 0 Бегать с ручным попугайчиком на плече и светится как боженька?')
 					wait(500)
-					sampSendChat('/mess 0 Скорей вводи /trade, большой выбор ассортимента, как от сервера, так и от игроков!')
+					send_rpc_command('/mess 0 Скорей вводи /trade, большой выбор ассортимента, как от сервера, так и от игроков!')
 					wait(500)
-					sampSendChat('/mess 3 --------===================| Рынок |================-----------')
+					send_rpc_command('/mess 3 --------===================| Рынок |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Автомастерская', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 16 --------===================| Автомастерская |================-----------')
+					send_rpc_command('/mess 16 --------===================| Автомастерская |================-----------')
 					wait(500)
-					sampSendChat('/mess 17 Всегда мечтал приобрести ковш на свой кибертрак? Не проблема!')
+					send_rpc_command('/mess 17 Всегда мечтал приобрести ковш на свой кибертрак? Не проблема!')
 					wait(500)
-					sampSendChat('/mess 17 В автомастерских из /tp - разное - автомастерские найдется и не такое.')
+					send_rpc_command('/mess 17 В автомастерских из /tp - разное - автомастерские найдется и не такое.')
 					wait(500)
-					sampSendChat('/mess 17 Сделай апгрейд своего любимчика под свой вкус и цвет')
+					send_rpc_command('/mess 17 Сделай апгрейд своего любимчика под свой вкус и цвет')
 					wait(500)
-					sampSendChat('/mess 16 --------===================| Автомастерская |================-----------')
+					send_rpc_command('/mess 16 --------===================| Автомастерская |================-----------')
 				end)
 			end
 			if imgui.Button(u8'Группа/Форум', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 11 --------===================| Сторонние площадки |================-----------')
+					send_rpc_command('/mess 11 --------===================| Сторонние площадки |================-----------')
 					wait(500)
-					sampSendChat('/mess 7 У нашего проекта имеется группа vk.сom/teamadmrds ...')
+					send_rpc_command('/mess 7 У нашего проекта имеется группа vk.сom/teamadmrds ...')
 					wait(500)
-					sampSendChat('/mess 7 ... и даже форум, на котором игроки могут оставить жалобу на администрацию или игроков.')
+					send_rpc_command('/mess 7 ... и даже форум, на котором игроки могут оставить жалобу на администрацию или игроков.')
 					wait(500)
-					sampSendChat('/mess 7 Следи за новостями и будь вкурсе событий.')
+					send_rpc_command('/mess 7 Следи за новостями и будь вкурсе событий.')
 					wait(500)
-					sampSendChat('/mess 11 --------===================| Сторонние площадки |================-----------')
+					send_rpc_command('/mess 11 --------===================| Сторонние площадки |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'VIP', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 13 --------===================| Преимущества VIP |================-----------')
+					send_rpc_command('/mess 13 --------===================| Преимущества VIP |================-----------')
 					wait(500)
-					sampSendChat('/mess 7 Хочешь играть с друзьями без дискомфорта?')
+					send_rpc_command('/mess 7 Хочешь играть с друзьями без дискомфорта?')
 					wait(500)
-					sampSendChat('/mess 7 Хочешь всегда телепортироваться по карте и к друзьям, чтобы быть всегда вместе?')
+					send_rpc_command('/mess 7 Хочешь всегда телепортироваться по карте и к друзьям, чтобы быть всегда вместе?')
 					wait(500)
-					sampSendChat('/mess 7 Хочешь получать каждый PayDay плюшки на свой аккаунт? Обзаведись VIP-статусом!')
+					send_rpc_command('/mess 7 Хочешь получать каждый PayDay плюшки на свой аккаунт? Обзаведись VIP-статусом!')
 					wait(500)
-					sampSendChat('/mess 13 --------===================| Преимущества VIP |================-----------')
+					send_rpc_command('/mess 13 --------===================| Преимущества VIP |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Арене', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 12 --------===================| PVP Arena |================-----------')
+					send_rpc_command('/mess 12 --------===================| PVP Arena |================-----------')
 					wait(500)
-					sampSendChat('/mess 10 Не знаешь чем заняться? Хочется экшена и быстрой реакции?')
+					send_rpc_command('/mess 10 Не знаешь чем заняться? Хочется экшена и быстрой реакции?')
 					wait(500)
-					sampSendChat('/mess 10 Вводи /arena и покажи на что ты способен!')
+					send_rpc_command('/mess 10 Вводи /arena и покажи на что ты способен!')
 					wait(500)
-					sampSendChat('/mess 10 Набей максимальное количество киллов, добейся идеала в своем +C')
+					send_rpc_command('/mess 10 Набей максимальное количество киллов, добейся идеала в своем +C')
 					wait(500)
-					sampSendChat('/mess 12 --------===================| PVP Arena |================-----------')
+					send_rpc_command('/mess 12 --------===================| PVP Arena |================-----------')
 				end)
 			end
 			if imgui.Button(u8'Виртуальный мир', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Твой виртуальный мир |================-----------')
+					send_rpc_command('/mess 8 --------===================| Твой виртуальный мир |================-----------')
 					wait(500)
-					sampSendChat('/mess 15 Мешают играть? Постоянно преследуют танки и самолёты?')
+					send_rpc_command('/mess 15 Мешают играть? Постоянно преследуют танки и самолёты?')
 					wait(500)
-					sampSendChat('/mess 15 Обычный пассив режим не спасает во время дрифта?')
+					send_rpc_command('/mess 15 Обычный пассив режим не спасает во время дрифта?')
 					wait(500)
-					sampSendChat('/mess 15 Выход есть! Вводи /dt [0-999] и дрифти с комфортом.')
+					send_rpc_command('/mess 15 Выход есть! Вводи /dt [0-999] и дрифти с комфортом.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Твой виртуальный мир |================-----------')
+					send_rpc_command('/mess 8 --------===================| Твой виртуальный мир |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Набор на админку', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 3 --------===================| Набор на пост администратора |================-----------')
+					send_rpc_command('/mess 3 --------===================| Набор на пост администратора |================-----------')
 					wait(500)
-					sampSendChat('/mess 2 Мечтал встать на пост администратора? Чистить сервер от читеров и нарушителей?')
+					send_rpc_command('/mess 2 Мечтал встать на пост администратора? Чистить сервер от читеров и нарушителей?')
 					wait(500)
-					sampSendChat('/mess 2 Всё это возможно и совершенно бесплатно <3')
+					send_rpc_command('/mess 2 Всё это возможно и совершенно бесплатно <3')
 					wait(500)
-					sampSendChat('/mess 2 На нашем форуме https://forumrds.ru/ открыт набор, успей подать заявку, кол-во мест ограничено.')
+					send_rpc_command('/mess 2 На нашем форуме https://forumrds.ru/ открыт набор, успей подать заявку, кол-во мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 3 --------===================| Набор на пост администратора |================-----------')
+					send_rpc_command('/mess 3 --------===================| Набор на пост администратора |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'О /report', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 17 --------===================| Связь с администрацией |================-----------')
+					send_rpc_command('/mess 17 --------===================| Связь с администрацией |================-----------')
 					wait(500)
-					sampSendChat('/mess 13 Нашел читера, злостного нарушителя, ДМера, или просто мешают играть?')
+					send_rpc_command('/mess 13 Нашел читера, злостного нарушителя, ДМера, или просто мешают играть?')
 					wait(500)
-					sampSendChat('/mess 13 Появился вопрос о возможностях сервера или его особенностей?')
+					send_rpc_command('/mess 13 Появился вопрос о возможностях сервера или его особенностей?')
 					wait(500)
-					sampSendChat('/mess 13 Администрация поможет! Пиши /report и свою жалобу/вопрос')
+					send_rpc_command('/mess 13 Администрация поможет! Пиши /report и свою жалобу/вопрос')
 					wait(500)
-					sampSendChat('/mess 17 --------===================| Связь с администрацией |================-----------')
+					send_rpc_command('/mess 17 --------===================| Связь с администрацией |================-----------')
 				end)
 			end
 			imgui.CenterText(u8'Мероприятия /join')
 			if imgui.Button(u8'Дерби', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Мероприятие Дерби |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие Дерби |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Дерби')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие Дерби')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 1')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /join - 1')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Мероприятие Дерби |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие Дерби |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Паркур', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Мероприятие /parkour |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие /parkour |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Паркур')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие Паркур')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /parkour либо /join - 2')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /parkour либо /join - 2')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Мероприятие /parkour |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие /parkour |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'PUBG', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Мероприятие /pubg |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие /pubg |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Pubg')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие Pubg')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /pubg либо /join - 3')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /pubg либо /join - 3')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Мероприятие /pubg |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие /pubg |================-----------')
 				end)
 			end
 			if imgui.Button(u8'DAMAGE DEATHMATCH', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Мероприятие /damagegm |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие /damagegm |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие DAMAGE DEATHMATCH')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие DAMAGE DEATHMATCH')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /damagegm либо /join - 4')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /damagegm либо /join - 4')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Мероприятие /damagegm |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие /damagegm |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'KILL DEATHMATCH', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Мероприятие KILL DEATHMATCH |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие KILL DEATHMATCH |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие DAMAGE DEATHMATCH')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие DAMAGE DEATHMATCH')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 5')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /join - 5')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Мероприятие KILL DEATHMATCH |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие KILL DEATHMATCH |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Paint Ball', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Мероприятие Paint Ball |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие Paint Ball |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Paint Ball')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие Paint Ball')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 7')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /join - 7')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Мероприятие Paint Ball |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие Paint Ball |================-----------')
 				end)
 			end
 			if imgui.Button(u8'Зомби vs Людей', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Зомби против людей |================-----------')
+					send_rpc_command('/mess 8 --------===================| Зомби против людей |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Зомби против людей')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие Зомби против людей')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 8')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /join - 8')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Зомби против людей |================-----------')
+					send_rpc_command('/mess 8 --------===================| Зомби против людей |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Прятки', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Мероприятие Прятки |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие Прятки |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Прятки')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие Прятки')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 10')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /join - 10')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Мероприятие Прятки |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие Прятки |================-----------')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Догонялки', imgui.ImVec2(130, 25)) then
 				lua_thread.create(function()
-					sampSendChat('/mess 8 --------===================| Мероприятие Догонялки |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие Догонялки |================-----------')
 					wait(500)
-					sampSendChat('/mess 0 На данный момент проходит сбор игроков на мероприятие Догонялки')
+					send_rpc_command('/mess 0 На данный момент проходит сбор игроков на мероприятие Догонялки')
 					wait(500)
-					sampSendChat('/mess 0 Чтобы принять участие вводи /join - 11')
+					send_rpc_command('/mess 0 Чтобы принять участие вводи /join - 11')
 					wait(500)
-					sampSendChat('/mess 0 Поторопись! Количество мест ограничено.')
+					send_rpc_command('/mess 0 Поторопись! Количество мест ограничено.')
 					wait(500)
-					sampSendChat('/mess 8 --------===================| Мероприятие Догонялки |================-----------')
+					send_rpc_command('/mess 8 --------===================| Мероприятие Догонялки |================-----------')
 				end)
 			end
 		end
@@ -1482,7 +1482,7 @@ function imgui.OnDrawFrame()
 										if b:match('wait(%(%d+)%)') then
 											wait(tonumber(b:match('%d+') .. '000'))
 										else
-											sampSendChat(b)
+											send_rpc_command(b)
 										end
 									end
 									param = nil
@@ -1627,7 +1627,7 @@ function imgui.OnDrawFrame()
 		for k,v in pairs(basic_command.ban) do
 			local name = string.gsub(string.gsub(string.gsub(v, '/ban _ (%d+) ', ''), '/siban _ (%d+) ', ''), '/iban _ (%d+) ', '')
 			if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
-				sampSendChat(string.gsub(v, '_', control_player_recon))
+				send_rpc_command(string.gsub(v, '_', control_player_recon))
 				windows.recon_ban_menu.v = false
 			end
 		end
@@ -1643,7 +1643,7 @@ function imgui.OnDrawFrame()
 		for k,v in pairs(basic_command.jail) do
 			local name = string.gsub(v, '/jail _ (%d+) ', '')
 			if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
-				sampSendChat(string.gsub(v, '_', control_player_recon))
+				send_rpc_command(string.gsub(v, '_', control_player_recon))
 				windows.recon_jail_menu.v = false
 			end
 		end
@@ -1660,7 +1660,7 @@ function imgui.OnDrawFrame()
 			local name = string.gsub(v, '/mute _ (%d+) ', '')
 			if not name:find('x(%d+)') and not name:find('х(%d+)') then
 				if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
-					sampSendChat(string.gsub(v, '_', control_player_recon))
+					send_rpc_command(string.gsub(v, '_', control_player_recon))
 					windows.recon_mute_menu.v = false
 				end
 			end
@@ -1677,7 +1677,7 @@ function imgui.OnDrawFrame()
 		for k,v in pairs(basic_command.kick) do
 			local name = string.gsub(v, '/kick _ ', '')
 			if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
-				sampSendChat(string.gsub(v, '_', control_player_recon))
+				send_rpc_command(string.gsub(v, '_', control_player_recon))
 				windows.recon_kick_menu.v = false
 			end
 		end
@@ -1722,13 +1722,13 @@ function imgui.OnDrawFrame()
 				imgui.Text(u8'Коллизия: ' .. inforeport[15])
 			end
 			if imgui.Button(u8'Посмотреть первую статистику', imgui.ImVec2(250, 25)) then
-				sampSendChat('/statpl ' .. sampGetPlayerNickname(control_player_recon))
+				send_rpc_command('/statpl ' .. sampGetPlayerNickname(control_player_recon))
 			end
 			if imgui.Button(u8'Посмотреть вторую статистику', imgui.ImVec2(250, 25)) then
 				sampSendClickTextdraw(textdraw.stats)
 			end
 			if imgui.Button(u8'Посмотреть /offstats статистику', imgui.ImVec2(250, 25)) then
-				sampSendChat('/offstats ' .. sampGetPlayerNickname(control_player_recon))
+				send_rpc_command('/offstats ' .. sampGetPlayerNickname(control_player_recon))
 				sampSendDialogResponse(16196, 1, 0)
 			end
         end
@@ -1736,7 +1736,7 @@ function imgui.OnDrawFrame()
 			for _,v in pairs(playersToStreamZone()) do
 				if v ~= control_player_recon then
 					imgui.SetCursorPosX(10)
-					if imgui.Button(sampGetPlayerNickname(v) .. '[' .. v .. ']', imgui.ImVec2(250, 25)) then sampSendChat('/re ' .. v) end
+					if imgui.Button(sampGetPlayerNickname(v) .. '[' .. v .. ']', imgui.ImVec2(250, 25)) then send_rpc_command('/re ' .. v) end
 				end
 			end
         end
@@ -1752,7 +1752,7 @@ function imgui.OnDrawFrame()
 			lua_thread.create(function()
 				if control_player_recon < sampGetMaxPlayerId() then
 					control_player_recon = control_player_recon - 1
-					sampSendChat('/re ' .. control_player_recon)
+					send_rpc_command('/re ' .. control_player_recon)
 					while not sampIsPlayerConnected(control_player_recon) do wait(0) end
 				end
 			end)
@@ -1778,13 +1778,13 @@ function imgui.OnDrawFrame()
 		if imgui.Button(u8'Следующий ->') then
 			lua_thread.create(function()
 				if control_player_recon < sampGetMaxPlayerId() then
-					sampSendChat('/re ' .. control_player_recon + 1)
+					send_rpc_command('/re ' .. control_player_recon + 1)
 					control_player_recon = control_player_recon + 1
 					wait(250)
 					while not sampIsPlayerConnected(control_player_recon + 1) and control_player_recon + 1 <= sampGetMaxPlayerId() do
 						wait(250)
 						control_player_recon = (control_player_recon + 1) + 1
-						sampSendChat('/re ' .. (control_player_recon + 1))
+						send_rpc_command('/re ' .. (control_player_recon + 1))
 					end
 				end
 			end)
@@ -1797,26 +1797,26 @@ function imgui.OnDrawFrame()
 		imgui.Tooltip(u8'Q')
 		imgui.SameLine()
 		if imgui.Button(u8'Слапнуть') then
-			sampSendChat('/slap ' .. control_player_recon)
+			send_rpc_command('/slap ' .. control_player_recon)
 		end
 		imgui.SameLine()
 		if imgui.Button(u8'Заспавнить') then
-			sampSendChat('/aspawn ' .. control_player_recon)
+			send_rpc_command('/aspawn ' .. control_player_recon)
 		end
 		imgui.SameLine()
 		if imgui.Button(u8'Телепортировать') then
 			lua_thread.create(function()
-				sampSendChat('/reoff')
+				send_rpc_command('/reoff')
 				wait(3000)
-				sampSendChat('/gethere ' .. control_player_recon)
+				send_rpc_command('/gethere ' .. control_player_recon)
 			end)
 		end
 		imgui.SameLine()
 		if imgui.Button(u8'Телепортироваться') then
 			lua_thread.create(function()
-				sampSendChat('/reoff')
+				send_rpc_command('/reoff')
 				wait(3000)
-				sampSendChat('/agt ' .. control_player_recon)
+				send_rpc_command('/agt ' .. control_player_recon)
 			end)
 		end
 		imgui.SameLine()
@@ -2055,37 +2055,37 @@ function imgui.OnDrawFrame()
 		imgui.CenterText(u8'Вы закончили слежку по репорту')
 		imgui.CenterText(u8'Доложить информацию?')
 		if imgui.Button(u8'Нарушений не наблюдаю (1)', imgui.ImVec2(250, 25)) or (isKeyDown(VK_1) and not (sampIsChatInputActive() or sampIsDialogActive())) then
-			sampSendInputChat('/n ' .. copies_player_recon)
+			sampProcessChatInput('/n ' .. copies_player_recon)
 			copies_player_recon = nil
 			windows.answer_player_report.v = false
 		end
 		if imgui.Button(u8'Данный игрок чист (2)', imgui.ImVec2(250,25)) or (isKeyDown(VK_2) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampSendInputChat('/cl ' .. copies_player_recon)
+			sampProcessChatInput('/cl ' .. copies_player_recon)
 			copies_player_recon = nil
 			windows.answer_player_report.v = false
 		end
 		if imgui.Button(u8'Игрок наказан. (3)', imgui.ImVec2(250,25)) or (isKeyDown(VK_3) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampSendInputChat('/nak ' .. copies_player_recon)
+			sampProcessChatInput('/nak ' .. copies_player_recon)
 			copies_player_recon = nil
 			windows.answer_player_report.v = false
 		end
 		if imgui.Button(u8'Помогли вам. (4)', imgui.ImVec2(250,25)) or (isKeyDown(VK_4) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampSendInputChat('/pmv ' .. copies_player_recon)
+			sampProcessChatInput('/pmv ' .. copies_player_recon)
 			copies_player_recon = nil
 			windows.answer_player_report.v = false
 		end
 		if imgui.Button(u8'Игрок AFK (5)', imgui.ImVec2(250,25)) or (isKeyDown(VK_5) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampSendInputChat('/afk ' .. copies_player_recon)
+			sampProcessChatInput('/afk ' .. copies_player_recon)
 			copies_player_recon = nil
 			windows.answer_player_report.v = false
 		end
 		if imgui.Button(u8'Игрок не в сети (6)', imgui.ImVec2(250,25)) or (isKeyDown(VK_6) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampSendInputChat('/nv ' .. copies_player_recon)
+			sampProcessChatInput('/nv ' .. copies_player_recon)
 			copies_player_recon = nil
 			windows.answer_player_report.v = false
 		end
 		if imgui.Button(u8'Это донат-преимущества (7)', imgui.ImVec2(250,25)) or (isKeyDown(VK_7) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampSendInputChat('/dpr ' .. copies_player_recon)
+			sampProcessChatInput('/dpr ' .. copies_player_recon)
 			copies_player_recon = nil
 			windows.answer_player_report.v = false
 		end
@@ -2114,7 +2114,7 @@ function imgui.OnDrawFrame()
 		imgui.Begin(u8'Новый флуд', windows.new_flood_mess, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-		if imgui.Button(u8'Скрипт сам допишет /mess\nВам лишь надо указать цвет.', imgui.ImVec2(250,32)) then sampSendChat('/mcolors') end
+		if imgui.Button(u8'Скрипт сам допишет /mess\nВам лишь надо указать цвет.', imgui.ImVec2(250,32)) then send_rpc_command('/mcolors') end
 		imgui.Text(u8'Название: ')
 		imgui.PushItemWidth(250)
 		imgui.InputText('##title_flood_mess', buffer.title_flood_mess)
@@ -2138,7 +2138,7 @@ function imgui.OnDrawFrame()
 				lua_thread.create(function()
 					v = textSplit(v, '\n')
 					for _,v in pairs(v) do
-						sampSendChat('/mess ' .. v)
+						send_rpc_command('/mess ' .. v)
 						wait(500)
 					end
 				end)
@@ -2383,7 +2383,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		if text:match('Weapon hack .code. 015.') then
 			lua_thread.create(function()
 				while (sampIsDialogActive() or sampIsChatInputActive()) do wait(0) end
-				sampSendChat("/iwep " .. string.match(text, "%[(%d+)%]"))
+				send_rpc_command("/iwep " .. string.match(text, "%[(%d+)%]"))
 			end)
 			return false
 		end 
@@ -2393,14 +2393,14 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		save()
 		checkbox.check_render_ears = imgui.ImBool(false)
 		ears = {}
-		if notify_report then notify_report.addNotify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно приостановлено', 2,2,6) end
+		notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно приостановлено')
 		return false
 	end
 	if text:match('%[Информация%] {FFFFFF}Теперь вы видите сообщения игроков') then
 	    render_ears = true
 		save()
 		checkbox.check_render_ears = imgui.ImBool(true)
-		if notify_report then notify_report.addNotify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано', 2,2,6) end
+		notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано')
 		return false
 	end
 	if cfg.settings.render_admins then
@@ -2488,34 +2488,22 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				oskid = tonumber(text:match('%[(%d+)%]'))
 				for i = 0, #spisokoskrod do
 					if text:match('}'..tostring(spisokoskrod[i])) or text:match('%s'..tostring(spisokoskrod[i])) then
-						if not sampIsDialogActive() then
-							sampAddChatMessage('=======================================================', 0x00FF00)
-							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-							sampAddChatMessage('=======================================================', 0x00FF00)
-							sampSendChat('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-							if notify_report then
-								notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
-							end
-							return false
-						else
-							sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
-						end
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						send_rpc_command('/rmute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
+						notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.')
+						return false
 					end
 				end
 				for i = 0, #spisokrz do
 					if text:match('}'..tostring(spisokrz[i])) or text:match('%s'..tostring(spisokrz[i])) then
-						if not sampIsDialogActive() then
-							sampAddChatMessage('=======================================================', 0x00FF00)
-							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
-							sampAddChatMessage('=======================================================', 0x00FF00)
-							sampSendChat('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
-							if notify_report then
-								notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
-							end
-							return false
-						else
-							sampAddChatMessage(tag .. 'Увы, у вас открыт диалог, я не смогу наказать игрока ' .. sampGetPlayerNickname(oskid), -1)
-						end
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' .. text .. ' {00FF00}[АТ]', -1)
+						sampAddChatMessage('=======================================================', 0x00FF00)
+						send_rpc_command('/rmute ' .. oskid .. ' 5000 Розжиг межнац.розни')
+						notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни')
+						return false
 					end
 				end
 			end
@@ -2526,38 +2514,32 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			local text = string.gsub(text, '{%w%w%w%w%w%w}', '')
 			if cfg.settings.smart_automute then
 				for i = 0, #spisokoskrod do
-					if text:match('%s'.. tostring(spisokoskrod[i])) and not sampIsDialogActive() then
+					if text:match('%s'.. tostring(spisokoskrod[i])) then
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampAddChatMessage('{00FF00}[АT]{DCDCDC} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
 						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.', 2,1,10)
-						end
+						send_rpc_command('/mute ' .. oskid .. ' 5000 Оскорбление/Упоминание родных')
+						notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.')
 						return false
 					end
 				end
 				for i = 0, #spisokrz do
-					if text:match('%s'..tostring(spisokrz[i])) and not sampIsDialogActive() then
+					if text:match('%s'..tostring(spisokrz[i])) then
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
 						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampSendChat('/mute ' .. oskid .. ' 5000 Розжиг межнац.розни')
-						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни', 2,1,10)
-						end
+						send_rpc_command('/mute ' .. oskid .. ' 5000 Розжиг межнац.розни')
+						notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни')
 						return false
 					end
 				end
 				for i = 0, #spisokproject do
-					if text:match('%s' .. tostring(spisokproject[i])) and not sampIsDialogActive() then
+					if text:match('%s' .. tostring(spisokproject[i])) then
 						sampAddChatMessage('=======================================================', 0x00FF00)
 						sampAddChatMessage('{00FF00}[АT]{DCDCDC} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: ' .. text .. ' {00FF00}[АТ]', -1)
 						sampAddChatMessage('=======================================================', 0x00FF00)
-						sampSendInputChat('/up ' .. oskid)
-						if notify_report then
-							notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(spisokproject[i]), 2,1,10)
-						end
+						sampProcessChatInput('/up ' .. oskid)
+						notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(spisokproject[i]), 2,1,10)
 						return false
 					end
 				end
@@ -2566,14 +2548,12 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				if not text:match(' я ') and text:match('%s'..tostring(osk[i])) then
 					if cfg.settings.smart_automute then
 						for d = 0, #spisokor do
-							if text:match('%s'.. tostring(spisokor[d])) and not sampIsDialogActive() then
+							if text:match('%s'.. tostring(spisokor[d])) then
 								sampAddChatMessage('=======================================================', 0x00FF00)
 								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
 								sampAddChatMessage('=======================================================', 0x00FF00)
-								sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
-								if notify_report then
-									notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(osk[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
-								end
+								send_rpc_command('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
+								notify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(osk[i]) .. ' и ' .. tostring(spisokor[d]))
 								return false
 							end
 						end
@@ -2581,25 +2561,21 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampSendChat('/mute ' .. oskid .. ' 400 Оскорбление/Унижение')
-					if notify_report then
-						notify_report.addNotify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(osk[i]), 2,1,10)
-					end
+					send_rpc_command('/mute ' .. oskid .. ' 400 Оскорбление/Унижение')
+					notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(osk[i]))
 					return false
 				end
 			end
 			for i = 0, #mat do
-				if text:match('%s'.. tostring(mat[i])) and not sampIsDialogActive() then
+				if text:match('%s'.. tostring(mat[i])) then
 					if cfg.settings.smart_automute then
 						for d = 0, #spisokor do
 							if text:match('%s'.. tostring(spisokor[d])) then
 								sampAddChatMessage('=======================================================', 0x00FF00)
 								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
 								sampAddChatMessage('=======================================================', 0x00FF00)
-								sampSendChat('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
-								if notify_report then
-									notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(mat[i]) .. ' и ' .. tostring(spisokor[d]), 2,1,10)
-								end
+								send_rpc_command('/mute ' .. oskid .. ' 5000 Оскорбление/упоминание родных')
+								notify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(mat[i]) .. ' и ' .. tostring(spisokor[d]))
 								return false
 							end
 						end
@@ -2607,10 +2583,8 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 					sampAddChatMessage('=======================================================', 0x00FF00)
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('=======================================================', 0x00FF00)
-					sampSendChat('/mute ' .. oskid .. ' 300 Нецензурная лексика')
-					if notify_report then
-						notify_report.addNotify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(mat[i]), 2,1,10)
-					end						
+					send_rpc_command('/mute ' .. oskid .. ' 300 Нецензурная лексика')
+					notify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. tostring(mat[i]))				
 					return false
 				end
 			end
@@ -2650,7 +2624,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					wait(1000)
 					while (sampIsDialogActive() or sampIsChatInputActive()) do wait(0) end
 					mobile_player = false
-					sampSendChat('/tonline ' .. control_player_recon)
+					send_rpc_command('/tonline ' .. control_player_recon)
 				end)
 			elseif v == 'STATS' then 
 				textdraw.stats = id
@@ -2685,8 +2659,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				local _,weapon, patron = text[i]:match('(%d+)	Weapon: (%d+)     Ammo: (.+)')
 				if (text[i]:find('-')) or (weapon == '0' and patron ~= '0') then
 					sampAddChatMessage(tag .. 'Оружие (ID): ' .. weapon..'. Патроны: '..patron, -1)
-					if notify_report then notify_report.addNotify('{66CDAA}[AT] Анти-чит', 'Оружие (ID): ' .. weapon..'\nПатроны: '..patron, 2,2,10) end
-					wait(500)
+					notify('{66CDAA}[AT] Анти-чит', 'Оружие (ID): ' .. weapon..'\nПатроны: '..patron)
+					wait(1000)
 					setVirtualKeyDown(119, true) -- screenshot F8
 					setVirtualKeyDown(119, false)
 					player_cheater = true
@@ -2698,8 +2672,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			if player_cheater then
 				while sampIsDialogActive() do wait(0) end
 				player_cheater = nil
-				sampSendChat('/iban '..sampGetPlayerIdByNickname(title)..' 7 Чит на оружие')
-				if notify_report then notify_report.addNotify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты', 2,2,10) end
+				send_rpc_command('/iban '..sampGetPlayerIdByNickname(title)..' 7 Чит на оружие')
+				notify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты')
 			else sampAddChatMessage(tag .. 'Пробил игрока ' .. title .. '[' .. sampGetPlayerIdByNickname(title) .. ']. По результатам проверки читов не обнаружено.', -1) end
 		end)
 	end
@@ -2744,28 +2718,28 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 								sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 								sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixma .. '}Мл.Администратор', -1)
 								wait(800) -- серверная задержка на команды
-								sampSendChat('/prefix ' .. id .. ' Мл.Администратор ' .. cfg.settings.prefixma)
+								send_rpc_command('/prefix ' .. id .. ' Мл.Администратор ' .. cfg.settings.prefixma)
 								wait(800) -- серверная задержка на команды
-								sampSendChat('/admins')
-								if notify_report then notify_report.addNotify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.' , 2,2,15) end
+								send_rpc_command('/admins')
+								notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.')
 							elseif lvl < 15 and lvl >= 10 and rang ~= 'Администратор' then
 								while sampIsDialogActive() do wait(0) end
 								sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 								sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' ..cfg.settings.prefixa..'}Администратор', -1)
 								wait(800) -- серверная задержка на команды
-								sampSendChat('/prefix ' .. id .. ' Администратор ' .. cfg.settings.prefixa)
+								send_rpc_command('/prefix ' .. id .. ' Администратор ' .. cfg.settings.prefixa)
 								wait(800) -- серверная задержка на команды
-								if notify_report then notify_report.addNotify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.' , 2,2,15) end
-								sampSendChat('/admins')
+								notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.')
+								send_rpc_command('/admins')
 							elseif lvl < 18 and lvl >= 15 and rang ~= 'Ст.Администратор' then
 								while sampIsDialogActive() do wait(0) end
 								sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 								sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixsa..'}Ст.Администратор', -1)
 								wait(800) -- серверная задержка на команды
-								sampSendChat('/prefix ' .. id .. ' Ст.Администратор ' .. cfg.settings.prefixsa)
+								send_rpc_command('/prefix ' .. id .. ' Ст.Администратор ' .. cfg.settings.prefixsa)
 								wait(800) -- серверная задержка на команды
-								sampSendChat('/admins')
-								if notify_report then notify_report.addNotify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.' , 2,2,15) end
+								send_rpc_command('/admins')
+								notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.')
 							end
 						end)
 					end
@@ -2866,18 +2840,18 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			sampSendDialogResponse(dialogId, 1, _, peremrep)
 			sampCloseCurrentDialogWithButton(0)
 			while sampIsDialogActive() do wait(0) end
-			if answer.control_player then sampSendChat('/re ' .. autorid)
-			elseif answer.slejy then sampSendChat('/re ' .. reportid)
-			elseif answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
+			if answer.control_player then send_rpc_command('/re ' .. autorid)
+			elseif answer.slejy then send_rpc_command('/re ' .. reportid)
+			elseif answer.peredamrep then send_rpc_command('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
 			elseif answer.nakajy then
-				if nakazatreport.oftop then sampSendChat('/rmute ' .. autorid .. ' 120 Оффтоп в /report')
-				elseif nakazatreport.oskadm then sampSendChat('/rmute ' .. autorid .. ' 2500 Оскорбление администрации')
-				elseif nakazatreport.oskrep then sampSendChat('/rmute ' .. autorid .. ' 400 Оскорбление/Унижение')
-				elseif nakazatreport.poprep then sampSendChat('/rmute ' .. autorid .. ' 120 Попрошайничество')
-				elseif nakazatreport.oskrod then sampSendChat('/rmute ' .. autorid .. ' 5000 Оскорбление/Упоминание родных')
-				elseif nakazatreport.capsrep then sampSendChat('/rmute ' .. autorid .. ' 120 Капс в /report')
-				elseif nakazatreport.matrep then sampSendChat('/rmute ' .. autorid .. ' 300 Нецензурная лексика')
-				elseif nakazatreport.kl then sampSendChat('/rmute ' .. autorid .. ' 3000 Клевета на администрацию') end
+				if nakazatreport.oftop then send_rpc_command('/rmute ' .. autorid .. ' 120 Оффтоп в /report')
+				elseif nakazatreport.oskadm then send_rpc_command('/rmute ' .. autorid .. ' 2500 Оскорбление администрации')
+				elseif nakazatreport.oskrep then send_rpc_command('/rmute ' .. autorid .. ' 400 Оскорбление/Унижение')
+				elseif nakazatreport.poprep then send_rpc_command('/rmute ' .. autorid .. ' 120 Попрошайничество')
+				elseif nakazatreport.oskrod then send_rpc_command('/rmute ' .. autorid .. ' 5000 Оскорбление/Упоминание родных')
+				elseif nakazatreport.capsrep then send_rpc_command('/rmute ' .. autorid .. ' 120 Капс в /report')
+				elseif nakazatreport.matrep then send_rpc_command('/rmute ' .. autorid .. ' 300 Нецензурная лексика')
+				elseif nakazatreport.kl then send_rpc_command('/rmute ' .. autorid .. ' 3000 Клевета на администрацию') end
 				nakazatreport = {}
 			end
 			buffer.text_ans.v = ''
@@ -2954,7 +2928,7 @@ function render_admins()
 	while true do
 		wait(30000)
 		while sampIsDialogActive() do wait(300) end
-		if not AFK then sampSendChat('/admins') end
+		if not AFK then send_rpc_command('/admins') end
 	end
 end
 
@@ -2962,7 +2936,7 @@ function autoonline()
 	while true do
 		wait(61000) 
 		while sampIsDialogActive() do wait(300) end 
-		if not AFK then sampSendChat("/online") end 
+		if not AFK then send_rpc_command("/online") end 
 	end 
 end
 ------------- Input Helper -------------
@@ -3024,23 +2998,16 @@ end
 function ScriptExport()
 	lua_thread.create(function()
 		imgui.Process = false
-		if cfg.settings.wallhack then sampSendInputChat('/wh ') end
+		if cfg.settings.wallhack then sampProcessChatInput('/wh ') end
 		wait(500)
-		sampSendInputChat('/fsoff')
+		sampProcessChatInput('/fsoff')
 		wait(500)
-		sampSendInputChat('/mpoff')
+		sampProcessChatInput('/mpoff')
 		showCursor(false,false)
 		thisScript():unload()
 	end)
 end
 
-
-function sampSendInputChat(text) -- отправка в чат через ф6
-	sampSetChatInputText(text)
-	sampSetChatInputEnabled(true)
-	setVirtualKeyDown(13, true)
-	setVirtualKeyDown(13, false)
-end
 function save()
 	inicfg.save(cfg,'AT//AT_main.ini')
 end
@@ -3059,10 +3026,10 @@ function wait_accept_form()
 			end
 			if isKeyJustPressed(VK_U) and not sampIsChatInputActive() and not sampIsDialogActive() then
 				if sampIsPlayerConnected(admin_form.idadmin) then
-					if not admin_form.styleform then wait(500) sampSendChat(admin_form.forma .. ' // ' .. sampGetPlayerNickname(admin_form.idadmin))
-					else wait(500) sampSendChat(admin_form.forma) end
+					if not admin_form.styleform then wait(500) send_rpc_command(admin_form.forma .. ' // ' .. sampGetPlayerNickname(admin_form.idadmin))
+					else wait(500) send_rpc_command(admin_form.forma) end
 					wait(800)
-					sampSendChat('/a AT - Принято.')
+					send_rpc_command('/a AT - Принято.')
 				else sampAddChatMessage(tag .. 'Администратор не в сети.', -1) end
 				admin_form = {}
 				break
@@ -3078,15 +3045,15 @@ end
 function binder_key()
 	while true do
 		if not (windows.fast_report.v or windows.answer_player_report.v or sampIsChatInputActive() or sampIsDialogActive() or windows.menu_tools.v) then
-			if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_ans)) then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0) end
+			if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_ans)) then send_rpc_command("/ans") sampSendDialogResponse(2348, 1, 0) end
 			if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_addText)) then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport) sampSetChatInputEnabled(true) end
-			if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_wallhack)) then sampSendInputChat("/wh") end
-			for k,v in pairs(cfg.binder_key) do if isKeyJustPressed(strToIdKeys(k)) then sampSendChat(v) end end
+			if isKeyJustPressed(strToIdKeys(cfg.settings.fast_key_wallhack)) then sampProcessChatInput("/wh") end
+			for k,v in pairs(cfg.binder_key) do if isKeyJustPressed(strToIdKeys(k)) then send_rpc_command(v) end end
 		end
 		wait(1)
 	end
 end
---============= Wall hack + RGB color ==============--
+--============= Wallhack + RGB color ==============--
 function getBodyPartCoordinates(id, handle)
 	local pedptr = getCharPointer(handle)
 	local vec = ffi.new("float[3]")
@@ -3106,6 +3073,23 @@ function explode_argb(argb)
     local g = bit.band(bit.rshift(argb, 8), 0xFF)
     local b = bit.band(argb, 0xFF)
     return a, r, g, b
+end
+function on_wallhack() -- Включение WallHack (свойства)
+	local pStSet = sampGetServerSettingsPtr();
+	NTdist = mem.getfloat(pStSet + 39)
+	NTwalls = mem.getint8(pStSet + 47)
+	NTshow = mem.getint8(pStSet + 56)
+	mem.setfloat(pStSet + 39, 500.0)
+	mem.setint8(pStSet + 47, 0)
+	mem.setint8(pStSet + 56, 1)
+	nameTag = true
+end
+function off_wallhack() -- Выключение WallHack (свойства)
+	local pStSet = sampGetServerSettingsPtr();
+	mem.setfloat(pStSet + 39, 30)
+	mem.setint8(pStSet + 47, 0)
+	mem.setint8(pStSet + 56, 1)
+	nameTag = false
 end
 --============= Wall hack + RGB color ==============--
 
@@ -3200,6 +3184,10 @@ function update() -- Обновление скрипта
 	end
 end
 
+function notify(title, text)
+	if notify_report then notify_report.addNotify(title, text, 2,1,12) end
+end
+
 function render_adminchat()
 	while true do
 		wait(1)
@@ -3215,23 +3203,7 @@ function render_adminchat()
 end
 
 
-function on_wallhack() -- Включение WallHack (свойства)
-	local pStSet = sampGetServerSettingsPtr();
-	NTdist = mem.getfloat(pStSet + 39)
-	NTwalls = mem.getint8(pStSet + 47)
-	NTshow = mem.getint8(pStSet + 56)
-	mem.setfloat(pStSet + 39, 500.0)
-	mem.setint8(pStSet + 47, 0)
-	mem.setint8(pStSet + 56, 1)
-	nameTag = true
-end
-function off_wallhack() -- Выключение WallHack (свойства)
-	local pStSet = sampGetServerSettingsPtr();
-	mem.setfloat(pStSet + 39, 30)
-	mem.setint8(pStSet + 47, 0)
-	mem.setint8(pStSet + 56, 1)
-	nameTag = false
-end
+
 function imgui.TextColoredRGB(text) -- цветной рендер админс
     local style = imgui.GetStyle()
     local colors = style.Colors
