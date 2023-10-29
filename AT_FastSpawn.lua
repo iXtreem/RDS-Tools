@@ -2,8 +2,10 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 1.0
+local version = 1.1
 local imgui = require 'imgui' 
+local ffi = require "ffi"
+local fa = require 'faicons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
 local inicfg = require 'inicfg'
@@ -18,7 +20,6 @@ local cfg2 = inicfg.load({
 	},
 }, 'AT//AT_main.ini')
 inicfg.save(cfg2, 'AT//AT_main.ini')
-local style_list = {u8'0.5 сек', u8'1 сек', u8'1.5 сек', u8'2 сек', u8'3 сек'}
 local cfg = inicfg.load({
 	AT_FastSpawn = {
         spawn = true,
@@ -30,32 +31,8 @@ local cfg = inicfg.load({
 		server = nil,
 		nickname = nil,
 	},
-	command = {
-		[0] = '',
-		[1] = '',
-		[2] = '',
-		[3] = '',
-		[4] = '',
-		[5] = '',
-		[6] = '',
-		[7] = '',
-		[8] = '',
-		[9] = '',
-		[10] = ''
-	},
-	wait_command = {
-		[0] = 0,
-		[1] = 0,
-		[2] = 0,
-		[3] = 0,
-		[4] = 0,
-		[5] = 0,
-		[6] = 0,
-		[7] = 0,
-		[8] = 0,
-		[9] = 0,
-		[10] = 0
-	},
+	command = {[0] = ''},
+	wait_command = {[0] = 0},
 }, directIni)
 inicfg.save(cfg,directIni)
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
@@ -64,39 +41,37 @@ local sw, sh = getScreenResolution()
 local style_selected = imgui.ImInt(cfg2.settings.style)
 local text_buffer = imgui.ImBuffer(4096)
 local text_buffer2 = imgui.ImBuffer(4096)
-local inputCommand = {
-	[0] = imgui.ImBuffer(u8(cfg.command[0]), 256),
-	[1] = imgui.ImBuffer(u8(cfg.command[1]), 256),
-	[2] = imgui.ImBuffer(u8(cfg.command[2]), 256),
-	[3] = imgui.ImBuffer(u8(cfg.command[3]), 256),
-	[4] = imgui.ImBuffer(u8(cfg.command[4]), 256),
-	[5] = imgui.ImBuffer(u8(cfg.command[5]), 256),
-	[6] = imgui.ImBuffer(u8(cfg.command[6]), 256),
-	[7] = imgui.ImBuffer(u8(cfg.command[7]), 256),
-	[8] = imgui.ImBuffer(u8(cfg.command[8]), 256),
-	[9] = imgui.ImBuffer(u8(cfg.command[9]), 256),
-	[10] = imgui.ImBuffer(u8(cfg.command[10]), 256),
-}
-
-local inputWait = {
-	[0] = imgui.ImInt(cfg.wait_command[0]),
-	[1] = imgui.ImInt(cfg.wait_command[1]),
-	[2] = imgui.ImInt(cfg.wait_command[2]),
-	[3] = imgui.ImInt(cfg.wait_command[3]),
-	[4] = imgui.ImInt(cfg.wait_command[4]),
-	[5] = imgui.ImInt(cfg.wait_command[5]),
-	[6] = imgui.ImInt(cfg.wait_command[6]),
-	[7] = imgui.ImInt(cfg.wait_command[7]),
-	[8] = imgui.ImInt(cfg.wait_command[8]),
-	[9] = imgui.ImInt(cfg.wait_command[9]),
-	[10] = imgui.ImInt(cfg.wait_command[10]),
-}
+local inputCommand = {[0] = imgui.ImBuffer(u8(cfg.command[0]), 256)}
+local inputWait = {[0] = imgui.ImInt(cfg.wait_command[0]),}
 local checked_test = imgui.ImBool(cfg.AT_FastSpawn.autorizate)
 local checked_test2 = imgui.ImBool(cfg.AT_FastSpawn.autoalogin)
 local checked_test3 = imgui.ImBool(cfg.AT_FastSpawn.spawn)
 
 local secondary_window_state = imgui.ImBool(false)
 local main_window_state = imgui.ImBool(false)
+
+local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
+local fa_glyph_ranges = imgui.ImGlyphRanges( {fa.min_range, fa.max_range} )
+function imgui.BeforeDrawFrame()
+    if not fontsize then  fontsize = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 17.0, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic()) end -- 17 razmer
+	if not fa_font then local font_config = imgui.ImFontConfig() font_config.MergeMode = true fa_font = imgui.GetIO().Fonts:AddFontFromFileTTF('moonloader/resource/fonts/fontawesome-webfont.ttf', 14.0, font_config, fa_glyph_ranges) end 
+end
+ffi.cdef[[
+	short GetKeyState(int nVirtKey);
+	bool GetKeyboardLayoutNameA(char* pwszKLID);
+	int GetLocaleInfoA(int Locale, int LCType, char* lpLCData, int cchData);
+]]
+local BuffSize = 32
+local KeyboardLayoutName = ffi.new("char[?]", BuffSize)
+local LocalInfo = ffi.new("char[?]", BuffSize)
+chars = {
+	["й"] = "q", ["ц"] = "w", ["у"] = "e", ["к"] = "r", ["е"] = "t", ["н"] = "y", ["г"] = "u", ["ш"] = "i", ["щ"] = "o", ["з"] = "p", ["х"] = "[", ["ъ"] = "]", ["ф"] = "a",
+	["ы"] = "s", ["в"] = "d", ["а"] = "f", ["п"] = "g", ["р"] = "h", ["о"] = "j", ["л"] = "k", ["д"] = "l", ["ж"] = ";", ["э"] = "'", ["я"] = "z", ["ч"] = "x", ["с"] = "c", ["м"] = "v",
+	["и"] = "b", ["т"] = "n", ["ь"] = "m", ["б"] = ",", ["ю"] = ".", ["Й"] = "Q", ["Ц"] = "W", ["У"] = "E", ["К"] = "R", ["Е"] = "T", ["Н"] = "Y", ["Г"] = "U", ["Ш"] = "I",
+	["Щ"] = "O", ["З"] = "P", ["Х"] = "{", ["Ъ"] = "}", ["Ф"] = "A", ["Ы"] = "S", ["В"] = "D", ["А"] = "F", ["П"] = "G", ["Р"] = "H", ["О"] = "J", ["Л"] = "K", ["Д"] = "L",
+	["Ж"] = ":", ["Э"] = "\"", ["Я"] = "Z", ["Ч"] = "X", ["С"] = "C", ["М"] = "V", ["И"] = "B", ["Т"] = "N", ["Ь"] = "M", ["Б"] = "<", ["Ю"] = ">"
+}
+
 
 function sampev.onServerMessage(color,text)
 	if text == ('Вы успешно авторизовались!') then
@@ -108,22 +83,24 @@ function sampev.onServerMessage(color,text)
 end
 function main()
 	while not isSampAvailable() do wait(0) end
+	for k,v in pairs(cfg.command) do if (v and #(v)>1) and k~=0 then inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(tostring(v)), 256) else table.remove(cfg.command, k) save() end end
+	for k,v in pairs(cfg.wait_command) do inputWait[#inputWait+1] = imgui.ImInt(v) end
 	cfg2.settings.versionFS = version
 	inicfg.save(cfg2,'AT//AT_main.ini')
 	cfg2 = nil
-	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	nick = sampGetPlayerNickname(id)
 	if cfg.AT_FastSpawn.spawn then
 		while not sampIsLocalPlayerSpawned() do
 			if not sampIsChatInputActive() and not sampIsDialogActive() and start_click_shift then
 				setVirtualKeyDown(16, true)
-				wait(50)
+				wait(100)
 				setVirtualKeyDown(16, false) 
 			end
 			wait(200)
 		end
 		start_click_shift = nil
 	end
+	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+	nick = sampGetPlayerNickname(id)
 	wait(3000)
 	if autorizate and cfg.AT_FastSpawn.parolalogin and cfg.AT_FastSpawn.autoalogin and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
 		while not access_alogin do
@@ -136,27 +113,20 @@ function main()
 	end
 	if autorizate and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
 		for i = 0, #cfg.command do
-			if cfg.wait_command[i] == 0 then press_wait = 500
-			elseif cfg.wait_command[i] == 1 then press_wait = 1000
-			elseif cfg.wait_command[i] == 2 then press_wait = 1500
-			elseif cfg.wait_command[i] == 3 then press_wait = 2000
-			elseif cfg.wait_command[i] == 4 then press_wait = 2500
-			elseif cfg.wait_command[i] == 5 then press_wait = 3000 end
-			if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
-				wait(press_wait)
-				while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
-				sampSendInputChat(cfg.command[i])
+			if cfg.command[i] and #(cfg.command[i]) >= 2 then
+				if cfg.wait_command[i] == 0 then press_wait = 500
+				elseif cfg.wait_command[i] == 1 then press_wait = 1000
+				elseif cfg.wait_command[i] == 2 then press_wait = 1500
+				elseif cfg.wait_command[i] == 3 then press_wait = 2000
+				elseif cfg.wait_command[i] == 4 then press_wait = 3000 end
+				if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
+					wait(press_wait)
+					while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
+					sampProcessChatInput(cfg.command[i])
+				end
 			end
 		end
 	end
-end
-
-
-function sampSendInputChat(text) -- отправка в чат через ф6
-	sampSetChatInputText(text)
-	sampSetChatInputEnabled(true)
-	setVirtualKeyDown(13, true)
-	setVirtualKeyDown(13, false)
 end
 function imgui.OnDrawFrame()
     if not main_window_state.v and not secondary_window_state.v then
@@ -166,6 +136,7 @@ function imgui.OnDrawFrame()
         imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin('-- FastSpawn --', main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.PushFont(fontsize)
         imgui.Text(u8'Пароль от админки:')
         imgui.InputText('##SearchBar', text_buffer)
         imgui.SameLine()
@@ -198,35 +169,47 @@ function imgui.OnDrawFrame()
         if imgui.Button(u8"Добавить команды") then
             secondary_window_state.v = not secondary_window_state.v
         end
+		imgui.PopFont()
         imgui.End()
     end
 	if secondary_window_state.v then
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8'Добавить команды', secondary_window_state, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.PushFont(fontsize)
 		imgui.Text(u8'      Команда')
 		imgui.SameLine()
-		imgui.Text(u8'           Задержка')
+		imgui.Text(u8'    Задержка')
 		for i = 0, #inputCommand do
-			imgui.PushItemWidth(100)
-			if imgui.InputText('##inputcommand' .. tostring(i), inputCommand[i]) then
-				cfg.command[i] = u8:decode(inputCommand[i].v)
-				save()
+			if inputCommand[i] then
+				imgui.PushItemWidth(100)
+				if imgui.InputText('##inputcommand' .. tostring(i), inputCommand[i]) then
+					cfg.command[i] = u8:decode(inputCommand[i].v)
+					save()
+				end
+				imgui.PopItemWidth()
+				imgui.SameLine()
+				imgui.PushItemWidth(100)
+				inputWait[i].v = cfg.wait_command[i]
+				if imgui.Combo("##selected" .. i, inputWait[i], {u8'0.5 сек', u8'1 сек', u8'1.5 сек', u8'2 сек', u8'3 сек'}, 5) then
+					cfg.wait_command[i] = inputWait[i].v
+					save()
+				end
+				imgui.PopItemWidth()
 			end
-			imgui.PopItemWidth()
-			imgui.SameLine()
-			imgui.PushItemWidth(80)
-			if imgui.Combo("##selected" .. tostring(i), inputWait[i], style_list, 5) then
-				if inputWait[i].v == 0 then cfg.wait_command[i] = 0
-				elseif inputWait[i].v == 1 then cfg.wait_command[i] = 1
-				elseif inputWait[i].v == 2 then cfg.wait_command[i] = 2
-				elseif inputWait[i].v == 3 then cfg.wait_command[i] = 3
-				elseif inputWait[i].v == 4 then cfg.wait_command[i] = 4
-				elseif inputWait[i].v == 5 then cfg.wait_command[i] = 5 end
-				save()
-			end
-			imgui.PopItemWidth()
 		end
+		if imgui.Button(u8'Добавить', imgui.ImVec2(210,24)) then
+			if #(cfg.command) <= 10 then
+				if #(cfg.command[#(cfg.command)]) >= 2 then
+					cfg.command[#(cfg.command) + 1] = ''
+					cfg.wait_command[#(cfg.wait_command) + 1] = 0
+					save() 
+					inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(cfg.command[#(cfg.command)]), 256)
+					inputWait[#inputWait+1] = imgui.ImInt(cfg.wait_command[#(cfg.wait_command)])
+				else sampAddChatMessage(tag .. 'Прошлый пункт не заполнен, а значит будет выводить пустую строку.', -1) end
+			else sampAddChatMessage(tag .. 'Вы достигли максимума - 10 команд.', -1) end
+		end
+		imgui.PopFont()
 		imgui.End()
 	end
 end
