@@ -18,7 +18,7 @@ local fa 				= require 'faicons'					-- Иконки в imgui
 local mem 				= require "memory"					-- Работа с памятью игры
 local font 				= require ("moonloader").font_flag	-- Шрифты визуальных текстов на экране
 encoding.default 		= 'CP1251' 
-u8 						= encoding.UTF8 
+local u8 				= encoding.UTF8 
 
 ------=================== Загрузка модулей ===================----------------------
 
@@ -79,6 +79,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		forma_na_kick = false,
 		forma_na_mute = false,
 		add_mynick_in_form = false,
+		time_nakazanie = true,
 	},
 	customotvet = {},
 	myflood = {},
@@ -138,6 +139,7 @@ local checkbox = {
 	check_on_custom_recon_menu = imgui.ImBool(cfg.settings.on_custom_recon_menu),
 	check_on_custom_answer = imgui.ImBool(cfg.settings.on_custom_answer),
 	check_color_report = imgui.ImBool(cfg.settings.on_color_report),
+	check_time_nakazanie = imgui.ImBool(cfg.settings.time_nakazanie),
 	checked_radio_button = imgui.ImInt(1),
 	check_render_ears = imgui.ImBool(false),
 }
@@ -289,7 +291,7 @@ function main()
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		--ScriptExport()
+		ScriptExport()
 	end
 	if update_main or update_fs or update_mp then windows.update_script.v = true imgui.Process = true end
 	if cfg.mute_players.data ~= os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year then
@@ -387,7 +389,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		nak     =  		'/ot _ Игрок был наказан, спасибо за обращение. ',
 		n       =  		'/ot _ Не наблюдаю нарушений со стороны игрока. ',
 		fo      =  		'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru ',
-		rep     =  		'/ot _ Решить любой вопрос вы всегда можете через /report',
+		rep     =  		'/ot _ Нашли читера? Появился вопрос? Напиши /report!',
 	},
 	mute = {
 		fd      =  		'/mute _ 120 Флуд',--[[x10]]fd2='/mute _ 240 Флуд x2',fd3='/mute _ 360 Флуд x3',fd4='/mute _ 480 Флуд x4',fd5='/mute _ 600 Флуд х5',fd6='/mute _ 720 Флуд х6',fd7='/mute _ 840 Флуд х7',fd8='/mute _ 960 Флуд х8',fd9='/mute _ 1080 Флуд х9',fd10='/mute _ 1200 Флуд х10',
@@ -804,13 +806,26 @@ function imgui.OnDrawFrame()
 			end
 			imgui.SameLine()
 			imgui.Text(u8'Рендер /ears')
-			imgui.Text('\n\n\n\n')
+			imgui.SameLine()
+			imgui.SetCursorPosX(200)
+			if imadd.ToggleButton("##timer_nakazanie", checkbox.check_time_nakazanie) then
+				cfg.settings.time_nakazanie = not cfg.settings.time_nakazanie
+				save()
+			end
+			imgui.SameLine()
+			imgui.Text(u8'Время до ввода команд')
+			imgui.Text('\n\n\n')
 			imgui.Separator()
 			imgui.Text(u8'Разработчик скрипта - N.E.O.N [RDS 01].')
-			imgui.Text(u8'Обратная связь: ')
+			imgui.Text(u8'Обратная связь:')
 			imgui.SameLine()
 			if imgui.Link("https://vk.com/alexandrkob", u8"Нажми, чтобы открыть ссылку в браузере") then
 				os.execute(('explorer.exe "%s"'):format("https://vk.com/alexandrkob"))
+			end
+			imgui.Text(u8'Группа VK:')
+			imgui.SameLine()
+			if imgui.Link("https://vk.com/club222702914", u8"Нажми, чтобы открыть ссылку в браузере") then
+				os.execute(('explorer.exe "%s"'):format("https://vk.com/club222702914"))
 			end
 		end
 		if menu2[3] then
@@ -840,7 +855,7 @@ function imgui.OnDrawFrame()
 				save()	
 			end
 			imgui.PopItemWidth()
-			if imgui.Button(u8'Сохранить позицию Recon Menu', imgui.ImVec2(410, 24)) then
+			if imgui.Button(u8'Сохранить позицию рекон мeню', imgui.ImVec2(410, 24)) then
 				windows.recon_menu.v = not windows.recon_menu.v
 				windows.new_position_recon_menu.v = not windows.new_position_recon_menu.v
 			end
@@ -1560,7 +1575,7 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Tooltip('E')
 		imgui.SameLine()
-		if imgui.Button(u8'Список своих', imgui.ImVec2(120, 25)) or (isKeyJustPressed(VK_R) and not sampIsChatInputActive()) then
+		if imgui.Button(u8'Мои ответы', imgui.ImVec2(120, 25)) or (isKeyJustPressed(VK_R) and not sampIsChatInputActive()) then
 			windows.custom_ans.v = not windows.custom_ans.v
 		end
 		imgui.Tooltip('R')
@@ -2279,8 +2294,6 @@ function imgui.OnDrawFrame()
 end
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if command:match('/mute (%d+) (%d+) .+') or command:match('/rmute (%d+) (%d+) .+') then
-		if command:match('/rmute (%d+) (%d+) .+') then timer_command(15)
-		elseif command:match('/mute') then timer_command(6) end
 		if cfg.settings.forma_na_mute then
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
@@ -2291,6 +2304,8 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				return false
 			end
 		end
+		if command:match('/rmute') then timer_command(15)
+		elseif command:match('/mute') then timer_command(6) end
 		if cfg.settings.smart_automute then
 			local id, second, reason = string.match(command,'(%d+) (%d+) (.+)') -- Узнаем ник наказуемого
 			if sampIsPlayerConnected(id) and not string.gsub(reason, 'x(%d)', '') then -- если игрок в сети
@@ -2461,6 +2476,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 	end
 	if text:match('%[A%] NEARBY CHAT: .+') or text:match('%[A%] SMS: .+') then
 		render_ears = true
+		check_render_ears = imgui.ImBool(render_ears)
 		local text = string.gsub(text, 'NEARBY CHAT:', '{4682B4}AT-NEAR:{FFFFFF}')
 		local text = string.gsub(text, 'SMS:', '{4682B4}AT-SMS:{FFFFFF}')
 		local text = string.gsub(text, ' отправил ', '')
@@ -2638,8 +2654,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			elseif v == 'STATS' then 
 				textdraw.stats = id
 				lua_thread.create(function()
-					while not (sampTextdrawIsExists(textdraw.refresh) and sampTextdrawIsExists(textdraw.inforeport) and sampTextdrawIsExists(textdraw.name_report)) do wait(100) end
-					wait(300)
+					while not (sampTextdrawIsExists(textdraw.refresh) or sampTextdrawIsExists(textdraw.inforeport) or sampTextdrawIsExists(textdraw.name_report)) do wait(200) end
 					if cfg.settings.keysync then keysync(control_player_recon) end
 					sampTextdrawSetPos(textdraw.close, 2000, 0) -- кнопка закрытия рекона
 					sampTextdrawSetPos(textdraw.stats, 2000, 0) -- кнопка статистики
@@ -3205,11 +3220,12 @@ function render_adminchat()
 end
 
 function timer_command(sec)
-	if count_time == -1 then
+	if count_time == -1 and cfg.settings.time_nakazanie then
 		lua_thread.create(function()
-			while count_time ~= sec do
-				count_time = count_time + 1
+			count_time = 0
+			while sec ~= count_time do
 				wait(1000)
+				sec = sec - 1
 			end
 			count_time = -1
 		end)
@@ -3217,10 +3233,10 @@ function timer_command(sec)
 			local font_watermark = renderCreateFont("Javanese Text", 9, font.BOLD + font.BORDER + font.SHADOW)
 			while count_time ~= -1 do 
 				wait(1)
-				renderFontDrawText(font_watermark, 'Время, до ввода нового наказания: ' .. count_time..'/'..sec, sw-280, 5, 0xCCFFFFFF)
+				renderFontDrawText(font_watermark, 'Вы сможете выдать следующее наказание через: ' .. sec, sw-360, 5, 0xCCFFFFFF)
 			end
 		end)
-	else count_time = 0 end
+	end
 end
 
 
