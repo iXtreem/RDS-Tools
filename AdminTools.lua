@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 3.9 										-- Версия скрипта
+local version = 3.91 										-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -260,7 +260,7 @@ function main()
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", getWorkingDirectory() .. '//config//AT//AdminTools.ini', function(id, status) end)
-	wait(100)
+	wait(200)
 	local AdminTools = inicfg.load(nil, getWorkingDirectory() .. '//config//AT//AdminTools.ini')
 	if AdminTools then
 		if AdminTools.script.info then update_info = AdminTools.script.info end
@@ -389,7 +389,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		nak     =  		'/ot _ Игрок был наказан, спасибо за обращение. ',
 		n       =  		'/ot _ Не наблюдаю нарушений со стороны игрока. ',
 		fo      =  		'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru ',
-		rep     =  		'/ot _ Нашли читера? Появился вопрос? Напиши /report!',
+		rep     =  		'/ot _ Нашли читера? Появился вопрос? Напишите /report!',
 	},
 	mute = {
 		fd      =  		'/mute _ 120 Флуд',--[[x10]]fd2='/mute _ 240 Флуд x2',fd3='/mute _ 360 Флуд x3',fd4='/mute _ 480 Флуд x4',fd5='/mute _ 600 Флуд х5',fd6='/mute _ 720 Флуд х6',fd7='/mute _ 840 Флуд х7',fd8='/mute _ 960 Флуд х8',fd9='/mute _ 1080 Флуд х9',fd10='/mute _ 1200 Флуд х10',
@@ -484,7 +484,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 }
 --------============= Инициализируем команды, указанные выше ===========================---------------------------
 for k,v in pairs(basic_command.help) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.ans) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then if cfg.settings.add_answer_report then sampSendChat(string.gsub(v, '_', param) .. cfg.settings.mytextreport) else sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.ans) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then if cfg.settings.add_answer_report then sampSendChat(string.gsub(v, '_', param) ..' '.. cfg.settings.mytextreport) else sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 for k,v in pairs(basic_command.mute) do  sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
 for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
@@ -2621,9 +2621,6 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			elseif v:match('~n~') then
 				if not v:match('~g~') then 
 					textdraw.inforeport = id  -- инфо панель в реконе
-					windows.recon_menu.v = true
-					windows.menu_in_recon.v = true
-					imgui.Process = true
 					lua_thread.create(function()
 						while not windows.recon_menu.v do wait(0) end
 						while windows.recon_menu.v do
@@ -2654,7 +2651,11 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			elseif v == 'STATS' then 
 				textdraw.stats = id
 				lua_thread.create(function()
-					while not (sampTextdrawIsExists(textdraw.refresh) or sampTextdrawIsExists(textdraw.inforeport) or sampTextdrawIsExists(textdraw.name_report)) do wait(200) end
+					while not (sampTextdrawIsExists(textdraw.refresh) and sampTextdrawIsExists(textdraw.inforeport) and sampTextdrawIsExists(textdraw.name_report)) do wait(0) end
+					wait(10)
+					windows.recon_menu.v = true
+					windows.menu_in_recon.v = true
+					imgui.Process = true
 					if cfg.settings.keysync then keysync(control_player_recon) end
 					sampTextdrawSetPos(textdraw.close, 2000, 0) -- кнопка закрытия рекона
 					sampTextdrawSetPos(textdraw.stats, 2000, 0) -- кнопка статистики
