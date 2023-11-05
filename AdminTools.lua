@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.1	 										-- Версия скрипта
+local version = 4.11	 									-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -138,7 +138,7 @@ local checkbox = {
 	option_find_log 		= imgui.ImInt(0),
 	check_render_ears 		= imgui.ImBool(false),
 	add_full_words 			= imgui.ImBool(true),
-	control_system_mute  = imgui.ImBool(cfg.settings.control_system_mute),
+	control_system_mute  	= imgui.ImBool(cfg.settings.control_system_mute),
 	check_answer_player_report = imgui.ImBool(cfg.settings.answer_player_report),
 	check_on_custom_recon_menu = imgui.ImBool(cfg.settings.on_custom_recon_menu),
 }
@@ -298,7 +298,7 @@ function main()
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		ScriptExport()
+		--ScriptExport()
 	end
 	if update_main or update_fs or update_mp then windows.update_script.v = true imgui.Process = true end
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
@@ -1606,7 +1606,7 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Text(fa.ICON_FILES_O)
 		if imgui.IsItemClicked(0) then 
-			setClipboardText(sampGetPlayerNickname(autor))
+			setClipboardText(autor)
 			sampAddChatMessage(tag .. 'Ник скопирован в буффер обмена.', -1)
 		end
 		imgui.TextWrapped(u8('Жалоба: ' .. textreport))
@@ -2028,7 +2028,6 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 	if windows.answer_player_report.v then -- помощь после слежки в реконе
-		windows.render_admins.v = false
 		imgui.SetNextWindowPos(imgui.ImVec2(sw-250, 0), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8"Помощь после выхода из рекона", windows.answer_player_report.v, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
@@ -2424,7 +2423,13 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			return false
 		end
 	end
-	return
+	if sampIsDialogActive() then -- защита от отправки команд во время отыгрытого окна
+		lua_thread.create(function()
+			local command = command
+			while sampIsDialogActive() do wait(1) end
+			sampSendChat(command)
+		end)
+	else return end
 end
 function SendChat(text)
     local bs = raknetNewBitStream()
@@ -2436,7 +2441,7 @@ function SendChat(text)
 end
 
 function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
-	if #text > 3 then
+	if #text > 4 then
 		if text:match('%[Информация%] {FFFFFF}Теперь вы не видите сообщения игроков') then
 			render_ears = false
 			checkbox.check_render_ears = imgui.ImBool(render_ears)
@@ -2748,7 +2753,6 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				lua_thread.create(function()
 					while not (sampTextdrawIsExists(textdraw.close) and sampTextdrawIsExists(textdraw.name_report)) do wait(100) end
 					wait(200)
-					windows.render_admins.v = false
 					windows.recon_menu.v = true
 					windows.menu_in_recon.v = true
 					imgui.Process = true
@@ -2916,12 +2920,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				elseif myid then if reportid == myid then peremrep = ('Вы указали мой ID :D') answer.slejy = nil end end
 			elseif answer.nakazan then peremrep = ('Данный игрок уже был наказан.')
 			elseif answer.uto4id then peremrep = ('Уточните ID нарушителя в /report.')
-			elseif answer.nakajy then
-				windows.fast_rmute.v = true
-				if nakazatreport.oftop or nakazatreport.oskadm or nakazatreport.matrep or nakazatreport.oskrep or nakazatreport.poprep or nakazatreport.oskrod or nakazatreport.capsrep then
-					windows.fast_rmute.v = false
-					peremrep = ('Будете наказаны за нарушение правил /report')
-				end  
+			elseif answer.nakajy then peremrep = ('Будете наказаны за нарушение правил /report')  
 			elseif answer.jb then peremrep = ('Напишите жалобу на forumrds.ru')
 			elseif answer.peredamrep then peremrep = ('Передам ваш репорт.')
 			elseif answer.rabotay then peremrep = ('Начал(а) работу по вашей жалобе.')
@@ -3004,7 +3003,7 @@ function log(text) -- записываем лог
 	local data_today = os.date("*t") -- узнаем дату сегодня
 	local log = (getWorkingDirectory()..'\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 	local file = io.open(log,"a")
-	file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(text, 3)..'\n')
+	if file then file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(text, 3)..'\n') end
 	file:close()
 end
 function daysPassed(year1, month1, day1) -- узнаем разницу в днях
