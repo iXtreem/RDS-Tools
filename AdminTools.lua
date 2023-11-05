@@ -2716,7 +2716,6 @@ function sampev.onShowTextDraw(id, data) -- —читываем серверные текстдравы
 			elseif v:match('~n~') then
 				if not v:match('~g~') then 
 					textdraw.inforeport = id  -- инфо панель в реконе
-					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информаци€
 					lua_thread.create(function()
 						while not windows.recon_menu.v do wait(0) end
 						while windows.recon_menu.v do
@@ -2758,6 +2757,7 @@ function sampev.onShowTextDraw(id, data) -- —читываем серверные текстдравы
 					sampTextdrawSetPos(textdraw.stats, 2000, 0) -- кнопка статистики
 					sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
 					sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информаци€ о никнейме игрока
+					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информаци€
 				end)
 			elseif v == 'CLOSE' then textdraw.close = id
 			elseif v == 'BAN' then return false
