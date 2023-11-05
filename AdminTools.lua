@@ -298,7 +298,7 @@ function main()
 		server03 = true
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		--ScriptExport()
+		ScriptExport()
 	end
 	if update_main or update_fs or update_mp then windows.update_script.v = true imgui.Process = true end
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
