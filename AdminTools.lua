@@ -2761,6 +2761,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
 					sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информация о никнейме игрока
 					while not sampTextdrawIsExists(textdraw.inforeport) do wait(100) end
+					wait(100)
 					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
 				end)
 			elseif v == 'CLOSE' then textdraw.close = id
