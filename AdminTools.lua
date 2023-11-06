@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.11	 									-- Версия скрипта
+local version = 4.12	 									-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -974,7 +974,10 @@ function imgui.OnDrawFrame()
 					else sampAddChatMessage(tag .. 'Данная опция доступна только в реконе.', -1) end
 				else sampAddChatMessage(tag ..'Функция выключена, включите её и задайте позицию', -1) end
 			end
-			imgui.Text('\n\n\n\n\n')
+			if windows.recon_menu.v then
+				imgui.Text(u8'На данный момент вы находитесь в реконе.\nАктивация курсора - клавиша F или правая кнопка мыши.')
+			end
+			imgui.SetCursorPosY(370)
 			imgui.Separator()
 			imgui.Text(u8'Разработчик скрипта - N.E.O.N [RDS 01].')
 			imgui.Text(u8'Обратная связь:')
@@ -1817,7 +1820,7 @@ function imgui.OnDrawFrame()
 			if mobile_player then imgui.Text(fa.ICON_MOBILE)
 			else imgui.Text(fa.ICON_DESKTOP) end
 			imgui.Separator()
-			if inforeport[15] then
+			if inforeport[14] then
 				imgui.Text(u8'Здоровье авто: ' .. inforeport[4])
 				imgui.Text(u8'Скорость: ' .. inforeport[5])
 				imgui.Text(u8'Оружие: ' .. inforeport[7])
@@ -1827,7 +1830,7 @@ function imgui.OnDrawFrame()
 				imgui.Text('VIP: ' .. inforeport[12])
 				imgui.Text('Passive mode: ' .. inforeport[13])
 				imgui.Text(u8'Турбо пакет: ' .. inforeport[14])
-				imgui.Text(u8'Коллизия: ' .. inforeport[15])
+				--imgui.Text(u8'Коллизия: ' .. inforeport[15])
 			end
 			if imgui.Button(u8'Посмотреть первую статистику', imgui.ImVec2(250, 25)) or (isKeyJustPressed(VK_Z) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 				sampSendChat('/statpl ' .. sampGetPlayerNickname(control_player_recon))
@@ -2423,13 +2426,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			return false
 		end
 	end
-	if sampIsDialogActive() then -- защита от отправки команд во время отыгрытого окна
-		lua_thread.create(function()
-			local command = command
-			while sampIsDialogActive() do wait(1) end
-			sampSendChat(command)
-		end)
-	else return end
+	return
 end
 function SendChat(text)
     local bs = raknetNewBitStream()
@@ -2460,7 +2457,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				return false
 			end
 		end
-		log(text)
+		if not AFK then log(text) end
 		if text:match("(.+)%((%d+)%) пытался написать в чат: ") and not AFK and cfg.settings.control_system_mute then
 			lua_thread.create(function()
 				local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
@@ -2530,7 +2527,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		if cfg.settings.find_form and not AFK then
 			if text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: ") then
 				for i = 1, #spisok_in_form do
-					if spisok_in_form[i] and text:find(spisok_in_form[i]) then
+					if text:find(spisok_in_form[i]) then
 						while true do -- пока цикл не будет прерван
 							admin_form = {}
 							local find_admin_form = string.gsub(text, '%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: {%w%w%w%w%w%w}', '')
@@ -2752,7 +2749,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				textdraw.stats = id
 				lua_thread.create(function()
 					while not (sampTextdrawIsExists(textdraw.close) and sampTextdrawIsExists(textdraw.name_report)) do wait(100) end
-					wait(200)
+					wait(1)
 					windows.recon_menu.v = true
 					windows.menu_in_recon.v = true
 					imgui.Process = true
@@ -2761,6 +2758,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					sampTextdrawSetPos(textdraw.stats, 2000, 0) -- кнопка статистики
 					sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
 					sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информация о никнейме игрока
+					while not sampTextdrawIsExists(textdraw.inforeport) do wait(100) end
 					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
 				end)
 			elseif v == 'CLOSE' then textdraw.close = id
@@ -3576,7 +3574,7 @@ function auto_update_recon()
 			while not doesCharExist(target) and windows.recon_menu.v do
 				sampSendClickTextdraw(textdraw.refresh)
 				printStyledString('auto - update...', 500, 4)
-				wait(1500)
+				wait(1000)
 				keysync(control_player_recon)
 			end
 			start_update_recon = false
