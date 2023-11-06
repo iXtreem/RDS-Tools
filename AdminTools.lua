@@ -332,15 +332,17 @@ function main()
 	end
 	for k, v in ipairs(scanDirectory(getWorkingDirectory()..'\\config\\chatlog\\')) do
 		local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
-		if tonumber(daysPassed(data3,data2,data1)) < 3 then
-			file = io.open(getWorkingDirectory()..'\\config\\chatlog\\'..v,'r')
-			for line in file:lines() do
-				if k == 1 then chatlog_1[#chatlog_1 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','')
-				elseif k == 2 then chatlog_2[#chatlog_2 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','')
-				elseif k == 3 then chatlog_3[#chatlog_3 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','') end
-			end
-			file:close()
-		else os.remove(getWorkingDirectory()..'\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
+		if data3 and data2 and data3 then
+			if tonumber(daysPassed(data3,data2,data1)) < 3 then
+				file = io.open(getWorkingDirectory()..'\\config\\chatlog\\'..v,'r')
+				for line in file:lines() do
+					if k == 1 then chatlog_1[#chatlog_1 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','')
+					elseif k == 2 then chatlog_2[#chatlog_2 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','')
+					elseif k == 3 then chatlog_3[#chatlog_3 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','') end
+				end
+				file:close()
+			else os.remove(getWorkingDirectory()..'\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
+		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 	end
 	--========== ЧАТ ЛОГГ ========----
 	lua_thread.create(inputChat)
