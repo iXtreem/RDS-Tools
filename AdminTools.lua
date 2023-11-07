@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.12	 									-- Версия скрипта
+local version = 4.13	 									-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -419,7 +419,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		nak     =  		'/ot _ Игрок был наказан, спасибо за обращение. ',
 		n       =  		'/ot _ Не наблюдаю нарушений со стороны игрока. ',
 		fo      =  		'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru ',
-		rep     =  		'/ot _ Нашли читера? Появился вопрос? Напишите /report!',
+		rep     =  		'/ot _ Нашли нарушителя? Появился вопрос? Напишите /report!',
 	},
 	mute = {
 		fd      =  		'/mute _ 120 Флуд',--[[x10]]fd2='/mute _ 240 Флуд x2',fd3='/mute _ 360 Флуд x3',fd4='/mute _ 480 Флуд x4',fd5='/mute _ 600 Флуд x5',fd6='/mute _ 720 Флуд x6',fd7='/mute _ 840 Флуд x7',fd8='/mute _ 960 Флуд x8',fd9='/mute _ 1080 Флуд x9',fd10='/mute _ 1200 Флуд x10',
@@ -494,7 +494,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	},
 	prochee = {
 		wh 		= 		'Включить WallHack',
-		keysync = 		'Зафиксировать игрока',
 		tool 	= 		'Активировать меню АТ',
 		sbanip 	= 		'Выдать блокировку аккаунта с IP адресом (ФД!)',
 		spp 	= 		'Заспавнить игроков в радиусе',
@@ -1803,7 +1802,6 @@ function imgui.OnDrawFrame()
 		imgui.Begin("##recon", windows.recon_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.ShowCursor = false
-		if not sampIsPlayerConnected(control_player_recon) then windows.recon_menu.v = false windows.menu_in_recon.v = false end
 		imgui.PushFont(fontsize)
 		if imgui.Button(u8'Игрок ' ..fa.ICON_MALE, imgui.ImVec2(120, 25)) then uu() menu[1] = true end imgui.SameLine()
         if imgui.Button(u8'В радиусе ' .. fa.ICON_USERS, imgui.ImVec2(120, 25)) then uu() menu[2] = true end
@@ -1823,16 +1821,16 @@ function imgui.OnDrawFrame()
 			else imgui.Text(fa.ICON_DESKTOP) end
 			imgui.Separator()
 			if inforeport[14] then
-				imgui.Text(u8'Здоровье авто: ' .. inforeport[4])
-				imgui.Text(u8'Скорость: ' .. inforeport[5])
-				imgui.Text(u8'Оружие: ' .. inforeport[7])
-				imgui.Text(u8'Точность: ' .. inforeport[8])
-				imgui.Text('Ping: ' .. inforeport[6])
-				imgui.Text('AFK: ' .. inforeport[10])
-				imgui.Text('VIP: ' .. inforeport[12])
-				imgui.Text('Passive mode: ' .. inforeport[13])
-				imgui.Text(u8'Турбо пакет: ' .. inforeport[14])
-				--imgui.Text(u8'Коллизия: ' .. inforeport[15])
+				imgui.Text(u8'Здоровье авто: ' .. inforeport[3])
+				imgui.Text(u8'Скорость: ' .. inforeport[4])
+				imgui.Text(u8'Оружие: ' .. inforeport[6])
+				imgui.Text(u8'Точность: ' .. inforeport[7])
+				imgui.Text('Ping: ' .. inforeport[5])
+				imgui.Text('AFK: ' .. inforeport[9])
+				imgui.Text('VIP: ' .. inforeport[11])
+				imgui.Text('Passive mode: ' .. inforeport[12])
+				imgui.Text(u8'Турбо пакет: ' .. inforeport[13])
+				imgui.Text(u8'Коллизия: ' .. inforeport[14])
 			end
 			if imgui.Button(u8'Посмотреть первую статистику', imgui.ImVec2(250, 25)) or (isKeyJustPressed(VK_Z) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 				sampSendChat('/statpl ' .. sampGetPlayerNickname(control_player_recon))
@@ -2724,15 +2722,15 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 						while not windows.recon_menu.v do wait(0) end
 						while windows.recon_menu.v do
 							inforeport = textSplit(sampTextdrawGetString(textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
-							if inforeport[4] ==   '-1'   then inforeport[4] = '-' end  --========= ХП АВТО
-							if inforeport[7] == '0 : 0 ' then inforeport[7] = '-' end  --====== Оружие
+							if inforeport[3] ==   '-1'   then inforeport[3] = '-' end  --========= ХП АВТО
+							if inforeport[6] == '0 : 0 ' then inforeport[6] = '-' end  --====== Оружие
 							--=========== Название ВИП =======--------
-							if     inforeport[12] == '0' then inforeport[12] = '-'
-							elseif inforeport[12] == '1' then inforeport[12] = 'Standart'
-							elseif inforeport[12] == '2' then inforeport[12] = 'Premium'
-							elseif inforeport[12] == '3' then inforeport[12] = 'Diamond'
-							elseif inforeport[12] == '4' then inforeport[12] = 'Platinum'
-							elseif inforeport[12] == '5' then inforeport[12] = 'Personal' end
+							if     inforeport[11] == '0' then inforeport[11] = '-'
+							elseif inforeport[11] == '1' then inforeport[11] = 'Standart'
+							elseif inforeport[11] == '2' then inforeport[11] = 'Premium'
+							elseif inforeport[11] == '3' then inforeport[11] = 'Diamond'
+							elseif inforeport[11] == '4' then inforeport[11] = 'Platinum'
+							elseif inforeport[11] == '5' then inforeport[11] = 'Personal' end
 							--=========== Название ВИП =======--------
 							wait(1000)
 						end
@@ -3091,12 +3089,12 @@ function translite(text)
 end
 function inputChat()
 	while true do
-		wait(0)
-		if sampIsChatInputActive() and cfg.settings.inputhelper then
+		wait(10)
+		if sampIsChatInputActive() then
 			local getInput = sampGetChatInputText()
 			if(oldText ~= getInput and #getInput > 0)then
 				local firstChar = string.sub(getInput, 1, 1)
-				if(firstChar == "." or firstChar == "/")then
+				if (firstChar == "." or firstChar == "/") and cfg.settings.inputhelper then
 					local cmd, text = string.match(getInput, "^([^ ]+)(.*)")
 					local nText = "/" .. translite(string.sub(cmd, 2)) .. text
 					local chatInfoPtr = sampGetInputInfoPtr()
