@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.13	 									-- Версия скрипта
+local version = 4.2		 									-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -151,7 +151,7 @@ local buffer = {
 	newmat 				= imgui.ImBuffer(256),
 	newosk 				= imgui.ImBuffer(256),
 	add_new_text		= imgui.ImBuffer(u8(cfg.settings.mytextreport), 256),
-	bloknotik 			= imgui.ImBuffer(cfg.settings.bloknotik, 4096),
+	bloknotik 			= imgui.ImBuffer(u8(cfg.settings.bloknotik), 4096),
 	new_flood_mess 		= imgui.ImBuffer(4096),
 	title_flood_mess 	= imgui.ImBuffer(256),
 	new_command_title 	= imgui.ImBuffer(256),
@@ -293,9 +293,7 @@ function main()
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
 	end
 	local AdminTools = nil
-	if sampGetCurrentServerAddress() == '46.174.52.246' then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3(/tool)', -1)
-	elseif sampGetCurrentServerAddress() == '46.174.49.170' then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3 или /tool', -1)
-		server03 = true
+	if sampGetCurrentServerAddress() == '46.174.52.246' or sampGetCurrentServerAddress() == '46.174.49.170' then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3(/tool)', -1)
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
 		ScriptExport()
@@ -523,7 +521,7 @@ for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k..'f', functio
 for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(v, '_', param) , '/jail', '/jailakk') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 for k,v in pairs(basic_command.ban) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(string.gsub(v, '_', param) , '/siban', '/banoff') ,'/iban', '/banoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 --------============= Инициализируем команды ниже (особые свойства) ===========================---------------------------
-for k,v in pairs(cfg.my_command) do local v = string.gsub(v, '\\n','\n') sampRegisterChatCommand(k, function(param) lua_thread.create(function() for a,b in pairs(textSplit(string.gsub(u8:decode(v), '_', param), '\n')) do if b:match('wait(%(%d+)%)') then wait(tonumber(b:match('%d+') .. '000')) else sampSendChat(b) end end end) end) end
+for k,v in pairs(cfg.my_command) do local v = string.gsub(v, '\\n','\n') sampRegisterChatCommand(k, function(param) lua_thread.create(function() for a,b in pairs(textSplit(string.gsub(v, '_', param), '\n')) do if b:match('wait(%(%d+)%)') then wait(tonumber(b:match('%d+') .. '000')) else sampSendChat(b) end end end) end) end
 
 -- Команда or (оск/упом родни) содержит название переменной, потому создается отдельно
 sampRegisterChatCommand('prfma', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Младший-Администратор ' .. cfg.settings.prefixma) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
@@ -703,10 +701,7 @@ function imgui.OnDrawFrame()
 			imgui.SameLine()
 			imgui.SetCursorPosX(250)
 			if imadd.ToggleButton('##find_form', checkbox.check_find_form) then
-				if server03 then
-					cfg.settings.find_form  = false
-					checkbox.check_find_form = imgui.ImBool(cfg.settings.find_form)
-				else cfg.settings.find_form  = not cfg.settings.find_form end
+				cfg.settings.find_form  = not cfg.settings.find_form
 				save()
 			end
 			imgui.SameLine()
@@ -1058,38 +1053,36 @@ function imgui.OnDrawFrame()
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Чат-логгер', imgui.ImVec2(228, 24)) then windows.menu_chatlogger.v = true windows.menu_tools.v = false end
-			if not server03 then
-				if imgui.Button(u8'Авто-отправка форм для младших администраторов', imgui.ImVec2(485, 24)) then imgui.OpenPopup('autoform') end
-				if imgui.BeginPopup('autoform') then
-					imgui.CenterText(u8'Каких доступов у вас нет?')
-					if imgui.Checkbox('/ban', checkbox.check_form_ban) then
-						cfg.settings.forma_na_ban = not cfg.settings.forma_na_ban
-						save()
-					end
-					if imgui.Checkbox('/jail', checkbox.check_form_jail) then
-						cfg.settings.forma_na_jail = not cfg.settings.forma_na_jail
-						save()
-					end
-					if imgui.Checkbox('/mute', checkbox.check_form_mute) then
-						if not cfg.settings.automute then
-							cfg.settings.forma_na_mute = not cfg.settings.forma_na_mute
-						else 
-							cfg.settings.forma_na_mute = false
-							checkbox.check_form_mute = imgui.ImBool(cfg.settings.forma_na_mute)
-							sampAddChatMessage(tag .. 'У вас включен автомут, во избежания фарма данные опции совместно запрещены.', -1)
-						end
-						save()
-					end
-					if imgui.Checkbox('/kick', checkbox.check_form_kick) then
-						cfg.settings.forma_na_kick = not cfg.settings.forma_na_kick
-						save()
-					end
-					if imgui.Checkbox(u8'Добавлять // мой ник', checkbox.check_add_mynick_form) then
-						cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
-						save()
-					end
-					imgui.EndPopup()
+			if imgui.Button(u8'Авто-отправка форм для младших администраторов', imgui.ImVec2(485, 24)) then imgui.OpenPopup('autoform') end
+			if imgui.BeginPopup('autoform') then
+				imgui.CenterText(u8'Каких доступов у вас нет?')
+				if imgui.Checkbox('/ban', checkbox.check_form_ban) then
+					cfg.settings.forma_na_ban = not cfg.settings.forma_na_ban
+					save()
 				end
+				if imgui.Checkbox('/jail', checkbox.check_form_jail) then
+					cfg.settings.forma_na_jail = not cfg.settings.forma_na_jail
+					save()
+				end
+				if imgui.Checkbox('/mute', checkbox.check_form_mute) then
+					if not cfg.settings.automute then
+						cfg.settings.forma_na_mute = not cfg.settings.forma_na_mute
+					else 
+						cfg.settings.forma_na_mute = false
+						checkbox.check_form_mute = imgui.ImBool(cfg.settings.forma_na_mute)
+						sampAddChatMessage(tag .. 'У вас включен автомут, во избежания фарма данные опции совместно запрещены.', -1)
+					end
+					save()
+				end
+				if imgui.Checkbox('/kick', checkbox.check_form_kick) then
+					cfg.settings.forma_na_kick = not cfg.settings.forma_na_kick
+					save()
+				end
+				if imgui.Checkbox(u8'Добавлять // мой ник', checkbox.check_add_mynick_form) then
+					cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
+					save()
+				end
+				imgui.EndPopup()
 			end
 			imgui.SetCursorPosY(470)
 			if imgui.Button(u8'Перезагрузить скрипт '..fa.ICON_RECYCLE, imgui.ImVec2(250,24)) then reloadScripts() end
@@ -1100,7 +1093,7 @@ function imgui.OnDrawFrame()
 			buffer.bloknotik.v = string.gsub(buffer.bloknotik.v, "\\n", "\n")
 			if imgui.InputTextMultiline("##1", buffer.bloknotik, imgui.ImVec2(495, 500)) then
 				buffer.bloknotik.v = string.gsub(buffer.bloknotik.v, "\n", "\\n")
-				cfg.settings.bloknotik = buffer.bloknotik.v
+				cfg.settings.bloknotik = u8:decode(buffer.bloknotik.v)
 				save()	
 			end
 		end
@@ -1556,24 +1549,21 @@ function imgui.OnDrawFrame()
 			if imgui.Button(u8'Сохрaнить', imgui.ImVec2(250, 24)) then
 				if #(u8:decode(buffer.new_command_title.v)) ~= 0 and #(u8:decode(buffer.new_command.v)) > 2 then
 					buffer.new_command_title.v = string.gsub(buffer.new_command_title.v, '%/', '')
-					cfg.my_command[buffer.new_command_title.v] = string.gsub(buffer.new_command.v,'\n','\\n')
+					cfg.my_command[buffer.new_command_title.v] = string.gsub(u8:decode(buffer.new_command.v),'\n','\\n')
 					save()
-					for k,v in pairs(cfg.my_command) do
-						if k == buffer.new_command_title.v then
-							local v = string.gsub(v, '\\n','\n') 
-							sampRegisterChatCommand(k, function(param)
-								lua_thread.create(function()
-									for a,b in pairs(textSplit(string.gsub(u8:decode(v), '_', param), '\n')) do
-										if b:match('wait(%(%d+)%)') then
-											wait(tonumber(b:match('%d+') .. '000'))
-										else sampSendChat(b) end
-									end
-								end)
-							end)
-							sampAddChatMessage(tag .. 'Новая команда /' .. buffer.new_command_title.v .. ' успешно создана.',-1)
-							buffer.new_command.v, buffer.new_command_title.v = '',''
-						end
-					end
+					buffer.new_command.v = string.gsub(buffer.new_command.v, '\\n','\n') 
+					local v = string.gsub(cfg.my_command[buffer.new_command_title.v], '\\n','\n') 
+					sampRegisterChatCommand(buffer.new_command_title.v, function(param) 
+						lua_thread.create(function() 
+							for a,b in pairs(textSplit(string.gsub(v, '_', param), '\n'))  do 
+								if b:match('wait(%(%d+)%)') then 
+									wait(tonumber(b:match('%d+') .. '000')) 
+								else sampSendChat(b) end 
+							end 
+						end) 
+					end) 
+					sampAddChatMessage(tag .. 'Новая команда /' .. buffer.new_command_title.v .. ' успешно создана.',-1)
+					buffer.new_command.v, buffer.new_command_title.v = '',''
 				else sampAddChatMessage(tag .. 'Что вы собрались сохранять?', -1) end
 			end
 			imgui.SameLine()
