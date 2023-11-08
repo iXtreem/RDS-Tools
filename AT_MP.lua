@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.6
+local version = 1.7
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding'
@@ -64,6 +64,7 @@ local checkbox = {
     check_8 = imgui.ImBool(cfg.AT_MP.warningjail),
     check_9 = imgui.ImBool(cfg.AT_MP.warningkick),
     check_10 = imgui.ImBool(anticrashmp),
+    check_11 = imgui.ImBool(false),
 }
 local windows = {
     menu_window_state = imgui.ImBool(false),
@@ -357,7 +358,8 @@ function imgui.OnDrawFrame()
     end
     if windows.secondary_window_state.v then
         imgui.SetNextWindowPos(imgui.ImVec2(sw - 375, 50), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin(u8"Выбери мероприятие", windows.secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        if checkbox.check_11.v then imgui.Begin(u8"Выбери мероприятие", windows.secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        else imgui.Begin(u8"Выбери мероприятие", windows.secondary_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders) end
         imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
         imgui.ShowCursor = false
         imgui.PushFont(fontsize)
@@ -614,13 +616,13 @@ function imgui.OnDrawFrame()
                 imgui.PopFont()
             end
             imgui.CenterText(u8'Активация курсора - клавиша F')
-            if imadd.ToggleButton('##find_weapon', checkbox.check_10) then
+            imgui.Checkbox(u8'позиция окна', checkbox.check_11)
+            imgui.Tooltip(u8'Если галочка активна - окно можно двигать курсором.')
+            if imgui.Checkbox(u8'анти-срыв мероприятия', checkbox.check_10) then
                 if anticrashmp then func3:terminate()
                 else func3:run() end
                 anticrashmp = not anticrashmp
             end
-            imgui.SameLine()
-            imgui.Text(u8'Анти-срыв мероприятия')
             imgui.Tooltip(u8'Автоматически выдает джайл, если видит оружие в руках игрока.\nМожет посадить администратора, потому проводить совместно не рекомендуется.')
         end
         if isKeyJustPressed(VK_F) and not (sampIsDialogActive() and sampIsChatInputActive()) then
