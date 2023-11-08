@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.71
+local version = 1.72
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding'
@@ -701,7 +701,7 @@ function imgui.Tooltip(text)
 end
 function find_weapon()
     local _, myid = sampGetPlayerIdByCharHandle(playerPed)
-    wait(15000)
+    while menu ~= 'настройки' and menu ~= 'закрыть мп' do wait(3000) end
     while true do
         wait(2000)
         local playerzone = playersToStreamZone()
