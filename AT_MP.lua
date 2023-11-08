@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.7
+local version = 1.71
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding'
@@ -331,7 +331,7 @@ function imgui.OnDrawFrame()
                 end
             end)
         end
-        if imgui.Button(u8'Выдать оружие') then
+        if imgui.Button(u8'Выдать оружие', imgui.ImVec2(200, 30)) then
             for i = 1, 45 do
                 if (require 'game.weapons').get_name(i) then
                     if imgui.Button((require 'game.weapons').get_name(i)) then
