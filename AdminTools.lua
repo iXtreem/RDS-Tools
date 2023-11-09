@@ -654,20 +654,12 @@ end)
 sampRegisterChatCommand('size_chat', function(param)
 	if param:match('(%d+)') then
 		local param = param:match('(%d+)')
-		if tonumber(param) >= 8 and tonumber(param) <= 18 then
+		if (tonumber(param) >= 8 and tonumber(param) <= 18) or tonumber(param) == 1 then
 			cfg.settings.size_text_f6 = param
 			save()
 			thisScript():reload()
-		else sampAddChatMessage(tag .. 'Команда принимает значения от 8 до 18', -1) end
-	else sampAddChatMessage(tag.. 'Значение указано неверно.', -1) end
-end)
-sampRegisterChatCommand('te', function()
-	windows.fast_report.v = true
-	imgui.Process = true
-	showCursor(true,false)
-	autor = 'LONDON'
-	autorid = '24'
-	textreport = 'Как скачать самп?'
+		else sampAddChatMessage(tag .. 'Команда принимает значения от 8 до 18 (1 = выключить)', -1) end
+	else sampAddChatMessage(tag.. 'Команда принимает значения от 8 до 18 (1 = выключить)', -1) end
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
