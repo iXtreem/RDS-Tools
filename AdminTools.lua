@@ -22,9 +22,9 @@ local u8 				= encoding.UTF8
 
 ------=================== Загрузка модулей ===================----------------------
 
-local AT_MP 			= pcall(script.load, "\\resource\\AT_MP.lua") 			-- подгрузка плагина для мероприятий
-local AT_FastSpawn 		= pcall(script.load, "\\resource\\AT_FastSpawn.lua")  	-- подгрузка быстрого спавна
-local AT_Trassera 		= pcall(script.load, "\\resource\\AT_Trassera.lua") 	-- подгрузка трассеров
+local AT_MP 			= script.load("\\resource\\AT_MP.lua") 			-- подгрузка плагина для мероприятий
+local AT_FastSpawn 		= script.load("\\resource\\AT_FastSpawn.lua")  	-- подгрузка быстрого спавна
+local AT_Trassera 		= script.load("\\resource\\AT_Trassera.lua") 	-- подгрузка трассеров
 local notify_report 	= import("\\resource\\lib_imgui_notf.lua") 				-- импорт уведомлений
 
 local tag 				= '{2B6CC4}Admin Tools: {F0E68C}' 	-- Задаем название скрипта в самой игре
@@ -372,9 +372,6 @@ function main()
         wait(1)
 		if isPauseMenuActive() or isGamePaused() then AFK = true end
 		if AFK and not (isPauseMenuActive() or isGamePaused()) then AFK = false end
-		if isKeyJustPressed(0x54 --[[VK_T]]) and not windows.fast_report.v and not sampIsDialogActive() and not sampIsScoreboardOpen() and not isSampfuncsConsoleActive() then
-			sampSetChatInputEnabled(true)
-		end
 		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then  -- кнопка активации окна
 			windows.menu_tools.v = not windows.menu_tools.v
 			imgui.Process = true
