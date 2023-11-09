@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.73
+local version = 1.74
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding'
@@ -22,6 +22,8 @@ local cfg2 = inicfg.load({
         style = 0,
     },
 }, 'AT//AT_main.ini')
+cfg2.settings.versionMP = version
+inicfg.save(cfg2, 'AT//AT_main.ini')
 local cfg = inicfg.load({
     AT_MP = {
         adminstate = false,
@@ -81,14 +83,6 @@ function imgui.BeforeDrawFrame()
 end
 function main()
     while not isSampAvailable() do wait(0) end
-    local cfg2 = inicfg.load({
-        settings = {
-            versionMP = version,
-            style = 0,
-        },
-    }, 'AT//AT_main.ini')
-    cfg2.settings.versionMP = version
-    inicfg.save(cfg2, 'AT//AT_main.ini')
     while not sampIsLocalPlayerSpawned() do wait(1000) end
     _, myid = sampGetPlayerIdByCharHandle(playerPed)
     mynick = sampGetPlayerNickname(myid) 

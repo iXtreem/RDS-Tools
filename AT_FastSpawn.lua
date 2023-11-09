@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 1.1
+local version = 1.2
 local imgui = require 'imgui' 
 local ffi = require "ffi"
 local fa = require 'faicons'
@@ -19,7 +19,8 @@ local cfg2 = inicfg.load({
 		style = 0,
 	},
 }, 'AT//AT_main.ini')
-inicfg.save(cfg2, 'AT//AT_main.ini')
+cfg2.settings.versionFS = version
+inicfg.save(cfg2,'AT//AT_main.ini')
 local cfg = inicfg.load({
 	AT_FastSpawn = {
         spawn = true,
@@ -85,9 +86,6 @@ function main()
 	while not isSampAvailable() do wait(0) end
 	for k,v in pairs(cfg.command) do if (v and #(v)>1) and k~=0 then inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(tostring(v)), 256) else table.remove(cfg.command, k) save() end end
 	for k,v in pairs(cfg.wait_command) do inputWait[#inputWait+1] = imgui.ImInt(v) end
-	cfg2.settings.versionFS = version
-	inicfg.save(cfg2,'AT//AT_main.ini')
-	cfg2 = nil
 	if cfg.AT_FastSpawn.spawn then
 		while not sampIsLocalPlayerSpawned() do
 			if not sampIsChatInputActive() and not sampIsDialogActive() and start_click_shift then
@@ -156,15 +154,15 @@ function imgui.OnDrawFrame()
         imgui.Separator()
         if imgui.Checkbox(u8"Автоввод пароля", checked_test) then
             cfg.AT_FastSpawn.autorizate = not cfg.AT_FastSpawn.autorizate
-            inicfg.save(cfg,directIni)
+			save()
         end
         if imgui.Checkbox(u8'Автоввод А пароля', checked_test2) then
             cfg.AT_FastSpawn.autoalogin = not cfg.AT_FastSpawn.autoalogin
-            inicfg.save(cfg,directIni)
+			save()
         end
         if imgui.Checkbox(u8'АвтоSpawn', checked_test3) then
             cfg.AT_FastSpawn.spawn = not cfg.AT_FastSpawn.spawn
-            inicfg.save(cfg,directIni)
+			save()
         end
         if imgui.Button(u8"Добавить команды") then
             secondary_window_state.v = not secondary_window_state.v
@@ -227,11 +225,10 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 		return false
     end
     if dialogId == 1 and cfg.AT_FastSpawn.autorizate and cfg.AT_FastSpawn.parolaccount and not inputpassword then
-		_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+		local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 		if cfg.AT_FastSpawn.nickname == sampGetPlayerNickname(id) and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() then
 			printStyledString('authorization ...', 1000, 7)
 			sampSendDialogResponse(dialogId, 1, _, cfg.AT_FastSpawn.parolaccount)
-			sampCloseCurrentDialogWithButton(0)
 			inputpassword = true
 		end
     end
