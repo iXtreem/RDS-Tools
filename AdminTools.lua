@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.2		 									-- Версия скрипта
+local version = 4.3		 									-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -81,6 +81,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		forma_na_mute = false,
 		add_mynick_in_form = false,
 		control_system_mute = false,
+		size_text_f6 = 12,
 	},
 	customotvet = {},
 	myflood = {},
@@ -172,8 +173,6 @@ local mat 				= {}											-- автомут на мат
 local osk 				= {}											-- автомут на оск
 local admins 			= {}											-- Рендер /admins
 local chatlog 			= {}											-- Считывание чатлога из файла
-local files_chatlog 	= {}											-- Проверяем имеющиеся чатлоги
-local render_ears 		= false 										-- Рендер /ears чата, настройка при входе в игру
 local menu 				= {true, false} 								-- переключение окон в рекон меню [True = окно активно при запуке]
 local menu2 			= {true, false, false, false, false, false, false}-- переключение окон основное меню [True = окно активно при запуске]
 local textdraw 			= {} 											-- узнаем ид текстравов для взаимодействия с ними
@@ -197,7 +196,7 @@ local name_car = {'Landstalker','Bravura','Buffalo','Linerunner','Perrenial','Se
 local font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
 ---================= Задаем шрифт ears-чата =====================------------
 local font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
----================= Узнаем размер админ-чата =====================------------
+---================= Задаем шрифт рендера игроков =====================------------
 
 local spisokoskrod = {'mq', 'rnq'} -- автомут на оск род
 local spisokrz = { 'слава укр', 'слава росс'} -- примерный розжиг
@@ -228,7 +227,6 @@ local spisokproject = { -- список проектов за который идет автомут
 	'арз',
 	'arz',
 }
-
 --------======================== Задаем шрифт и размер для имгуи текста ============--------------------
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
 local fa_glyph_ranges = imgui.ImGlyphRanges( {fa.min_range, fa.max_range} )
@@ -240,7 +238,17 @@ ffi.cdef[[
 	short GetKeyState(int nVirtKey);
 	bool GetKeyboardLayoutNameA(char* pwszKLID);
 	int GetLocaleInfoA(int Locale, int LCType, char* lpLCData, int cchData);
+	int GetKeyboardLayoutNameA(char* pwszKLID);
 ]]
+do
+    local langIdBuffer = ffi.new("char[9]") --thanks by @RTD
+    function getCurrentLanguageName()
+        if ffi.C.GetKeyboardLayoutNameA(langIdBuffer) then
+            return ffi.string(langIdBuffer) or "err"
+        end
+        return "err"
+    end
+end
 local BuffSize = 32
 local KeyboardLayoutName = ffi.new("char[?]", BuffSize)
 local LocalInfo = ffi.new("char[?]", BuffSize)
@@ -343,7 +351,7 @@ function main()
 		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 	end
 	--========== ЧАТ ЛОГГ ========----
-	lua_thread.create(inputChat)
+	if cfg.settings.inputhelper then lua_thread.create(inputChat) end
 	func = lua_thread.create_suspended(autoonline)
 	funcadm = lua_thread.create_suspended(render_admins)
 	func1 = lua_thread.create_suspended(render_text)
@@ -503,6 +511,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		prfga 	= 		'Выдать префикс ГА',
 		color_report   ='Назначить цвет ответа на репорт',
 		inputhelper    ='Включить/Выключить InputHelper',
+		size_chat	   ='Изменить размер рендера информации открытого чата',
 		add_autoprefix ='Добавить администратора в исключение автопрефикса',
 		del_autoprefix ='Удалить администратора из исключений автопрефикса',
 	},
@@ -641,6 +650,24 @@ sampRegisterChatCommand('sbanip', function()
 end)
 sampRegisterChatCommand('spp', function()
 	lua_thread.create(function() for _, id in pairs(playersToStreamZone()) do wait(500) sampSendChat('/aspawn ' .. id) end end)
+end)
+sampRegisterChatCommand('size_chat', function(param)
+	if param:match('(%d+)') then
+		local param = param:match('(%d+)')
+		if tonumber(param) >= 8 and tonumber(param) <= 18 then
+			cfg.settings.size_text_f6 = param
+			save()
+			thisScript():reload()
+		else sampAddChatMessage(tag .. 'Команда принимает значения от 8 до 18', -1) end
+	else sampAddChatMessage(tag.. 'Значение указано неверно.', -1) end
+end)
+sampRegisterChatCommand('te', function()
+	windows.fast_report.v = true
+	imgui.Process = true
+	showCursor(true,false)
+	autor = 'LONDON'
+	autorid = '24'
+	textreport = 'Как скачать самп?'
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
@@ -790,7 +817,7 @@ function imgui.OnDrawFrame()
 			imgui.SetCursorPosX(250)
 			if imadd.ToggleButton("##renderEars", checkbox.check_render_ears) then
 				if not sampIsDialogActive() then
-					if render_ears then ears = {} end
+					if checkbox.check_render_ears.v then ears = {} end
 					sampSendChat('/ears')
 				else sampAddChatMessage(tag .. 'У вас открыт диалог.',-1) end
 			end
@@ -1615,80 +1642,96 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Tooltip('Enter')
 		imgui.Separator()
-		if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or (isKeyDown(VK_Q) and not sampIsChatInputActive()) then
-			answer.rabotay = true
-		end
-		imgui.Tooltip('Q')
-		imgui.SameLine()
-		if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or (isKeyDown(VK_E) and not sampIsChatInputActive()) then
-			answer.slejy = true
-		end
-		imgui.Tooltip('E')
-		imgui.SameLine()
-		if imgui.Button(u8'Мои ответы', imgui.ImVec2(120, 25)) or (isKeyJustPressed(VK_R) and not sampIsChatInputActive()) then
-			start_my_answer()
-		end
-		imgui.Tooltip('R')
-		imgui.SameLine()
-		if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or (isKeyDown(VK_V) and not sampIsChatInputActive()) then
-			answer.peredamrep = true
-		end
-		imgui.Tooltip('V')
-		if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or (isKeyJustPressed(VK_G) and not sampIsChatInputActive()) then
-			if tonumber(autorid) then imgui.OpenPopup('option')
-			else sampAddChatMessage(tag .. 'Данный игрок не в сети. Используйте /rmuteoff', -1) end
-		end
-		if imgui.BeginPopup('option') then
-			if imgui.Button(u8'Оффтоп (1)', imgui.ImVec2(250, 25)) or isKeyDown(VK_1) then
-				nakazatreport.oftop = true
-				answer.nakajy = true
+		if #(buffer.text_ans.v) > 2 then
+			imgui.CenterText(u8'Сохраненные ответы')
+			imgui.SameLine()
+			imgui.Text('(?)')
+			imgui.Tooltip(u8'Нажатие на ответ - отправляет ответ.\nНажатие на кнопку "Отправить" отправляет ваш ответ, вне зависимости от сохраненных.\nНажатие Enter отправляет 1-ый из предложенных сохраненных ответов при наличии.')
+			for k,v in pairs(cfg.customotvet) do
+				if string.rlower(v):find(string.rlower(u8:decode(buffer.text_ans.v))) or string.rlower(v):find(translateText(string.rlower(u8:decode(buffer.text_ans.v)))) then
+					if imgui.Button(u8(v), imgui.ImVec2((sw * 0.5) - 295, 24)) then
+						if not answer.customans then 
+							answer.customans = v
+						end
+					end
+				end
 			end
-			if imgui.Button(u8'Капс (2)', imgui.ImVec2(250, 25)) or isKeyDown(VK_2) then
-				nakazatreport.capsrep = true
-				answer.nakajy = true
+		else
+			if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or (isKeyDown(VK_Q) and not sampIsChatInputActive()) then
+				answer.rabotay = true
 			end
-			if imgui.Button(u8'Оскорбление администрации (3)', imgui.ImVec2(250, 25)) or isKeyDown(VK_3) then
-				nakazatreport.oskadm = true
-				answer.nakajy = true
+			imgui.Tooltip('Q')
+			imgui.SameLine()
+			if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or (isKeyDown(VK_E) and not sampIsChatInputActive()) then
+				answer.slejy = true
 			end
-			if imgui.Button(u8'Клевета на администрацию (4)', imgui.ImVec2(250, 25)) or isKeyDown(VK_4) then
-				nakazatreport.kl = true
-				answer.nakajy = true
+			imgui.Tooltip('E')
+			imgui.SameLine()
+			if imgui.Button('Skin/Color', imgui.ImVec2(120, 25)) or (isKeyJustPressed(VK_R) and not sampIsChatInputActive()) then
+				start_my_answer()
 			end
-			if imgui.Button(u8'Оскорбление/Упоминание родных (5)', imgui.ImVec2(250, 25)) or isKeyDown(VK_5) then
-				nakazatreport.oskrod = true
-				answer.nakajy = true
+			imgui.Tooltip('R')
+			imgui.SameLine()
+			if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or (isKeyDown(VK_V) and not sampIsChatInputActive()) then
+				answer.peredamrep = true
 			end
-			if imgui.Button(u8'Попрошайничество (6)', imgui.ImVec2(250, 25)) or isKeyDown(VK_6) then
-				nakazatreport.poprep = true
-				answer.nakajy = true
+			imgui.Tooltip('V')
+			if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or (isKeyJustPressed(VK_G) and not sampIsChatInputActive()) then
+				if tonumber(autorid) then imgui.OpenPopup('option')
+				else sampAddChatMessage(tag .. 'Данный игрок не в сети. Используйте /rmuteoff', -1) end
 			end
-			if imgui.Button(u8'Оскорбление/Унижение (7)', imgui.ImVec2(250, 25)) or isKeyDown(VK_7) then
-				nakazatreport.oskrep = true
-				answer.nakajy = true
+			if imgui.BeginPopup('option') then
+				if imgui.Button(u8'Оффтоп (1)', imgui.ImVec2(250, 25)) or isKeyDown(VK_1) then
+					nakazatreport.oftop = true
+					answer.nakajy = true
+				end
+				if imgui.Button(u8'Капс (2)', imgui.ImVec2(250, 25)) or isKeyDown(VK_2) then
+					nakazatreport.capsrep = true
+					answer.nakajy = true
+				end
+				if imgui.Button(u8'Оскорбление администрации (3)', imgui.ImVec2(250, 25)) or isKeyDown(VK_3) then
+					nakazatreport.oskadm = true
+					answer.nakajy = true
+				end
+				if imgui.Button(u8'Клевета на администрацию (4)', imgui.ImVec2(250, 25)) or isKeyDown(VK_4) then
+					nakazatreport.kl = true
+					answer.nakajy = true
+				end
+				if imgui.Button(u8'Оскорбление/Упоминание родных (5)', imgui.ImVec2(250, 25)) or isKeyDown(VK_5) then
+					nakazatreport.oskrod = true
+					answer.nakajy = true
+				end
+				if imgui.Button(u8'Попрошайничество (6)', imgui.ImVec2(250, 25)) or isKeyDown(VK_6) then
+					nakazatreport.poprep = true
+					answer.nakajy = true
+				end
+				if imgui.Button(u8'Оскорбление/Унижение (7)', imgui.ImVec2(250, 25)) or isKeyDown(VK_7) then
+					nakazatreport.oskrep = true
+					answer.nakajy = true
+				end
+				if imgui.Button(u8'Нецензурная лексика (8)', imgui.ImVec2(250, 25)) or isKeyDown(VK_8) then
+					nakazatreport.matrep = true
+					answer.nakajy = true
+				end
+				imgui.EndPopup()
 			end
-			if imgui.Button(u8'Нецензурная лексика (8)', imgui.ImVec2(250, 25)) or isKeyDown(VK_8) then
-				nakazatreport.matrep = true
-				answer.nakajy = true
+			imgui.Tooltip('G')
+			imgui.SameLine()
+			if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or (isKeyDown(VK_B) and not sampIsChatInputActive()) then
+				answer.uto4id = true
 			end
-			imgui.EndPopup()
+			imgui.Tooltip('B')
+			imgui.SameLine()
+			if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or (isKeyDown(VK_F) and not sampIsChatInputActive()) then
+				answer.uto4 = true
+			end
+			imgui.Tooltip('F')
+			imgui.SameLine()
+			if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or (isKeyDown(VK_Y) and not sampIsChatInputActive()) then
+				answer.otklon = true
+			end
+			imgui.Tooltip('Y')
 		end
-		imgui.Tooltip('G')
-		imgui.SameLine()
-		if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or (isKeyDown(VK_B) and not sampIsChatInputActive()) then
-			answer.uto4id = true
-		end
-		imgui.Tooltip('B')
-		imgui.SameLine()
-		if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or (isKeyDown(VK_F) and not sampIsChatInputActive()) then
-			answer.uto4 = true
-		end
-		imgui.Tooltip('F')
-		imgui.SameLine()
-		if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or (isKeyDown(VK_Y) and not sampIsChatInputActive()) then
-			answer.otklon = true
-		end
-		imgui.Tooltip('Y')
 		imgui.Separator()
 		if imadd.ToggleButton('##doptextans' .. fa.ICON_COMMENTING_O, checkbox.check_add_answer_report) then
 			cfg.settings.add_answer_report = not cfg.settings.add_answer_report
@@ -1951,9 +1994,7 @@ function imgui.OnDrawFrame()
 		if isKeyJustPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end
 		if not windows.fast_report.v then windows.custom_ans.v = false end
 		imgui.PushFont(fontsize)
-		imgui.RadioButton(u8"Мои ответы", checkbox.custom_ans, 0)
-		imgui.SameLine()
-		if imgui.RadioButton(u8"ID скинов", checkbox.custom_ans, 1) then
+		if imgui.RadioButton(u8"ID скинов", checkbox.custom_ans, 0) then
 			if not skin then
 				skin = {}
 				for i = 0, 311 do
@@ -1962,7 +2003,7 @@ function imgui.OnDrawFrame()
 			end
 		end
 		imgui.SameLine()
-		if imgui.RadioButton(u8"ID цветов", checkbox.custom_ans, 2) then
+		if imgui.RadioButton(u8"ID цветов", checkbox.custom_ans, 1) then
 			if not html_color then
 				html_color = {}
 				local file_color = io.open(getWorkingDirectory() .. "\\resource\\skin\\color.txt","r")
@@ -1970,7 +2011,7 @@ function imgui.OnDrawFrame()
 			end
 		end 
 		imgui.SameLine()
-		if imgui.RadioButton(u8"Названия авто", checkbox.custom_ans, 3) then
+		if imgui.RadioButton(u8"Названия авто", checkbox.custom_ans, 2) then
 			if not auto then
 				auto = {}
 				for i = 400, 611 do
@@ -1980,31 +2021,20 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Separator()
 		if checkbox.custom_ans.v == 0 then
-			imgui.NewInputText('##SearchBar3', buffer.find_custom_answer, sw*0.5, u8'Фильтр ответов', 2) 
-			for k,v in pairs(cfg.customotvet) do
-				if string.rlower(v):find(string.rlower(u8:decode(buffer.find_custom_answer.v))) then	
-					if imgui.Button(u8(v), imgui.ImVec2((sw*0.5)-2, 24)) then
-						answer.customans = v
-						buffer.find_custom_answer.v = ''
-						windows.custom_ans.v = false
-					end
-				end
-			end
-		elseif checkbox.custom_ans.v == 1 then
 			imgui.CenterText(u8'Выбранный скин будет дополнен к вашему ответу.')
 			for i = 1, 312 do
 				imgui.Image(skin[i], imgui.ImVec2(75, 150))
 				if imgui.IsItemClicked(0) then buffer.text_ans.v = buffer.text_ans.v .. ('ID: '..i-1) end
 				if i%9~=0 then imgui.SameLine() end
 			end
-		elseif checkbox.custom_ans.v == 2 then
+		elseif checkbox.custom_ans.v == 1 then
 			imgui.CenterText(u8'Выбранный цвет будет дополнен к вашему ответу.')
 			for i = 1, 256 do 
 				imgui.TextColoredRGB(u8(html_color[i]))
 				if imgui.IsItemClicked(0) then buffer.text_ans.v = buffer.text_ans.v .. string.sub(string.sub(html_color[i], 1, 7), 2) end 
 				if i%7~=0 then imgui.SameLine() end 
 			end
-		elseif checkbox.custom_ans.v == 3 then
+		elseif checkbox.custom_ans.v == 2 then
 			imgui.CenterText(u8'Выбранный транспорт будет дополнен к вашему ответу.')
 			imgui.NewInputText('##SearchBar3', buffer.find_custom_answer, sw*0.5, u8'Фильтр транспорта', 2)			
 			for i = 1, 212 do
@@ -2426,19 +2456,16 @@ function SendChat(text)
     raknetSendRpc(rn.RPC.SERVERCOMMAND, bs)
     raknetDeleteBitStream(bs)
 end
-
 function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 	if #text > 4 then
 		if text:match('%[Информация%] {FFFFFF}Теперь вы не видите сообщения игроков') then
-			render_ears = false
-			checkbox.check_render_ears = imgui.ImBool(render_ears)
+			checkbox.check_render_ears = imgui.ImBool(true)
 			ears = {}
 			notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно приостановлено')
 			return false
 		end
 		if text:match('%[Информация%] {FFFFFF}Теперь вы видите сообщения игроков') then
-			render_ears = true
-			checkbox.check_render_ears = imgui.ImBool(render_ears)
+			checkbox.check_render_ears = imgui.ImBool(false)
 			notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано')
 			return false
 		end
@@ -2587,7 +2614,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				end
 			else adminchat[#adminchat + 1] = messange end
 			local admlvl, prefix, nickadm, idadm, admtext = nil
-			return false --
+			return false
 		end
 		if cfg.settings.automute and not AFK then 
 			text = text:rlower() .. ' '
@@ -2744,13 +2771,12 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					windows.menu_in_recon.v = true
 					imgui.Process = true
 					if cfg.settings.keysync then keysync(control_player_recon) end
-					sampTextdrawSetPos(textdraw.close, 2000, 0) -- кнопка закрытия рекона
 					sampTextdrawSetPos(textdraw.stats, 2000, 0) -- кнопка статистики
 					sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
 					sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информация о никнейме игрока
-					while not sampTextdrawIsExists(textdraw.inforeport) do wait(100) end
-					wait(100)
+					wait(300)
 					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
+					sampTextdrawSetPos(textdraw.close, 2000, 0) -- кнопка закрытия рекона
 				end)
 			elseif v == 'CLOSE' then textdraw.close = id
 			elseif v == 'BAN' then return false
@@ -2915,8 +2941,16 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			elseif answer.rabotay then peremrep = ('Начал(а) работу по вашей жалобе.')
 			elseif answer.customans then peremrep = answer.customans
 			elseif answer.uto4 then peremrep = ('Обратитесь с данной проблемой на форум https://forumrds.ru')
-			elseif ((#(u8:decode(buffer.text_ans.v)) == 0) and #answer == 0) then windows.fast_report.v = true
-			elseif ((#(u8:decode(buffer.text_ans.v)) ~= 0) and #answer == 0) or answer.moiotvet then peremrep = (u8:decode(buffer.text_ans.v)) answer.moiotvet = true
+			elseif #(buffer.text_ans.v) > 2 and #answer == 0 then
+				if not answer.moiotvet then
+					for k,v in pairs(cfg.customotvet) do
+						if string.rlower(v):find(string.rlower(u8:decode(buffer.text_ans.v))) or string.rlower(v):find(translateText(string.rlower(u8:decode(buffer.text_ans.v)))) then
+							peremrep = v 
+							break
+						end
+					end
+				end
+				if not peremrep then peremrep = (u8:decode(buffer.text_ans.v)) end
 			elseif answer.otklon then 
 				sampSendDialogResponse(dialogId, 1, 2) 
 				sampCloseCurrentDialogWithButton(0)  
@@ -3078,8 +3112,9 @@ function translite(text)
 	for k, v in pairs(chars) do text = string.gsub(text, k, v) end return text
 end
 function inputChat()
+	local font = renderCreateFont("Calibri", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW)
 	while true do
-		wait(10)
+		wait(5)
 		if sampIsChatInputActive() then
 			local getInput = sampGetChatInputText()
 			if(oldText ~= getInput and #getInput > 0)then
@@ -3096,6 +3131,23 @@ function inputChat()
 					oldText = nText
 				end
 			end
+			local in1 = sampGetInputInfoPtr()
+			local in1 = getStructElement(in1, 0x8, 4)
+			local in2 = getStructElement(--[[int]] in1, --[[int]] 0x8, --[[int]] 4)
+			local in3 = getStructElement(--[[int]] in1, --[[int]] 0xC, --[[int]] 4)
+			local _, pID = sampGetPlayerIdByCharHandle(playerPed) -- myid
+			local name = sampGetPlayerNickname(--[[int]] pID) -- mynick
+			local ping = sampGetPlayerPing(--[[int]] pID) -- ping
+			local caps = (ffi.load("user32")).GetKeyState(0x14) -- Код клавиши CapsLock
+
+			if caps == 1 or caps == 3 then caps = 'ON'
+			else caps = 'OFF' end
+
+			if getCurrentLanguageName() == '00000419' then raskl = 'RU'
+			else raskl = 'EN' end
+
+			local text = string.format("Ваш ник: {0088ff}%s{ffffff}, Ваш ID: {0088ff}%s{ffffff}, Ваш пинг: {0088ff}%s{ffffff}, Раскладка: {0088ff}%s{ffffff}, Capslock: {0088ff}%s{ffffff}", name, pID, ping, raskl, caps)
+			renderFontDrawText(--[[int]] font, --[[string]] text, --[[int]] in2 + 5, --[[int]] in3 + 40, --[[int]] -1)
 		end
 	end
 end
@@ -3634,6 +3686,37 @@ function keysync(playerId)
 			return
 		end
 	end
+end
+local transliterationTable = {
+    ['й'] = 'q', ['ц'] = 'w', ['у'] = 'e', ['к'] = 'r', ['е'] = 't', ['н'] = 'y', ['г'] = 'u', ['ш'] = 'i', ['щ'] = 'o',
+    ['з'] = 'p', ['х'] = '[', ['ъ'] = ']', ['ф'] = 'a', ['ы'] = 's', ['в'] = 'd', ['а'] = 'f', ['п'] = 'g', ['р'] = 'h',
+    ['о'] = 'j', ['л'] = 'k', ['д'] = 'l', ['ж'] = ';', ['э'] = "'", ['я'] = 'z', ['ч'] = 'x', ['с'] = 'c', ['м'] = 'v',
+    ['и'] = 'b', ['т'] = 'n', ['ь'] = 'm', ['б'] = ',', ['ю'] = '.', ['ё'] = '`',
+    
+    ['q'] = 'й', ['w'] = 'ц', ['e'] = 'у', ['r'] = 'к', ['t'] = 'е', ['y'] = 'н', ['u'] = 'г', ['i'] = 'ш', ['o'] = 'щ',
+    ['p'] = 'з', ['['] = 'х', [']'] = 'ъ', ['a'] = 'ф', ['s'] = 'ы', ['d'] = 'в', ['f'] = 'а', ['g'] = 'п', ['h'] = 'р',
+    ['j'] = 'о', ['k'] = 'л', ['l'] = 'д', [';'] = 'ж', ["'"] = 'э', ['z'] = 'я', ['x'] = 'ч', ['c'] = 'с', ['v'] = 'м',
+    ['b'] = 'и', ['n'] = 'т', ['m'] = 'ь', [','] = 'б', ['.'] = 'ю', ['`'] = 'ё'
+}
+
+function translateText(input)
+    local output = ''
+    for i = 1, string.len(input) do
+		local translatedChar = nil
+        local char = string.sub(input, i, i)
+		for k,v in pairs(transliterationTable) do
+        	if k == char then
+				translatedChar = v
+				break
+			elseif v == chat then
+				translatedChar = k
+				break
+			end
+		end
+        if translatedChar then output = output .. translatedChar
+		else output = output .. char end
+    end
+    return output
 end
 function encrypt(text, shift)
 	local encrypted = ""
