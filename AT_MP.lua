@@ -101,6 +101,7 @@ function main()
         cfg.info.data = os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year
         save()
     end
+    wait(-1) -- бесконечное ожидание
 end
 function check_player()
     while true do
