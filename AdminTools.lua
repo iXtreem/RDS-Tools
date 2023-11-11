@@ -2432,10 +2432,8 @@ function sampev.onSendCommand(command) -- –егистраци€ отправленных пакет-сообщен
 			if sampIsPlayerConnected(id) and not string.gsub(reason, 'x(%d)', '') then -- если игрок в сети
 				local nick = string.gsub(sampGetPlayerNickname(id), '%p','') -- присваиваем переменной значение ника и удал€ем символы пунктуации
 				for a,b in pairs(cfg.mute_players) do
-					sampAddChatMessage(reason,-1)
-					if string.sub(a, 1, #nick) == nick then -- ≈сли ник найден в массиве уже наказанных
+					if string.sub(string.gsub(a, '%p',''), 1, #nick) == nick then -- ≈сли ник найден в массиве уже наказанных
 						local second = second * b -- ”множаем наказание
-						sampAddChatMessage('da3',-1)
 						if second > 5000 then second = 5000 end
 						sampAddChatMessage(tag .. 'ƒанный игрок уже был наказан ранее, потому € увеличиваю наказание.', -1)
 						SendChat('/mute ' .. id ..' '..  second .. ' ' .. reason ..' x'..b)
