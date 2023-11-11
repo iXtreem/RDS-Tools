@@ -2,7 +2,7 @@ require 'lib.moonloader'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 1.2
+local version = 1.3
 local imgui = require 'imgui' 
 local ffi = require "ffi"
 local fa = require 'faicons'
@@ -78,7 +78,7 @@ function sampev.onServerMessage(color,text)
 	if text == ('Вы успешно авторизовались!') then
 		start_click_shift = true
 	end 
-	if text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") and text:match(nick) then
+	if text:match("%[A%] Администратор (.+)%[(%d+)%] %((%d+) level%) авторизовался в админ панели") and text:match(nick) then
 		access_alogin = true
 	end
 end
