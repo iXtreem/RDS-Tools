@@ -2958,7 +2958,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 						end
 					end
 				end
-				if not peremrep then peremrep = (u8:decode(buffer.text_ans.v)) end
+				if not peremrep then peremrep = (u8:decode(buffer.text_ans.v)) answer.moiotvet = true end
 			elseif answer.otklon then 
 				sampSendDialogResponse(dialogId, 1, 2) 
 				sampCloseCurrentDialogWithButton(0)  
