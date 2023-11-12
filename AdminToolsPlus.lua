@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 0.9
+local version = 1
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -19,9 +19,6 @@ local inicfg = require 'inicfg'
 local offadmins = {}
 local cfg = inicfg.load({
     settings = {
-		prefixma = '2E8B57',
-		prefixa = '87CEEB',
-		prefixsa = 'FF4500',
 		delete_point = true,
 		auto_al = false,
 		auto_hello = false,
@@ -59,12 +56,17 @@ local checkbox = {
 }
 local style_selected2 = imgui.ImInt(cfg.settings.count_warning-1)
 local style_selected = imgui.ImInt(cfg.settings.number_report-2)
-local selected_item = imgui.ImInt(0)
+local selected_item = imgui.ImInt(2)
 local selected_item2 = imgui.ImInt(0)
+local check_admin = imgui.ImInt(6) -- 7 дней
 local makeadmin = {}
 local kai = {}
+local kick_admin = {} -- для открытия /offadmins
+local kick_admin2 = {} -- выбранные в программе
 local newlvl = 1
 local SendKai = -1
+local offadmins = {}
+local topadm = {}
 
 
 function main()
@@ -93,12 +95,8 @@ function main()
 	sampAddChatMessage(tag .. 'Скрипт инициализирован. Активация: /atp', -1)
 	while true do
 		wait(100)
-		if isPauseMenuActive() or isGamePaused() then
-			AFK = true
-		end
-		if AFK and not (isPauseMenuActive() or isGamePaused()) then
-			AFK = false
-		end
+		if isPauseMenuActive() or isGamePaused() then AFK = true end
+		if AFK and not (isPauseMenuActive() or isGamePaused()) then AFK = false end
 	end
 end
 function imgui.OnDrawFrame()
@@ -170,21 +168,21 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.Text(u8'Удалять точки в центре ников')
 		imgui.InputTextMultiline("##", buffer.text_buffer, imgui.ImVec2(250, 300))
-        if imgui.Button(u8'Пробить список администраторов', imgui.ImVec2(250, 25)) then
-            if not sampIsDialogActive() then
-				sampSendChat('/offadmins')
-				sampAddChatMessage(tag .. 'Пройдите весь список, нажав клавишу: Далее.', -1)
-			else sampAddChatMessage(tag .. 'Диалог закрыть стоило бы.', -1)
+		if #topadm == 0 and #offadmins == 0 then
+			if imgui.Button(u8'Пробить информацию о администраторах', imgui.ImVec2(250,24)) then
+				lua_thread.create(function()
+					buffer.text_buffer.v = u8'Не пытайтесь закрыть диалоги досрочно\nваш интернет может не успевать прогружать информацию'
+					sampSendChat('/topadm')
+					while not sampIsDialogActive(2232) do wait(100) end
+					while sampIsDialogActive(2232) do sampCloseCurrentDialogWithButton(0) wait(100) end
+					sampSendChat('/offadmins')
+					secondary_window_state.v = true
+					buffer.text_buffer.v = ''
+				end)
 			end
-        end
-		if imgui.Button(u8'Пробить топ администрации', imgui.ImVec2(250, 25)) then
-            if not sampIsDialogActive() then
-				sampSendChat('/topadm')
-			else sampAddChatMessage(tag .. 'Диалог закрыть стоило бы.', -1)
-			end
-        end
+		end
 		if imgui.Button(u8'Выбрать диапазон баллов', imgui.ImVec2(250, 25)) then
-			if offadmins and topadm then
+			if #offadmins ~= 0 and #topadm ~= 0 then
 				secondary_window_state.v = not secondary_window_state.v
 			else sampAddChatMessage(tag .. 'Вы ещё не прошлись по спискам администраторов.', -1)
 			end
@@ -295,6 +293,7 @@ function imgui.OnDrawFrame()
 										end
 										if SendKai == 0 then
 											kai[#kai + 1] = 'Кай кик ' .. nick_kai
+											kick_admin2[#kick_admin2 + 1] = nick
 										elseif SendKai == 1 then
 											kai[#kai + 1] = 'Кай пред ' .. nick_kai
 										elseif SendKai == 2 then
@@ -357,6 +356,7 @@ function imgui.OnDrawFrame()
 								if SendKai == 0 then 
 									kai[#kai + 1] = 'Кай кик ' .. nick_kai 
 									makeadmin[#makeadmin + 1] = ('/makeadmin ' .. v .. ' 0') 
+									kick_admin2[#kick_admin2 + 1] = v
 								end
 								buffer.text_buffer.v = buffer.text_buffer.v .. v .. u8' 0 баллов' .. '\n'
 							end  
@@ -404,12 +404,62 @@ function imgui.OnDrawFrame()
 			end
 		end
 		imgui.PopItemWidth()
+		imgui.PushItemWidth(50)
+		imgui.Text(u8'Дни.')
+		imgui.Combo('##option_days', check_admin, {'1', '2', '3', '4', '5', '6', '7'}, 7)
+		if imgui.IsItemHovered() then
+			imgui.BeginTooltip() -- подсказка при наведении на кнопку
+			imgui.Text(u8'Если отыграно меньше данного кол-ва дней (включительно) - убрать из списка.\nДопустим те, кто встали недавно, в список не попадут.')
+			imgui.EndTooltip()
+		end
+		imgui.PopItemWidth()
 		imgui.Text(u8'Добавить искл: /newadm')
 		imgui.Text(u8'Удалить искл: /deladm')
 		if imgui.Button(u8'Вывести исключения') then
 			for i = 2, #cfg.listNoResult do
 				sampAddChatMessage(cfg.listNoResult[i],-1)
 			end
+		end
+		if imgui.Button(u8'Пробить новых админов') then
+			if #kick_admin2 ~= 0 then
+				lua_thread.create(function()
+					sampAddChatMessage(tag .. 'Запускаю проверку на новеньких администраторов', -1)
+					sampAddChatMessage(tag .. 'Не закрывайте диалоги!', -1)
+					kick_admin = {}
+					for _,text in pairs(textSplit(u8:decode(buffer.text_buffer.v), '\n')) do
+						if text:find('(.+) %[(%d+)%] (%d+) баллов') then
+							local nick, _, _ = text:match('(.+) %[(.+)%] (.+) баллов')
+							while sampIsDialogActive() do sampCloseCurrentDialogWithButton(0) end
+							sampSendChat('/ap')
+							sampSendDialogResponse(1034, 1, 1)
+							sampSendDialogResponse(6020, 1, 1, nick)
+							while not sampIsDialogActive(0) do wait(0) end
+							while sampIsDialogActive(0) do wait(0) end
+						end
+					end
+					for i = 1, #kick_admin do
+						for b = 1, #kick_admin2 do
+							if kick_admin[i] == kick_admin2[b] then
+								buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' %[(%d+)%] (%d+) баллов'), u8'')
+								buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' 0 баллов'), u8'')
+								for k,v in pairs(makeadmin) do
+									if v:find(kick_admin[i]) then
+										table.remove(makeadmin, k)
+										sampAddChatMessage('Администратор ' .. v .. ', вставший на пост раньше, чем ' .. check_admin.v+1 .. ' дней назад, был удален из списков', -1)
+									end
+								end
+								for k,v in pairs(kai) do
+									if v:find(kick_admin[i]) then
+										table.remove(kai, k)
+									end
+								end
+							end
+						end
+					end
+					secondary_window_state.v = false
+					main_window_state.v = true
+				end)
+			else sampAddChatMessage('Вы никого не снимали с поста', -1) end
 		end
 		imgui.End()
 	end
@@ -452,54 +502,74 @@ function sampev.onServerMessage(color,text)
 		end
 	end
 end
+function daysPassed(year1, month1, day1) -- узнаем разницу в днях
+    local currentDate = os.date("*t")
+    currentDate.year = year1
+    currentDate.month = month1
+    currentDate.day = day1
+    local currentTimestamp = os.time(currentDate)
+    local secondsPassed = os.difftime(os.time(), currentTimestamp)
+    local daysPassed = math.floor(secondsPassed / (24 * 60 * 60))
+    return daysPassed
+end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-	if dialogId == 4829 then
-		text = textSplit(text, '\n')
+	if button1 == '{f76663}X' and imgui.Process then	-- окно /offadmins - администратор
+		lua_thread.create(function()
+			local text = textSplit(text, '\n')
+			if text[27] then -- защита от крашей
+				--{FFFFFF}Дата выдачи:				{63BD4E}[2023-10-02 23:09:30]. {FFFFFF}
+				local year, month, day = text[27]:match('{63BD4E}%[(%d+)%-(%d+)%-(%d+) (%d%d):(%d%d):(%d%d)%]')
+				local days = daysPassed(year, month, day)
+				if days < check_admin.v + 1 then
+					kick_admin[#kick_admin+1] = title
+				end
+				wait(100)
+				sampCloseCurrentDialogWithButton(0)
+			end
+		end)
+	end
+	if dialogId == 4829 and imgui.Process then
+		local text = textSplit(text, '\n')
 		for k,v in pairs(text) do
-			v = string.sub(v, 9)
-			if v:match('Оффлайн') then -- адаптируемся под условия
-				v = string.sub(v, 1, -16)
-			end
-			if v:match('Онлайн') then -- адаптируемся под условия
-				v = string.sub(v, 1, -15)
-			end
+			local v = string.sub(v, 9)
+			if v:match('Оффлайн') then v = string.sub(v, 1, -16) end -- адаптируемся под условия
+			if v:match('Онлайн') then v = string.sub(v, 1, -15) end -- адаптируемся под условия
 			if #v > 0 and v ~= 'Ник	{ffffff}Уровень администратора	' and v~='<<< Назад' and v ~= 'Далее >>>' then
-				v = string.sub(v, 1, -2)
-				lvl1 = string.sub(v, -2) -- считываем первое значение уровня
+				local v = string.sub(v, 1, -2)
+				local lvl1 = string.sub(v, -2) -- считываем первое значение уровня
 				if string.sub(v, -2) == '1' then -- если администратор выше 10 уровня - изменить настройки
 					v = string.sub(v, 1, -2)
 					lvl2 = string.sub(v, -2)
 				end
-				if lvl2 then
-					lvl = lvl1 .. lvl2 -- Конкретный, точный лвл
-				else
-					lvl = lvl1
-				end
-				v = string.sub(v, 1, -3) 
+				if lvl2 then lvl = lvl1 .. lvl2 -- Конкретный, точный лвл
+				else lvl = lvl1 end
+				local v = string.sub(v, 1, -3) 
 				for d,s in pairs(offadmins) do -- защита от повторного открытия списка, удаляем повторяшек
 					if s == (v .. '=' .. lvl) then
 						offadmins[d], offadmins[s] = nil, nil
 					end
 				end
 				offadmins[#offadmins + 1] =  (v .. '=' .. lvl) -- записываем информацию о админе в конфиг
-				lvl, lvl1, lvl2 = nil
+				local lvl, lvl1, lvl2 = nil, nil, nil
 			end
+			if text[#text-1]:match('Далее >>>') then sampSendDialogResponse(4829, 1, #text-3)
+			else sampCloseCurrentDialogWithButton(0) end
 		end
 	end 
-	if dialogId == 2232 then
+	if dialogId == 2232 and imgui.Process then
 		topadm = {} -- создаем массив
-		text = textSplit(text, '\n')
+		local text = textSplit(text, '\n')
 		for k,v in pairs(text) do
 			if #v > 0 and v ~= '{ffffff}Ник	{ffffff}Уровень администратора	{ffffff}Баллов' then
-				v = string.sub(v, 10)
+				local v = string.sub(v, 10)
 				if string.sub(v, -1) == '0' or string.sub(v, -1) == '1' or string.sub(v, -1) == '2' or string.sub(v, -1) == '3' or string.sub(v, -1) == '4' or string.sub(v, -1) == '5' or string.sub(v, -1) == '6' or string.sub(v, -1) == '7' or string.sub(v, -1) == '8' or string.sub(v, -1) == '9' then
 					v = string.sub(v,2) -- удаляем информацию о LVLах, для этого у нас есть /offadmins
 				end
-				v = string.sub(v, 2)
+				local v = string.sub(v, 2)
 				if string.sub(v, 1, 1) == ' ' then -- удаляем лишний пробел
 					v = string.sub(v, 2)
 				end
-			    ballov = string.match(v, '%S+$') -- узнаем кол-во баллов
+				local ballov = string.match(v, '%S+$') -- узнаем кол-во баллов
 				if ballov then
 					v = string.sub(v, 1, -#ballov) -- удаляем из никнейма кол-во баллов
 				end
