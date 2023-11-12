@@ -3,7 +3,7 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.4		 									-- Версия скрипта
+local version = 4.44		 								-- Версия скрипта
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -132,7 +132,7 @@ local checkbox = {
 	check_on_custom_answer  = imgui.ImBool(cfg.settings.on_custom_answer),
 	check_color_report 		= imgui.ImBool(cfg.settings.on_color_report),
 	checked_radio_button 	= imgui.ImInt(1),
-	custom_ans 				= imgui.ImInt(0),
+	custom_ans 				= imgui.ImInt(4),
 	style_selected 			= imgui.ImInt(cfg.settings.style),
 	selected_item 			= imgui.ImInt(cfg.settings.size_adminchat),
 	option_find_log 		= imgui.ImInt(0),
@@ -215,12 +215,10 @@ local spisokor = { -- список возможных вариаций оскорбления родни (мат + что-то 
 	[6] = 'матушк',
 }
 local spisok_in_form = { -- список для автоформ
-	[0] = 'ban',
-	[1] = 'jail',
-	[2] = 'kick',
-	[3] = 'mute',
-	[4] = 'spawncars',
-	[5] = 'aspawn'
+	'ban',
+	'jail',
+	'kick',
+	'mute',
 }
 local spisokproject = { -- список проектов за который идет автомут
 	[0] = 'аризон',
@@ -377,7 +375,7 @@ function main()
         wait(1)
 		if isPauseMenuActive() or isGamePaused() then AFK = true end
 		if AFK and not (isPauseMenuActive() or isGamePaused()) then AFK = false end
-		if isKeyJustPressed(VK_F3) and not sampIsDialogActive() then  -- кнопка активации окна
+		if isKeyJustPressed(VK_F3) and not (sampIsDialogActive() or sampIsChatInputActive()) then  -- кнопка активации окна
 			windows.menu_tools.v = not windows.menu_tools.v
 			imgui.Process = true
 		end
@@ -1741,6 +1739,9 @@ function imgui.OnDrawFrame()
 					nakazatreport.matrep = true
 					answer.nakajy = true
 				end
+				if imgui.Button(u8'Розжиг межнациональной розни (9)', imgui.ImVec2(250,25)) or isKeyDown(VK_9) then
+					nakazatreport.rozjig = true
+				end
 				imgui.EndPopup()
 			end
 			imgui.Tooltip('G')
@@ -2051,7 +2052,7 @@ function imgui.OnDrawFrame()
 			imgui.CenterText(u8'Выбранный скин будет дополнен к вашему ответу.')
 			for i = 1, 312 do
 				imgui.Image(skin[i], imgui.ImVec2(75, 150))
-				if imgui.IsItemClicked(0) then buffer.text_ans.v = buffer.text_ans.v .. ('ID: '..i-1) end
+				if imgui.IsItemClicked(0) then buffer.text_ans.v = buffer.text_ans.v .. ('ID: '..i-1) ..' ' end
 				if i%9~=0 then imgui.SameLine() end
 			end
 		elseif checkbox.custom_ans.v == 1 then
@@ -2067,7 +2068,7 @@ function imgui.OnDrawFrame()
 			for i = 1, 212 do
 				if string.lower(name_car[i]):find(string.lower(buffer.find_custom_answer.v)) then
 					imgui.Image(auto[i], imgui.ImVec2(120, 100))
-					if imgui.IsItemClicked(0) then buffer.text_ans.v =  buffer.text_ans.v .. name_car[i] end
+					if imgui.IsItemClicked(0) then buffer.text_ans.v =  buffer.text_ans.v .. name_car[i]..' ' end
 					imgui.SameLine()
 					imgui.Text(name_car[i])
 					if i%3>0 then imgui.SameLine() end
@@ -2545,8 +2546,24 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				return false
 			end 
 		end
-		if cfg.settings.find_form and not AFK then
-			if text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: ") then
+		if text:match('%[A%] NEARBY CHAT:') or text:match('%[A%] SMS:') then
+			render_ears = true
+			checkbox.check_render_ears = imgui.ImBool(render_ears) 
+			local text = string.gsub(text, 'NEARBY CHAT:', '{87CEEB}AT-NEAR:{FFFFFF}')
+			local text = string.gsub(text, 'SMS:', '{4682B4}AT-SMS:{FFFFFF}')
+			local text = string.gsub(text, ' отправил ', '')
+			local text = string.gsub(text, ' игроку ', '->')
+			local text = string.sub(text, 5) -- удаляем [A]
+			if #ears == cfg.settings.strok_ears then
+				for i = 0, #ears do
+					if i ~= #ears then ears[i] = ears[i + 1]
+					else ears[#ears] = text end
+				end
+			else ears[#ears + 1] = text end
+			return false
+		end
+		if text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") then
+			if cfg.settings.find_form and not AFK then
 				for i = 1, #spisok_in_form do
 					if text:find(spisok_in_form[i]) then
 						while true do -- пока цикл не будет прерван
@@ -2590,35 +2607,19 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 					end
 				end
 			end
-		end
-		if text:match('%[A%] NEARBY CHAT:') or text:match('%[A%] SMS:') then
-			render_ears = true
-			checkbox.check_render_ears = imgui.ImBool(render_ears) 
-			local text = string.gsub(text, 'NEARBY CHAT:', '{87CEEB}AT-NEAR:{FFFFFF}')
-			local text = string.gsub(text, 'SMS:', '{4682B4}AT-SMS:{FFFFFF}')
-			local text = string.gsub(text, ' отправил ', '')
-			local text = string.gsub(text, ' игроку ', '->')
-			local text = string.sub(text, 5) -- удаляем [A]
-			if #ears == cfg.settings.strok_ears then
-				for i = 0, #ears do
-					if i ~= #ears then ears[i] = ears[i + 1]
-					else ears[#ears] = text end
-				end
-			else ears[#ears + 1] = text end
-			return false
-		end
-		if cfg.settings.admin_chat and text:match("%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") then
-			local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)')
-			local messange = string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext
-			if #messange >= 160 then messange = string.sub(messange, 1, 160) .. '...' end
-			if #adminchat == cfg.settings.strok_admin_chat then
-				for i = 0, #adminchat do
-					if i ~= #adminchat then adminchat[i] = adminchat[i+1]
-					else adminchat[#adminchat] = messange end
-				end
-			else adminchat[#adminchat + 1] = messange end
-			local admlvl, prefix, nickadm, idadm, admtext = nil
-			return false
+			if cfg.settings.admin_chat then
+				local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.*)')
+				local messange = string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext
+				if #messange >= 160 then messange = string.sub(messange, 1, 160) .. '...' end
+				if #adminchat == cfg.settings.strok_admin_chat then
+					for i = 0, #adminchat do
+						if i ~= #adminchat then adminchat[i] = adminchat[i+1]
+						else adminchat[#adminchat] = messange end
+					end
+				else adminchat[#adminchat + 1] = messange end
+				local admlvl, prefix, nickadm, idadm, admtext = nil
+				return false
+			end
 		end
 		if cfg.settings.automute and not AFK then 
 			local text = text:rlower() .. ' '
@@ -2956,7 +2957,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 						end
 					end
 				end
-				if not peremrep then peremrep = (u8:decode(buffer.text_ans.v)) answer.moiotvet = true end
+				if not peremrep then peremrep = u8:decode(buffer.text_ans.v) answer.moiotvet = true end
 			elseif answer.otklon then 
 				sampSendDialogResponse(dialogId, 1, 2) 
 				sampCloseCurrentDialogWithButton(0)  
@@ -2968,7 +2969,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			if peremrep then
 				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = peremrep .. ('{'..tostring(color())..'} ' .. cfg.settings.mytextreport) end
 				if cfg.settings.on_color_report and (#peremrep + #(cfg.settings.color_report)) < 80 then peremrep = cfg.settings.color_report .. peremrep end
-				if #peremrep < 3 then peremrep = peremrep .. '    ' end
+				if #peremrep < 5 then peremrep = peremrep .. '    ' end
 				if cfg.settings.custom_answer_save and answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
 				return false
@@ -2994,6 +2995,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				elseif nakazatreport.oskrod then sampSendChat('/rmute ' .. autorid .. ' 5000 Оскорбление/Упоминание родни')
 				elseif nakazatreport.capsrep then sampSendChat('/rmute ' .. autorid .. ' 120 Капс в /report')
 				elseif nakazatreport.matrep then sampSendChat('/rmute ' .. autorid .. ' 300 Нецензурная лексика')
+				elseif nakazatreport.rozjig then sampSendChat('/rmute ' .. autorid .. ' 5000 Розжиг межнациональной розни')
 				elseif nakazatreport.kl then sampSendChat('/rmute ' .. autorid .. ' 3000 Клевета на администрацию') end
 				nakazatreport = {}
 			end
