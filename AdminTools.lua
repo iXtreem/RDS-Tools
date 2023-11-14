@@ -308,7 +308,7 @@ function main()
 	if sampGetCurrentServerAddress() == '46.174.52.246' or sampGetCurrentServerAddress() == '46.174.49.170' then sampAddChatMessage(tag .. 'Скрипт успешно загружен. Активация F3(/tool)', -1)
 	else
 		sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-		--ScriptExport()
+		ScriptExport()
 	end
 	if update_main or update_fs or update_mp then windows.update_script.v = true imgui.Process = true end
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
