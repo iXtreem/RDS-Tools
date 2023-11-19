@@ -2733,7 +2733,11 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				---========= Если в причине есть множитель - удаляем ============-----------------
 				local reason = string.gsub(string.gsub(reason, ' x(%d)', ''), ' х(%d)', '')
 				--========== Если такой ник найден в скрипте, то добавляем множитель + 1 =======--- 
-				if cfg.mute_players[string.gsub(nick..reason, '%p','')] then cfg.mute_players[string.gsub(nick..reason, '%p','')] = tonumber(string.sub(cfg.mute_players[string.gsub(nick..reason, '%p','')],1,-1)) + 1
+				if cfg.mute_players[string.gsub(nick..reason, '%p','')] then 
+					local b = tonumber(string.sub(cfg.mute_players[string.gsub(nick..reason, '%p','')],1,-1))
+					if b ~= 0 then
+						cfg.mute_players[string.gsub(nick..reason, '%p','')] = b + 1
+					end
 				--========== Если такой ник не найден в скрипте, то приписываем множитель 2 =======--- 
 				else cfg.mute_players[string.gsub(nick..reason, '%p','')] = 2 end
 				save()
@@ -2747,11 +2751,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				local reason = string.gsub(string.gsub(reason, ' x(%d)', ''), ' х(%d)', '')
 				--========== Если такой ник найден в скрипте, то добавляем множитель + 1 =======--- 
 				if cfg.mute_players[string.gsub(nick..reason, '%p','')] then
-					local b = tonumber(string.sub(cfg.mute_players[string.gsub(nick..reason, '%p','')],1,-1)) + 1
-					if b == 8 then
-						cfg.mute_players[string.gsub(nick..reason, '%p','')] = b
-					else
-						cfg.mute_players[string.gsub(nick..reason, '%p','')] = 9
+					local b = tonumber(string.sub(cfg.mute_players[string.gsub(nick..reason, '%p','')],1,-1))
+					if b ~= 0 then
+						cfg.mute_players[string.gsub(nick..reason, '%p','')] = b + 1
 					end
 				--========== Если такой ник не найден в скрипте, то приписываем множитель 2 =======--- 
 				else cfg.mute_players[string.gsub(nick..reason, '%p','')] = 2 end
