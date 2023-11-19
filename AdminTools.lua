@@ -3,32 +3,33 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.5 			 							-- Версия скрипта
-local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-------=================== Подгрузка библиотек ===================----------------------
+local version = 4.61 			 							-- Версия скрипта
+
+------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
-local sampev		 	= require 'lib.samp.events'			-- Считывание текста из чата
+local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
 local imadd 			= require 'imgui_addons' 			-- Замена имгуи CheckBox'a
-local mimgui 			= require "mimgui"					-- Мимгуи для работы keysyns
+local mimgui 			= require 'mimgui'					-- Мимгуи для работы keysyns
 local inicfg 			= require 'inicfg'					-- Сохранение/загрузка конфигов
 local encoding 			= require 'encoding'				-- Дешифровка на русский язык
 local vkeys 			= require 'vkeys' 					-- Работа с нажатием клавиш
 local ffi 				= require "ffi"						-- Работа с открытым чатом
 local fa 				= require 'faicons'					-- Иконки в imgui
-local mem 				= require "memory"					-- Работа с памятью игры
-local font 				= require ("moonloader").font_flag	-- Шрифты визуальных текстов на экране
+local mem 				= require 'memory'					-- Работа с памятью игры
+local font 				= require ('moonloader').font_flag	-- Шрифты визуальных текстов на экране
 encoding.default 		= 'CP1251' 
-local u8 				= encoding.UTF8 
-
-------=================== Загрузка модулей ===================----------------------
+local u8 				= encoding.UTF8
+local dlstatus 			= require('moonloader').download_status
 
 local AT_MP 			= script.load("\\resource\\AT_MP.lua") 			-- подгрузка плагина для мероприятий
 local AT_FastSpawn 		= script.load("\\resource\\AT_FastSpawn.lua")  	-- подгрузка быстрого спавна
 local AT_Trassera 		= script.load("\\resource\\AT_Trassera.lua") 	-- подгрузка трассеров
-local notify_report 	= import("\\resource\\lib_imgui_notf.lua") 				-- импорт уведомлений
-
+local plagin_notify		= import('\\lib\\lib_imgui_notf.lua')
 local tag 				= '{2B6CC4}Admin Tools: {F0E68C}' 	-- Задаем название скрипта в самой игре
 local sw, sh 			= getScreenResolution()           	-- Узнаем разрешение экрана пользователя
+if io.open("moonloader\\lib\\my_lib.lua", "r") ~= nil then require 'my_lib'
+else sampAddChatMessage(tag .. "Не обнаружена библиотека скрипта, не могу быть запущен.", -1) end
+
 
 local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсутствует
 	settings = {
@@ -81,6 +82,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		forma_na_mute = false,
 		add_mynick_in_form = false,
 		size_text_f6 = 12,
+		enter_report = true,
 	},
 	customotvet = {},
 	myflood = {},
@@ -90,6 +92,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 	mute_players = {data = os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year},
 }, 'AT//AT_main.ini')
 inicfg.save(cfg, 'AT//AT_main.ini')
+style(cfg.settings.style)
 
 ------=================== ImGui окна ===================----------------------
 local windows = {
@@ -136,6 +139,7 @@ local checkbox = {
 	style_selected 			= imgui.ImInt(cfg.settings.style),
 	selected_item 			= imgui.ImInt(cfg.settings.size_adminchat),
 	option_find_log 		= imgui.ImInt(0),
+	button_enter_in_report 	= imgui.ImBool(cfg.settings.enter_report),
 	check_render_ears 		= imgui.ImBool(false),
 	add_full_words 			= imgui.ImBool(true),
 	inputhelper			  	= imgui.ImBool(cfg.settings.inputhelper),
@@ -158,9 +162,9 @@ local buffer = {
 	new_command 		= imgui.ImBuffer(4096),
 	find_rules 			= imgui.ImBuffer(256),
 	new_binder_key 		= imgui.ImBuffer(2056),
-	new_prfh 			= imgui.ImBuffer(cfg.settings.prefixh,256),
-	new_prfma 			= imgui.ImBuffer(cfg.settings.prefixma,256),
-	new_prfa 			= imgui.ImBuffer(cfg.settings.prefixa,256),
+	new_prfh 			= imgui.ImBuffer(cfg.settings.prefixh, 256),
+	new_prfma 			= imgui.ImBuffer(cfg.settings.prefixma, 56),
+	new_prfa 			= imgui.ImBuffer(cfg.settings.prefixa, 256),
 	new_prfsa 			= imgui.ImBuffer(cfg.settings.prefixsa, 256),
 	find_log 			= imgui.ImBuffer(4096),
 }
@@ -188,8 +192,6 @@ local textdraw_delete = {  												-- Текстдравы из рекон меню, подлежащие у
 	169, 181, 166, 168, 174, 182, 171, 173, 150, 183, 183, 147, 149, 142,
 	143, 184, 176, 145, 158, 162, 163, 167, 172, 148
 }
---================== русские буковки =====================
-local russian_characters = {[168] = 'Ё', [184] = 'ё', [192] = 'А', [193] = 'Б', [194] = 'В', [195] = 'Г', [196] = 'Д', [197] = 'Е', [198] = 'Ж', [199] = 'З', [200] = 'И', [201] = 'Й', [202] = 'К', [203] = 'Л', [204] = 'М', [205] = 'Н', [206] = 'О', [207] = 'П', [208] = 'Р', [209] = 'С', [210] = 'Т', [211] = 'У', [212] = 'Ф', [213] = 'Х', [214] = 'Ц', [215] = 'Ч', [216] = 'Ш', [217] = 'Щ', [218] = 'Ъ', [219] = 'Ы', [220] = 'Ь', [221] = 'Э', [222] = 'Ю', [223] = 'Я', [224] = 'а', [225] = 'б', [226] = 'в', [227] = 'г', [228] = 'д', [229] = 'е', [230] = 'ж', [231] = 'з', [232] = 'и', [233] = 'й', [234] = 'к', [235] = 'л', [236] = 'м', [237] = 'н', [238] = 'о', [239] = 'п', [240] = 'р', [241] = 'с', [242] = 'т', [243] = 'у', [244] = 'ф', [245] = 'х', [246] = 'ц', [247] = 'ч', [248] = 'ш', [249] = 'щ', [250] = 'ъ', [251] = 'ы', [252] = 'ь', [253] = 'э', [254] = 'ю', [255] = 'я'}
 --================== Название авто ID = [0],[1],[2],[3]...[n]  =====================
 local name_car = {'Landstalker','Bravura','Buffalo','Linerunner','Perrenial','Sentinel','Dumper','Firetruck','Trashmaster','Stretch','Manana','Infernus','Voodoo','Pony','Mule','Cheetah','Ambulance','Leviathan','Moonbeam','Esperanto','Taxi','Washington','Bobcat','Mr Whoopee','BF Injection','Hunter','Premier','Enforcer','Securicar','Banshee','Predator','Bus','Rhino','Barracks','Hotknife','Trailer','Previon','Coach','Cabbie','Stallion','Rumpo','RC Bandit','Romero','Packer','Monster','Admiral','Squalo','Seasparrow','Pizzaboy','Tram','Trailer2','Turismo','Speeder','Reefer','Tropic','Flatbed','Yankee','Caddy','Solair','BerkleysRCVan','Skimmer','PCJ-600','Faggio','Freeway','RC Baron','RC Raider','Glendale','Oceanic','Sanchez','Sparrow','Patriot','Quad','Coastguard','Dinghy','Hermes','Sabre','Rustler','ZR-350','Walton','Regina','Comet','BMX','Burrito','Camper','Marquis','Baggage','Dozer','Maverick','News Chopper','Rancher','FBI Rancher','Virgo','Greenwood','Jetmax','Hotring','Sandking','Blista Compact','Police Maverick','Boxville','Benson','Mesa','RC Goblin','Hotring Racer A','Hotring Racer B','Bloodring Banger','Rancher','Super GT','Elegant','Journey','Bike','Mountain Bike','Beagle','Cropdust','Stunt','Tanker','Roadtrain','Nebula','Majestic','Buccaneer','Shamal','Hydra','FCR-900','NRG-500','HPV1000','Cement Truck','Tow Truck','Fortune','Cadrona','FBI Truck','Willard','Forklift','Tractor','Combine','Feltzer','Remington','Slamvan','Blade','Freight','Streak','Vortex','Vincent','Bullet','Clover','Sadler','Firetruck LA','Hustler','Intruder','Primo','Cargobob','Tampa',	'Sunrise','Merit','Utility','Nevada','Yosemite','Windsor','Monster A','Monster B','Uranus','Jester',	'Sultan',	'Stratum','Elegy','Raindance','RC Tiger',	'Flash',	'Tahoma','Savanna','Bandito','Freight Flat','Streak Carriage','Kart','Mower','Duneride','Sweeper','Broadway','Tornado','AT-400','DFT-30','Huntley','Stafford','BF-400','Newsvan','Tug','Trailer3','Emperor','Wayfarer','Euros','Hotdog','Club','Freight Carriage','Trailer4','Andromada','Dodo','RC Cam','Launch','Police Car (LSPD)','Police Car (SFPD)','Police Car (LVPD)','Police Ranger','Picador','S.W.A.T. Van','Alpha','Phoenix','Glendale','Sadler','Luggage Trailer A','Luggage Trailer B','Stair Trailer','Boxville','Farm Plow','Utility Trailer',}
 ---================= Задаем шрифт админ-чата =====================------------
@@ -197,7 +199,6 @@ local font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, 
 ---================= Задаем шрифт ears-чата =====================------------
 local font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
 ---================= Задаем шрифт рендера игроков =====================------------
-
 local spisokoskrod = { -- автомут на оск род
 	[0] = 'mq', 
 	[1] = 'rnq'
@@ -232,12 +233,6 @@ local spisokproject = { -- список проектов за который идет автомут
 	[7] = 'arz',
 }
 --------======================== Задаем шрифт и размер для имгуи текста ============--------------------
-local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local fa_glyph_ranges = imgui.ImGlyphRanges( {fa.min_range, fa.max_range} )
-function imgui.BeforeDrawFrame()
-    if not fontsize then  fontsize = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 17.0, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic()) end -- 17 razmer
-	if not fa_font then local font_config = imgui.ImFontConfig() font_config.MergeMode = true fa_font = imgui.GetIO().Fonts:AddFontFromFileTTF('moonloader/resource/fonts/fontawesome-webfont.ttf', 14.0, font_config, fa_glyph_ranges) end 
-end
 ffi.cdef[[
 	short GetKeyState(int nVirtKey);
 	bool GetKeyboardLayoutNameA(char* pwszKLID);
@@ -278,7 +273,7 @@ function sampev.onPlayerDeathNotification(killerId, killedId, reason)
 end
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main() 
-	while not isSampAvailable() do wait(0) end
+	while not isSampAvailable() do wait(1000) end
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", getWorkingDirectory() .. '//config//AT//AdminTools.ini', function(id, status) end)
@@ -289,10 +284,27 @@ function main()
 			update_main = true
 			if AdminTools.script.main then
 				sampAddChatMessage(tag .. 'Обнаружено новое {808080}обязательное {F0E68C}обновление скрипта! Произвожу самообновление.', -1)
-				update_main = true
-				update_fs = true
-				update_mp = true
-				update()
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/my_lib.lua", getWorkingDirectory() .. "//lib//my_lib.lua", function(id, status) end)
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", getWorkingDirectory() .. "//resource//AT_FastSpawn.lua", function(id, status)
+					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+						sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
+						if not (update_mp or update_main) then reloadScripts() end
+					end  
+				end)
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", getWorkingDirectory() .. "//resource//AT_MP.lua", function(id, status)
+					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+						sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
+						if not (update_fs or update_main) then reloadScripts() end
+					end 
+				end) 
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "//config//AT//rules.txt", function(id, status)  end)
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", getWorkingDirectory() .. "//resource//AT_Trassera.lua", function(id, status) end)
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
+					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+						sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
+						reloadScripts()
+					end 
+				end)
 			end
 		end
 		if cfg.settings.versionFS and cfg.settings.versionMP then
@@ -314,8 +326,7 @@ function main()
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
 	local rules = file_exists(getWorkingDirectory() .. "\\config\\AT\\rules.txt") if not rules then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "\\config\\AT\\rules.txt", function(id, status) end) end
 	local AutoMute_mat = file_exists(getWorkingDirectory() .. "\\config\\AT\\mat.txt") if not AutoMute_mat then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/mat.txt", getWorkingDirectory() .. "\\config\\AT\\mat.txt", function(id, status) end) end
-	local AutoMute_osk = file_exists(getWorkingDirectory() .. "\\config\\AT\\osk.txt") if not AutoMute_osk then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", getWorkingDirectory() .. "\\config\\AT\\osk.txt", function(id, status) end) end
-	
+	local AutoMute_osk = file_exists(getWorkingDirectory() .. "\\config\\AT\\osk.txt") if not AutoMute_osk then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", getWorkingDirectory() .. "\\config\\AT\\osk.txt", function(id, status) end) sampAddChatMessage(tag .. 'Файлы автомута не были обнаружены, докачал их из интернета, перезагрузите скрипт ALT + R пожалуйста.', -1) end	
 	local rules = io.open(getWorkingDirectory() .. "\\config\\AT\\rules.txt","r")
 	if rules then for line in rules:lines() do pravila[#pravila + 1] = u8:decode(line);end rules:close() end
 	
@@ -369,7 +380,7 @@ function main()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(1)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. version .. ']', 10, sh-20, 0xCCFFFFFF)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. '4.6.1' .. ']', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
@@ -414,7 +425,7 @@ function main()
 	end
 end
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
-function color() mcolor = "" math.randomseed( os.time() ) for i = 1, 6 do local b = math.random(1, 16) if b == 1 then mcolor = mcolor .. "A" elseif b == 2 then mcolor = mcolor .. "B" elseif b == 3 then mcolor = mcolor .. "C" elseif b == 4 then mcolor = mcolor .. "D" elseif b == 5 then mcolor = mcolor .. "E" elseif b == 6 then mcolor = mcolor .. "F" elseif b == 7 then mcolor = mcolor .. "0" elseif b == 8 then mcolor = mcolor .. "1" elseif b == 9 then mcolor = mcolor .. "2" elseif b == 10 then mcolor = mcolor .. "3" elseif b == 11 then mcolor = mcolor .. "4" elseif b == 12 then mcolor = mcolor .. "5" elseif b == 13 then mcolor = mcolor .. "6" elseif b == 14 then mcolor = mcolor .. "7" elseif b == 15 then mcolor = mcolor .. "8" elseif b == 16 then mcolor = mcolor .. "9" end end return mcolor end
+function color() mcolor = '' math.randomseed( os.time() ) for i = 1, 6 do local b = math.random(1, 16) if b == 1 then mcolor = mcolor .. "A" elseif b == 2 then mcolor = mcolor .. "B" elseif b == 3 then mcolor = mcolor .. "C" elseif b == 4 then mcolor = mcolor .. "D" elseif b == 5 then mcolor = mcolor .. "E" elseif b == 6 then mcolor = mcolor .. "F" elseif b == 7 then mcolor = mcolor .. "0" elseif b == 8 then mcolor = mcolor .. "1" elseif b == 9 then mcolor = mcolor .. "2" elseif b == 10 then mcolor = mcolor .. "3" elseif b == 11 then mcolor = mcolor .. "4" elseif b == 12 then mcolor = mcolor .. "5" elseif b == 13 then mcolor = mcolor .. "6" elseif b == 14 then mcolor = mcolor .. "7" elseif b == 15 then mcolor = mcolor .. "8" elseif b == 16 then mcolor = mcolor .. "9" end end return mcolor end
 local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	ans = { 														-- с вариативностью есть доп/текст или нет
 		nv      =  		'/ot _ Игрок не в сети ',
@@ -428,11 +439,11 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		fo      =  		'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru ',
 		rep     =  		'/ot _ Нашли нарушителя? Появился вопрос? Напишите /report!',
 	},
-	mute = {
-		fd      =  		'/mute _ 120 Флуд',--[[x10]]fd2='/mute _ 240 Флуд x2',fd3='/mute _ 360 Флуд x3',fd4='/mute _ 480 Флуд x4',fd5='/mute _ 600 Флуд x5',fd6='/mute _ 720 Флуд x6',fd7='/mute _ 840 Флуд x7',fd8='/mute _ 960 Флуд x8',fd9='/mute _ 1080 Флуд x9',fd10='/mute _ 1200 Флуд x10',
-		po 		=  		'/mute _ 120 Попрошайничество',--[[x10]]po2='/mute _ 240 Попрошайничество x2',po3='/mute _ 360 Попрошайничество x3',po4 ='/mute _ 480 Попрошайничество x4',po5 ='/mute _ 600 Попрошайничество x5',po6 ='/mute _ 720 Попрошайничество x6',po7 ='/mute _ 840 Попрошайничество x7',po8 ='/mute _ 960 Попрошайничество x8',po9 ='/mute _ 1080 Попрошайничество x9',po10 ='/mute _ 1200 Попрошайничество x10',
-		m       =  		'/mute _ 300 Нецензурная лексика',--[[x10]]m2='/mute _ 600 Нецензурная лексика x2',m3='/mute _ 900 Нецензурная лексика x3',m4='/mute _ 1200 Нецензурная лексика x4',m5='/mute _ 1500 Нецензурная лексика x5',m6='/mute _ 1800 Нецензурная лексика x6',m7='/mute _ 2100 Нецензурная лексика x7',m8='/mute _ 2400 Нецензурная лексика x8',m9='/mute _ 2700 Нецензурная лексика x9',m10='/mute _ 3000 Нецензурная лексика x10',
-		ok      =  		'/mute _ 400 Оскорбление/Унижение',--[[x10]]ok2='/mute _ 800 Оскорбление/Унижение x2',ok3='/mute _ 1200 Оскорбление/Унижение x3',ok4='/mute _ 1600 Оскорбление/Унижение x4',ok5='/mute _ 2000 Оскорбление/Унижение x5',ok6='/mute _ 2400 Оскорбление/Унижение x6',ok7='/mute _ 2800 Оскорбление/Унижение x7',ok8='/mute _ 3200 Оскорбление/Унижение x8',ok9='/mute _ 3600 Оскорбление/Унижение x9',ok10='/mute _ 4000 Оскорбление/Унижение x10',
+	mute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
+		fd      =  		'/mute _ 120 Флуд',					--[[x10]]fd2='/mute _ 240 Флуд x2',fd3='/mute _ 360 Флуд x3',fd4='/mute _ 480 Флуд x4',fd5='/mute _ 600 Флуд x5',fd6='/mute _ 720 Флуд x6',fd7='/mute _ 840 Флуд x7',fd8='/mute _ 960 Флуд x8',fd9='/mute _ 1080 Флуд x9',fd10='/mute _ 1200 Флуд x10',
+		po 		=  		'/mute _ 120 Попрошайничество',		--[[x10]]po2='/mute _ 240 Попрошайничество x2',po3='/mute _ 360 Попрошайничество x3',po4 ='/mute _ 480 Попрошайничество x4',po5 ='/mute _ 600 Попрошайничество x5',po6 ='/mute _ 720 Попрошайничество x6',po7 ='/mute _ 840 Попрошайничество x7',po8 ='/mute _ 960 Попрошайничество x8',po9 ='/mute _ 1080 Попрошайничество x9',po10 ='/mute _ 1200 Попрошайничество x10',
+		m       =  		'/mute _ 300 Нецензурная лексика',	--[[x10]]m2='/mute _ 600 Нецензурная лексика x2',m3='/mute _ 900 Нецензурная лексика x3',m4='/mute _ 1200 Нецензурная лексика x4',m5='/mute _ 1500 Нецензурная лексика x5',m6='/mute _ 1800 Нецензурная лексика x6',m7='/mute _ 2100 Нецензурная лексика x7',m8='/mute _ 2400 Нецензурная лексика x8',m9='/mute _ 2700 Нецензурная лексика x9',m10='/mute _ 3000 Нецензурная лексика x10',
+		ok      =  		'/mute _ 400 Оскорбление/Унижение',	--[[x10]]ok2='/mute _ 800 Оскорбление/Унижение x2',ok3='/mute _ 1200 Оскорбление/Унижение x3',ok4='/mute _ 1600 Оскорбление/Унижение x4',ok5='/mute _ 2000 Оскорбление/Унижение x5',ok6='/mute _ 2400 Оскорбление/Унижение x6',ok7='/mute _ 2800 Оскорбление/Унижение x7',ok8='/mute _ 3200 Оскорбление/Унижение x8',ok9='/mute _ 3600 Оскорбление/Унижение x9',ok10='/mute _ 4000 Оскорбление/Унижение x10',
 		up 		=  		'/mute _ 1000 Упом. сторонних проектов',
 		oa 		=  		'/mute _ 2500 Оскорбление администрации',
 		kl 		=  		'/mute _ 3000 Клевета на администрацию',
@@ -443,22 +454,22 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		ia 		=  		'/mute _ 2500 Выдача себя за администратора',
 	},
 	rmute = {
-		oft 	= 		'/rmute _ 120 оффтоп в репорт',--[[x10]]oft2='/rmute _ 240 оффтоп в репорт x2',oft3='/rmute _ 360 оффтоп в репорт x3',oft4='/rmute _ 480 оффтоп в репорт х4',oft5='/rmute _ 600 оффтоп в репорт х5',oft6='/rmute _ 720 оффтоп в репорт x6',oft7='/rmute _ 840 оффтоп в репорт х7',oft8='/rmute _ 960 оффтоп в репорт х8',oft9='/rmute _ 1080 оффтоп в репорт х9',oft10='/rmute _ 1200 оффтоп в репорт х10',
-		cp 		= 		'/rmute _ 120 Caps in /report',--[[x10]]cp2='/rmute _ 240 Caps in /report x2',cp3='/rmute _ 360 Caps in /report x3',cp4='/rmute _ 480 Caps in /report x4',cp5='/rmute _ 600 Caps in /report x5',cp6='/rmute _ 720 Caps in /report x6',cp7='/rmute _ 840 Caps in /report x7',cp8='/rmute _ 960 Caps in /report x8',cp9='/rmute _ 1080 Caps in /report x9',cp10='/rmute _ 1200 Caps in /report x10',
+		oft 	= 		'/rmute _ 120 оффтоп в репорт',		--[[x10]]oft2='/rmute _ 240 оффтоп в репорт x2',oft3='/rmute _ 360 оффтоп в репорт x3',oft4='/rmute _ 480 оффтоп в репорт х4',oft5='/rmute _ 600 оффтоп в репорт х5',oft6='/rmute _ 720 оффтоп в репорт x6',oft7='/rmute _ 840 оффтоп в репорт х7',oft8='/rmute _ 960 оффтоп в репорт х8',oft9='/rmute _ 1080 оффтоп в репорт х9',oft10='/rmute _ 1200 оффтоп в репорт х10',
+		cp 		= 		'/rmute _ 120 caps in /report',		--[[x10]]cp2='/rmute _ 240 Caps in /report x2',cp3='/rmute _ 360 Caps in /report x3',cp4='/rmute _ 480 Caps in /report x4',cp5='/rmute _ 600 Caps in /report x5',cp6='/rmute _ 720 Caps in /report x6',cp7='/rmute _ 840 Caps in /report x7',cp8='/rmute _ 960 Caps in /report x8',cp9='/rmute _ 1080 Caps in /report x9',cp10='/rmute _ 1200 Caps in /report x10',
 		rpo		=		'/rmute _ 120 Попрошайка в /report',--[[x10]]rpo2='/rmute _ 240 Попрошайка в /report x2',rpo3='/rmute _ 360 Попрошайка в /report x3',rpo4='/rmute _ 480 Попрошайка в /report x4',rpo5='/rmute _ 600 Попрошайка в /report x5',rpo6='/rmute _ 720 Попрошайка в /report x6',rpo7='/rmute _ 840 Попрошайка в /report x7',rpo8='/rmute _ 960 Попрошайка в /report x8',rpo9='/rmute _ 1080 Попрошайка в /report x9',rpo10='/rmute _ 1200 Попрошайка в /report x10',
-		rm 		= 		'/rmute _ 300 мат в /report',--[[x10]]rm2='/rmute _ 600 мат в /report x2',rm3='/rmute _ 900 мат в /report x3',rm4='/rmute _ 600 мат в /report x4',rm5='/rmute _ 600 мат в /report x5',rm6='/rmute _ 600 мат в /report x6',rm7='/rmute _ 600 мат в /report x7',rm8='/rmute _ 600 мат в /report x8',rm9='/rmute _ 600 мат в /report x9',rm10='/rmute _ 600 мат в /report x10',
+		rm 		= 		'/rmute _ 300 мат в /report',		--[[x10]]rm2='/rmute _ 600 мат в /report x2',rm3='/rmute _ 900 мат в /report x3',rm4='/rmute _ 600 мат в /report x4',rm5='/rmute _ 600 мат в /report x5',rm6='/rmute _ 600 мат в /report x6',rm7='/rmute _ 600 мат в /report x7',rm8='/rmute _ 600 мат в /report x8',rm9='/rmute _ 600 мат в /report x9',rm10='/rmute _ 600 мат в /report x10',
 		rok 	= 		'/rmute _ 400 Оскорбление в /report',--[[x10]]rok2='/rmute _ 800 Оскорбление в /report x2',rok3='/rmute _ 1200 Оскорбление в /report x3',rok4='/rmute _ 1600 Оскорбление в /report x4',rok5='/rmute _ 2000 Оскорбление в /report x5',rok6='/rmute _ 2400 Оскорбление в /report x6',rok7='/rmute _ 2800 Оскорбление в /report x7',rok8='/rmute _ 3200 Оскорбление в /report x8',rok9='/rmute _ 3600 Оскорбление в /report x9',rok10='/rmute _ 4000 Оскорбление в /report x10',
-		roa 	= 		'/rmute _ 2500 Оскорбление администрации',
-		ror 	= 		'/rmute _ 5000 Оскорбление/Упоминание родных',
-		rzs 	= 		'/rmute _ 600 Злоупотребление символами',
-		rrz 	= 		'/rmute _ 5000 Розжиг межнац. розни',
+		roa 	= 		'/rmute _ 2500 Оскорблeние администрации',
+		ror 	= 		'/rmute _ 5000 Оскорблeние/Упоминание родных',
+		rzs 	= 		'/rmute _ 600 Злоупотребление символaми',
+		rrz 	= 		'/rmute _ 5000 Розжиг межнац. рoзни',
 	},
 	jail = {
 		bg 		= 		'/jail _ 300 Багоюз',
-		sk 		= 		'/jail _ 300 Spawn Kill',
 		td 		= 		'/jail _ 300 car in /trade',
-		jm 		= 		'/jail _ 300 Нарушение правил МП',
-		dz 		= 		'/jail _ 300 ДМ/ДБ в зеленой зоне',
+		jm 		= 		'/jail _ 300 Нарушение правил МП',	--[[x10]]jm2='/jail _ 600 Нарушение правил МП x2',jm3='/jail _ 900 Нарушение правил МП x3',jm4='/jail _ 1200 Нарушение правил МП x4',jm5='/jail _ 1500 Нарушение правил МП x5',jm6='/jail _ 1800 Нарушение правил МП x6',jm7='/jail _ 2100 Нарушение правил МП x7',jm8='/jail _ 2400 Нарушение правил МП x8',jm9='/jail _ 2700 Нарушение правил МП x9',jm10='/jail _ 3000 Нарушение правил МП x10',
+		dz		=		'/jail _ 300 ДМ/ДБ в зеленой зоне',	--[[x10]]dz2='/jail _ 600 ДМ/ДБ в зеленой зоне x2',dz3='/jail _ 900 ДМ/ДБ в зеленой зоне x3',dz4='/jail _ 1200 ДМ/ДБ в зеленой зоне x4',dz5='/jail _ 1500 ДМ/ДБ в зеленой зоне x5',dz6='/jail _ 1800 ДМ/ДБ в зеленой зоне x6',dz7='/jail _ 2100 ДМ/ДБ в зеленой зоне x7',dz8='/jail _ 2400 ДМ/ДБ в зеленой зоне x8',dz9='/jail _ 2700 ДМ/ДБ в зеленой зоне x9',dz10='/jail _ 3000 ДМ/ДБ в зеленой зоне x10',
+		sk 		= 		'/jail _ 300 Spawn Kill',			--[[x10]]sk2='/jail _ 600 Spawn Kill x2',sk3='/jail _ 900 Spawn Kill x3',sk4='/jail _ 1200 Spawn Kill x4',sk5='/jail _ 1500 Spawn Kill x5',sk6='/jail _ 1800 Spawn Kill x6',sk7='/jail _ 2100 Spawn Kill x7',sk8='/jail _ 2400 Spawn Kill x8',sk9='/jail _ 2700 Spawn Kill x9',sk10='/jail _ 3000 Spawn Kill x10',
 		dk 		= 		'/jail _ 900 ДБ Ковш в зеленой зоне',
 		jc 		= 		'/jail _ 900 сторонний скрипт/ПО',
 		sh 		= 		'/jail _ 900 SpeedHack/FlyCar',
@@ -503,6 +514,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		wh 		= 		'Включить WallHack',
 		tool 	= 		'Активировать меню АТ',
 		sbanip 	= 		'Выдать блокировку аккаунта с IP адресом (ФД!)',
+		opencl  = 		'Открыть меню чат-логгера',
 		spp 	= 		'Заспавнить игроков в радиусе',
 		prfma 	= 		'Выдать префикс мл.админу',
 		prfa 	= 		'Выдать префикс админу',
@@ -644,7 +656,12 @@ sampRegisterChatCommand('sbanip', function()
 	end)
 end)
 sampRegisterChatCommand('spp', function()
-	lua_thread.create(function() for _, id in pairs(playersToStreamZone()) do wait(500) sampSendChat('/aspawn ' .. id) end end)
+	lua_thread.create(function() 
+		for _, id in pairs(playersToStreamZone()) do 
+			wait(500) 
+			sampSendChat('/aspawn ' .. id) 
+		end 
+	end)
 end)
 sampRegisterChatCommand('size_chat', function(param)
 	if param:match('(%d+)') then
@@ -656,12 +673,16 @@ sampRegisterChatCommand('size_chat', function(param)
 		else sampAddChatMessage(tag .. 'Команда принимает значения от 8 до 18 (1 = выключить)', -1) end
 	else sampAddChatMessage(tag.. 'Команда принимает значения от 8 до 18 (1 = выключить)', -1) end
 end)
+sampRegisterChatCommand('opencl', function(param)
+	windows.menu_chatlogger.v = true
+	imgui.Process = true
+end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
 	if not windows.update_script.v and not windows.render_admins.v and not windows.menu_tools.v and not windows.pravila.v and not windows.fast_report.v and not windows.recon_menu.v and not windows.answer_player_report.v and not windows.menu_chatlogger.v then
 		showCursor(false,false)
-		imgui.Process = false
-		if cfg.settings.render_admins then sampSendChat('/admins') end
+		if cfg.settings.render_admins then windows.render_admins.v = true
+		else imgui.Process = false end
 	end
 	if windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
 		windows.render_admins.v = false
@@ -851,6 +872,7 @@ function imgui.OnDrawFrame()
 					if #ears > cfg.settings.strok_ears then for i = #ears, cfg.settings.strok_ears do ears[i] = nil end end
 					save()
 				end
+				if imgui.Button(u8'Сбросить чат') then ears = {} end
 				if imgui.Button(u8'Изменить позицию') then
 					if render_ears then
 						lua_thread.create(function()
@@ -910,6 +932,7 @@ function imgui.OnDrawFrame()
 					save()
 				end
 				imgui.PopItemWidth()
+				if imgui.Button(u8'Сбросить чат') then adminchat = {} end
 				if imgui.Button(u8'Изменить позицию') then
 					lua_thread.create(function()
 						if not adminchat[1] then adminchat[1] = 'Тестовое сообщение для видимости новой позиции.' end 
@@ -1449,7 +1472,7 @@ function imgui.OnDrawFrame()
 		if menu2[8] then
 			imgui.SetCursorPosX(10)
 			imgui.Checkbox('##celoeslovo', checkbox.add_full_words)
-			imgui.Tooltip(u8'Добавить в автомут целое слово')
+			imgui.Tooltip(u8'Вкл = добавление исключительно целого слова, а не ключевых')
 			imgui.SameLine()
 			imgui.CenterText(u8'Добавить мат (Всего в словаре: ' .. #mat..')')
 			imgui.SameLine()
@@ -1474,7 +1497,7 @@ function imgui.OnDrawFrame()
 				buffer.newmat.v = u8:decode(buffer.newmat.v)
 				buffer.newmat.v = buffer.newmat.v:rlower()
 				for k, v in pairs(mat) do
-					if mat[k] == buffer.newmat.v then
+					if (mat[k] == buffer.newmat.v) or (mat[k] == buffer.newmat.v..'%s') then
 						sampAddChatMessage('{DDA0DD}[AutoMute]:{F0E68C} Слово{008000} ' .. buffer.newmat.v .. ' {F0E68C}уже имеется в списке матов.', -1)
 						find_words = true
 						break
@@ -1482,8 +1505,8 @@ function imgui.OnDrawFrame()
 				end
 				if not find_words then
 					local AutoMute_mat = io.open(getWorkingDirectory() .. "\\config\\AT\\mat.txt", "a")
-					if checkbox.add_full_words.v == true then 
-						AutoMute_mat:write(u8(buffer.newmat.v..'%s') .. '\n')
+					if checkbox.add_full_words.v then 
+						AutoMute_mat:write(u8(buffer.newmat.v)..'%s' .. '\n')
 						table.insert(mat, buffer.newmat.v..'%s')
 					else
 						AutoMute_mat:write(u8(buffer.newmat.v) .. '\n')
@@ -1504,11 +1527,14 @@ function imgui.OnDrawFrame()
 				for k, v in pairs(mat) do
 					if (mat[k] == buffer.newmat.v) or (mat[k] == buffer.newmat.v..'%s') then
 						table.remove(mat, k)
+
 						local AutoMute_mat = io.open(getWorkingDirectory() .. "\\config\\AT\\mat.txt", "w") 
 						AutoMute_mat:close()
+
 						local AutoMute_mat = io.open(getWorkingDirectory() .. "\\config\\AT\\mat.txt", "a")
 						for i = 1, #mat do if mat[i] and #(mat[i]) > 2 then AutoMute_mat:write(u8(mat[i]) .. "\n") end end
 						AutoMute_mat:close()
+
 						find_words = true
 						sampAddChatMessage('{DDA0DD}[AutoMute]:{F0E68C} Выбранное вами слово{008000} ' .. buffer.newmat.v .. ' {F0E68C}было успешно удалено из списка матов', -1)
 						break
@@ -1542,7 +1568,7 @@ function imgui.OnDrawFrame()
 				buffer.newosk.v = u8:decode(buffer.newosk.v)
 				buffer.newosk.v = buffer.newosk.v:rlower()
 				for k, v in pairs(osk) do
-					if osk[k] == buffer.newosk.v then
+					if (osk[k] == buffer.newosk.v) or (osk[k] == buffer.newosk.v..'%s') then
 						sampAddChatMessage('{DDA0DD}[AutoMute]:{F0E68C} Слово{008000} ' .. buffer.newosk.v .. ' {F0E68C}уже имеется в списке оскорблений.', -1)
 						find_words = true
 						break
@@ -1551,7 +1577,7 @@ function imgui.OnDrawFrame()
 				if not find_words then
 					local AutoMute_osk = io.open(getWorkingDirectory() .. "\\config\\AT\\osk.txt", "a")
 					if checkbox.add_full_words.v then 
-						AutoMute_osk:write(u8(buffer.newosk.v .. '%s') .. '\n')
+						AutoMute_osk:write(u8(buffer.newosk.v) .. '%s' .. '\n')
 						table.insert(osk, buffer.newosk.v..'%s')
 					else 
 						AutoMute_osk:write(u8(buffer.newosk.v) .. '\n')
@@ -1571,12 +1597,14 @@ function imgui.OnDrawFrame()
 				buffer.newosk.v = buffer.newosk.v:rlower()
 				for k, v in pairs(osk) do
 					if (osk[k] == buffer.newosk.v) or (osk[k] == buffer.newosk.v..'%s') then
-						table.remove(osk, k)
 						local AutoMute_osk = io.open(getWorkingDirectory() .. "\\config\\AT\\osk.txt", "w") 
 						AutoMute_osk:close()
+
+						table.remove(osk, k)
 						local AutoMute_osk = io.open(getWorkingDirectory() .. "\\config\\AT\\osk.txt", "a")
 						for i = 1, #osk do if osk[i] and #(osk[i]) > 2 then AutoMute_osk:write(u8(osk[i]) .. "\n") end end
 						AutoMute_osk:close()
+
 						find_words = true
 						sampAddChatMessage('{DDA0DD}[AutoMute]:{F0E68C} Выбранное вами слово{008000} ' .. buffer.newosk.v .. ' {F0E68C}было успешно удалено из списка оскорблений', -1)
 						break
@@ -1589,7 +1617,7 @@ function imgui.OnDrawFrame()
 			end
 			imgui.CenterText(u8'Выберите тему оформления')
 			imgui.PushItemWidth(480)
-			if imgui.Combo("##selected", checkbox.style_selected, {u8"Темно-Синяя тема", u8"Красная тема", u8"Зеленая тема", u8"Бирюзовая тема", u8"Розовая тема", u8"Голубая тема"}, checkbox.style_selected) then
+			if imgui.Combo("##selected", checkbox.style_selected, {u8"Классическая тема", u8"Красная тема", u8"Синяя тема", u8"Фиолетовая тема", u8"Розовая тема", u8"Голубая тема"}, checkbox.style_selected) then
 				cfg.settings.style = checkbox.style_selected.v 
 				save()
 				sampAddChatMessage(tag ..'Произвожу перезагрузку для сихронизации RGB цветов...', -1)
@@ -1654,6 +1682,7 @@ function imgui.OnDrawFrame()
 			imgui.Tooltip('X')
 			imgui.SameLine()
 		end
+ 		imgui.SameLine()
 		imgui.Text(fa.ICON_FILES_O)
 		if imgui.IsItemClicked(0) then 
 			setClipboardText(autor)
@@ -1672,26 +1701,26 @@ function imgui.OnDrawFrame()
 		imgui.Tooltip('Enter')
 		imgui.Separator()
 		if #(buffer.text_ans.v) > 5 then
-			imgui.CenterText(u8'Сохраненные ответы')
-			imgui.SameLine()
-			imgui.Text('(?)')
-			imgui.Tooltip(u8'Нажатие на ответ - отправляет ответ.\nНажатие на кнопку "Отправить" отправляет ваш ответ, вне зависимости от сохраненных.\nНажатие Enter отправляет 1-ый из предложенных сохраненных ответов при наличии.')
+			if imgui.Checkbox(u8"При нажатии на Enter отправить сохраненный ответ", checkbox.button_enter_in_report) then
+				cfg.settings.enter_report = not cfg.settings.enter_report
+				save()
+			end
 			for k,v in pairs(cfg.customotvet) do
 				if string.rlower(v):find(string.rlower(u8:decode(buffer.text_ans.v))) or string.rlower(v):find(translateText(string.rlower(u8:decode(buffer.text_ans.v)))) then
 					if imgui.Button(u8(v), imgui.ImVec2((sw * 0.5) - 295, 24)) then
 						if not answer.customans then 
-							answer.customans = v
+							buffer.text_ans.v = u8(v)
 						end
 					end
 				end
 			end
 		else
-			if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or (isKeyDown(VK_Q) and not sampIsChatInputActive()) then
+			if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_Q) and not sampIsChatInputActive()) then
 				answer.rabotay = true
 			end
 			imgui.Tooltip('Q')
 			imgui.SameLine()
-			if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or (isKeyDown(VK_E) and not sampIsChatInputActive()) then
+			if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_E) and not sampIsChatInputActive()) then
 				answer.slejy = true
 			end
 			imgui.Tooltip('E')
@@ -1701,68 +1730,76 @@ function imgui.OnDrawFrame()
 			end
 			imgui.Tooltip('R')
 			imgui.SameLine()
-			if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or (isKeyDown(VK_V) and not sampIsChatInputActive()) then
+			if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_V) and not sampIsChatInputActive()) then
 				answer.peredamrep = true
 			end
 			imgui.Tooltip('V')
 			if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_G) and not sampIsChatInputActive()) then
-				if tonumber(autorid) then imgui.OpenPopup('option')
-				else sampAddChatMessage(tag .. 'Данный игрок не в сети. Используйте /rmuteoff', -1) end
+				imgui.OpenPopup('option')
 			end
 			if imgui.BeginPopup('option') then
-				if imgui.Button(u8'Оффтоп (1)', imgui.ImVec2(250, 25)) or isKeyDown(VK_1) then
+				if imgui.Button(u8'Оффтоп (1)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_1) then
 					nakazatreport.oftop = true
 					answer.nakajy = true
 				end
-				if imgui.Button(u8'Капс (2)', imgui.ImVec2(250, 25)) or isKeyDown(VK_2) then
+				if imgui.Button(u8'Капс (2)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_2) then
 					nakazatreport.capsrep = true
 					answer.nakajy = true
 				end
-				if imgui.Button(u8'Оскорбление администрации (3)', imgui.ImVec2(250, 25)) or isKeyDown(VK_3) then
+				if imgui.Button(u8'Оскорбление администрации (3)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_3) then
 					nakazatreport.oskadm = true
 					answer.nakajy = true
 				end
-				if imgui.Button(u8'Клевета на администрацию (4)', imgui.ImVec2(250, 25)) or isKeyDown(VK_4) then
+				if imgui.Button(u8'Клевета на администрацию (4)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_4) then
 					nakazatreport.kl = true
 					answer.nakajy = true
 				end
-				if imgui.Button(u8'Оскорбление/Упоминание родных (5)', imgui.ImVec2(250, 25)) or isKeyDown(VK_5) then
+				if imgui.Button(u8'Оск/Упом родных (5)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_5) then
 					nakazatreport.oskrod = true
 					answer.nakajy = true
 				end
-				if imgui.Button(u8'Попрошайничество (6)', imgui.ImVec2(250, 25)) or isKeyDown(VK_6) then
+				if imgui.Button(u8'Попрошайничество (6)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_6) then
 					nakazatreport.poprep = true
 					answer.nakajy = true
 				end
-				if imgui.Button(u8'Оскорбление/Унижение (7)', imgui.ImVec2(250, 25)) or isKeyDown(VK_7) then
+				if imgui.Button(u8'Оскорбление/Унижение (7)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_7) then
 					nakazatreport.oskrep = true
 					answer.nakajy = true
 				end
-				if imgui.Button(u8'Нецензурная лексика (8)', imgui.ImVec2(250, 25)) or isKeyDown(VK_8) then
+				if imgui.Button(u8'Нецензурная лексика (8)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_8) then
 					nakazatreport.matrep = true
 					answer.nakajy = true
 				end
-				if imgui.Button(u8'Розжиг межнациональной розни (9)', imgui.ImVec2(250,25)) or isKeyDown(VK_9) then
+				if imgui.Button(u8'Розжиг (9)', imgui.ImVec2(250,25)) or wasKeyPressed(VK_9) then
 					nakazatreport.rozjig = true
 				end
 				imgui.EndPopup()
 			end
 			imgui.Tooltip('G')
 			imgui.SameLine()
-			if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or (isKeyDown(VK_B) and not sampIsChatInputActive()) then
+			if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_B) and not sampIsChatInputActive()) then
 				answer.uto4id = true
 			end
 			imgui.Tooltip('B')
 			imgui.SameLine()
-			if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or (isKeyDown(VK_F) and not sampIsChatInputActive()) then
+			if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_F) and not sampIsChatInputActive()) then
 				answer.uto4 = true
 			end
 			imgui.Tooltip('F')
 			imgui.SameLine()
-			if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or (isKeyDown(VK_Y) and not sampIsChatInputActive()) then
-				answer.otklon = true
+			if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_Y) and not sampIsChatInputActive()) then
+				imgui.OpenPopup('otklon')
 			end
 			imgui.Tooltip('Y')
+			if imgui.BeginPopup('otklon') then
+				if imgui.Button(u8'Оставить репорт другому администратору', imgui.ImVec2(310, 25)) then
+					sampCloseCurrentDialogWithButton(0)
+				end
+				if imgui.Button(u8'Отклонить репорт полностью', imgui.ImVec2(310, 25)) then
+					answer.otklon = true
+				end
+				imgui.EndPopup()
+			end
 		end
 		imgui.Separator()
 		if imadd.ToggleButton('##doptextans' .. fa.ICON_COMMENTING_O, checkbox.check_add_answer_report) then
@@ -1878,7 +1915,7 @@ function imgui.OnDrawFrame()
 			imgui.SameLine()
 			if sampIsPlayerConnected(control_player_recon) then 
 				imgui.Text(sampGetPlayerNickname(control_player_recon) .. '[' .. control_player_recon .. ']')
-			else windows.recon_menu.v = false end
+			end
 			imgui.SameLine()
 			imgui.SetCursorPosX(230)
 			if mobile_player then imgui.Text(fa.ICON_MOBILE)
@@ -2393,23 +2430,40 @@ function imgui.OnDrawFrame()
 		end
 		if update_main then
 			if imgui.Button(u8'Обновить основной скрипт', imgui.ImVec2(400, 24)) then
-				sampAddChatMessage(tag .. 'Правильный выбор!', -1)
 				sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
-				update()
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/my_lib.lua", getWorkingDirectory() .. "//lib//my_lib.lua", function(id, status) end)
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "//config//AT//rules.txt", function(id, status)  end)
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", getWorkingDirectory() .. "//resource//AT_Trassera.lua", function(id, status) end)
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
+					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+						sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
+						reloadScripts()
+					end 
+				end)
 			end
 		end
 		if update_fs then
 			if imgui.Button(u8'Обновить плагин быстрого спавна', imgui.ImVec2(400, 24)) then
-				sampAddChatMessage(tag .. 'Верно мыслите!', -1)
+				update_fs = false
 				sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
-				update()
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", getWorkingDirectory() .. "//resource//AT_FastSpawn.lua", function(id, status)
+					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+						sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
+						if not (update_mp or update_main) then reloadScripts() end
+					end  
+				end) 
 			end
 		end
 		if update_mp then
 			if imgui.Button(u8'Обновить плагин мероприятий/админ-статистики', imgui.ImVec2(400, 24)) then
-				sampAddChatMessage(tag .. 'Дальше только лучше!', -1)
+				update_mp = false
+				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", getWorkingDirectory() .. "//resource//AT_MP.lua", function(id, status)
+					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+						sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
+						if not (update_fs or update_main) then reloadScripts() end
+					end 
+				end) 
 				sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
-				update()
 			end
 		end
 		imgui.PopFont()
@@ -2418,7 +2472,13 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 end
-
+sampRegisterChatCommand('test', function()
+	autor = ''
+	autorid = 'd'
+	textreport = ''
+	windows.fast_report.v = true
+	imgui.Process = true
+end)
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if command:match('mute (.+) (.+) .+') and string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' then
 		if cfg.settings.forma_na_mute then
@@ -2437,10 +2497,13 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				local nick = string.gsub(sampGetPlayerNickname(id), '%p','') -- присваиваем переменной значение ника и удаляем символы пунктуации
 				for a,b in pairs(cfg.mute_players) do
 					if string.sub(a, 1, #nick) == nick and reason == string.sub(a, #nick+1) then -- Если ник найден в массиве уже наказанных, и причина совпадает
-						local second = second * b -- Умножаем наказание
+						if b == 9 then b = 9 second = second * 9
+						else second = second * b end -- если не х10 ,то умножаем наказание
 						if second > 5000 then second = 5000 end
 						sampAddChatMessage(tag .. 'Данный игрок уже был наказан ранее, потому я увеличиваю наказание.', -1)
-						SendChat('/mute ' .. id ..' '..  second .. ' ' .. reason ..' x'..b)
+						if string.sub(command, 1, 6) == '/rmute' then
+							SendChat('/rmute ' .. id .. ' ' .. second .. ' ' .. reason .. ' x' .. b)
+						else SendChat('/mute ' .. id ..' '..  second .. ' ' .. reason ..' x' .. b) end
 						return false
 					end
 				end
@@ -2477,14 +2540,6 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 		end
 	end
 	return
-end
-function SendChat(text)
-    local bs = raknetNewBitStream()
-    local rn = require 'samp.raknet'
-    raknetBitStreamWriteInt32(bs, #text)
-    raknetBitStreamWriteString(bs, text)
-    raknetSendRpc(rn.RPC.SERVERCOMMAND, bs)
-    raknetDeleteBitStream(bs)
 end
 function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 	if #text > 4 then
@@ -2655,19 +2710,19 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				end	
 			end
 		elseif text:match('%[Информация%] {FFFFFF}Теперь вы не видите сообщения игроков') then
-			checkbox.check_render_ears = imgui.ImBool(true)
+			checkbox.check_render_ears.v = false
 			ears = {}
 			notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно приостановлено')
 			return false
 		elseif text:match('%[Информация%] {FFFFFF}Теперь вы видите сообщения игроков') then
-			checkbox.check_render_ears = imgui.ImBool(false)
+			checkbox.check_render_ears.v = true
 			notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано')
 			return false
 		elseif text:match('Время администратирования за сегодня:') or text:match('Ваша репутация:') or text:match('Всего администрации в сети:') then
 			if cfg.settings.render_admins then return false end
 		elseif text:match("(.+)%((%d+)%) пытался написать в чат: ") and not AFK then
 			sampAddChatMessage('',-1)
-			sampAddChatMessage(text,0xFF0000) -- чтобы не пропускали такие сообщения
+			sampAddChatMessage(text,0xff6347) -- чтобы не пропускали такие сообщения
 			sampAddChatMessage('',-1)
 			return false
 		elseif text:match("Администратор (.+) заткнул%(.+%) игрока (.+) на (.+) секунд. Причина:") then
@@ -2691,7 +2746,13 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				---========= Если в причине есть множитель - удаляем ============-----------------
 				local reason = string.gsub(string.gsub(reason, ' x(%d)', ''), ' х(%d)', '')
 				--========== Если такой ник найден в скрипте, то добавляем множитель + 1 =======--- 
-				if cfg.mute_players[string.gsub(nick..reason, '%p','')] then cfg.mute_players[string.gsub(nick..reason, '%p','')] = tonumber(string.sub(cfg.mute_players[string.gsub(nick..reason, '%p','')],1,-1)) + 1
+				if cfg.mute_players[string.gsub(nick..reason, '%p','')] then
+					local b = tonumber(string.sub(cfg.mute_players[string.gsub(nick..reason, '%p','')],1,-1)) + 1
+					if b == 8 then
+						cfg.mute_players[string.gsub(nick..reason, '%p','')] = b
+					else
+						cfg.mute_players[string.gsub(nick..reason, '%p','')] = 9
+					end
 				--========== Если такой ник не найден в скрипте, то приписываем множитель 2 =======--- 
 				else cfg.mute_players[string.gsub(nick..reason, '%p','')] = 2 end
 				save()
@@ -2699,7 +2760,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		elseif text:match('Weapon hack %[code: 015%]') and not AFK then
 			if cfg.settings.find_warning_weapon_hack then
 				lua_thread.create(function()
-					while (sampIsDialogActive() or sampIsChatInputActive()) do wait(800) end
+					while sampIsDialogActive() do wait(500) end
 					sampSendChat("/iwep " .. string.match(text, "%[(%d+)%]"))
 				end)
 				return false
@@ -2790,6 +2851,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			for i = 1, #text - 1 do
 				local _,weapon, patron = text[i]:match('(%d+)	Weapon: (%d+)     Ammo: (.+)')
 				if (text[i]:find('-')) or (weapon == '0' and patron ~= '0') then
+					sampAddChatMessage(tag .. 'Игрок: ' .. title .. ' ['..sampGetPlayerIdByNickname(title)..']',-1)
 					sampAddChatMessage(tag .. 'Оружие (ID): ' .. weapon..'. Патроны: '..patron, -1)
 					notify('{66CDAA}[AT] Анти-чит', 'Оружие (ID): ' .. weapon..'\nПатроны: '..patron)
 					imgui.Process = false
@@ -2803,7 +2865,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			wait(0)
 			sampCloseCurrentDialogWithButton(0)
 			if player_cheater then
-				while sampIsDialogActive() do wait(300) end
+				while sampIsDialogActive() do wait(500) end
 				player_cheater = nil
 				sampSendChat('/iban '..sampGetPlayerIdByNickname(title)..' 7 Чит на оружие')
 				notify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты')
@@ -2905,10 +2967,10 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		text[1] = string.gsub(string.gsub(text[1], '{%w%w%w%w%w%w}', ''), 'Игрок: ', '')
 		text[4] = string.gsub(string.gsub(text[4], '{%w%w%w%w%w%w}', ''), 'Жалоба: ', '')
 		autor = text[1]																			--1
-		if sampGetPlayerIdByNickname(autor) then autorid = sampGetPlayerIdByNickname(autor)		--1
+		if sampIsPlayerConnected(autor) then autorid = sampGetPlayerIdByNickname(autor)		--1
 		else autorid = 'Не в сети' end     														--1
 		textreport = text[4]																	--4
-		reportid = tonumber(string.match(textreport, '%d[%d.,]*'))								--4
+		reportid = tonumber(string.match(string.gsub(textreport, '%,','')--[[фикс запятой, из-за нее не видит ID]], '%d[%d.,]*')) --4
 		if not sampIsPlayerConnected(reportid) then 											--4
 			_, myid = sampGetPlayerIdByCharHandle(PLAYER_PED) 									--4
 		end																						--4
@@ -2918,6 +2980,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			sampSendDialogResponse(dialogId,1,0)
 		end)
 	elseif dialogId == 2350 then -- окно с возможностью принять или отклонить репорт
+		windows.fast_report.v = false
 		if not peremrep then
 			if answer.rabotay then peremrep = ('Начал(а) работу по вашей жалобе!')
 			elseif answer.slejy then
@@ -2935,7 +2998,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			elseif answer.customans then peremrep = answer.customans
 			elseif answer.uto4 then peremrep = ('Обратитесь с данной проблемой на форум https://forumrds.ru')
 			elseif #(buffer.text_ans.v) ~= 0 and #answer == 0 then
-				if not answer.moiotvet and #(buffer.text_ans.v) > 5 then
+				if checkbox.button_enter_in_report.v and not answer.moiotvet and #(buffer.text_ans.v) > 5 then
 					for k,v in pairs(cfg.customotvet) do
 						if string.rlower(v):find(string.rlower(u8:decode(buffer.text_ans.v))) or string.rlower(v):find(translateText(string.rlower(u8:decode(buffer.text_ans.v)))) then
 							peremrep = v 
@@ -2949,7 +3012,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end
 			elseif answer.otklon then 
 				sampSendDialogResponse(dialogId, 1, 2) 
-				sampCloseCurrentDialogWithButton(0)  
+				sampCloseCurrentDialogWithButton(0)
 				return false 
 			end
 		end
@@ -2967,12 +3030,11 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				if #(peremrep) < 4 then peremrep = peremrep .. '    ' end
 				if cfg.settings.custom_answer_save and answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
-				return false
+				sampCloseCurrentDialogWithButton(0)
+				return false 
 			end
 		end
-		windows.fast_report.v = false
 	elseif dialogId == 2351 and peremrep then -- окно с ответом на репорт
-		windows.fast_report.v = false
 		sampSendDialogResponse(dialogId, 1, _, peremrep)
 		sampCloseCurrentDialogWithButton(0)
 		buffer.text_ans.v = ''
@@ -2982,15 +3044,18 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			elseif answer.slejy then sampSendChat('/re ' .. reportid)
 			elseif answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
 			elseif answer.nakajy then
-				if nakazatreport.oftop then sampSendChat('/rmute ' .. autorid .. ' 120 Оффтоп в /report')
-				elseif nakazatreport.oskadm then sampSendChat('/rmute ' .. autorid .. ' 2500 Оскорбление администрации')
-				elseif nakazatreport.oskrep then sampSendChat('/rmute ' .. autorid .. ' 400 Оскорбление/Унижение')
-				elseif nakazatreport.poprep then sampSendChat('/rmute ' .. autorid .. ' 120 Попрошайничество')
-				elseif nakazatreport.oskrod then sampSendChat('/rmute ' .. autorid .. ' 5000 Оскорбление/Упоминание родни')
-				elseif nakazatreport.capsrep then sampSendChat('/rmute ' .. autorid .. ' 120 Капс в /report')
-				elseif nakazatreport.matrep then sampSendChat('/rmute ' .. autorid .. ' 300 Нецензурная лексика')
-				elseif nakazatreport.rozjig then sampSendChat('/rmute ' .. autorid .. ' 5000 Розжиг межнациональной розни')
-				elseif nakazatreport.kl then sampSendChat('/rmute ' .. autorid .. ' 3000 Клевета на администрацию') end
+				if not autorid then autorid = autor command = '/rmuteoff '
+				else command = '/rmute ' end
+				if nakazatreport.oftop then sampSendChat(command .. autorid .. ' 120 Оффтоп в /report')
+				elseif nakazatreport.oskadm then sampSendChat(command .. autorid .. ' 2500 Оскорбление администрации')
+				elseif nakazatreport.oskrep then sampSendChat(command .. autorid .. ' 400 Оскорбление/Унижение')
+				elseif nakazatreport.poprep then sampSendChat(command .. autorid .. ' 120 Попрошайничество')
+				elseif nakazatreport.oskrod then sampSendChat(command .. autorid .. ' 5000 Оскорбление/Упоминание родни')
+				elseif nakazatreport.capsrep then sampSendChat(command .. autorid .. ' 120 Капс в /report')
+				elseif nakazatreport.matrep then sampSendChat(command .. autorid .. ' 300 Нецензурная лексика')
+				elseif nakazatreport.rozjig then sampSendChat(command .. autorid .. ' 5000 Розжиг межнациональной розни')
+				elseif nakazatreport.kl then sampSendChat(command .. autorid .. ' 3000 Клевета на администрацию') end
+				command = nil
 				nakazatreport = {}
 			end
 			if answer.slejy and not copies_player_recon and tonumber(autorid) and cfg.settings.answer_player_report then
@@ -3001,7 +3066,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				if copies_player_recon and copies_report_id == control_player_recon then
 					if sampIsPlayerConnected(copies_player_recon) then
 						imgui.Process, windows.answer_player_report.v = true, true
-						for i = 0, 11 do wait(500) if windows.recon_menu.v then break end end
+						for i = 0, 11 do wait(500) if not copies_player_recon or (copies_report_id ~= control_player_recon) then break end end
 						if windows.answer_player_report.v then windows.answer_player_report.v = false copies_player_recon = nil end
 					else sampAddChatMessage(tag .. 'Игрок, написавший репорт, находится вне сети.', -1) end
 				end
@@ -3020,86 +3085,25 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 		return false
 	end
 end
-function imgui.Tooltip(text) -- подсказка при наведении на кнопку
-    if imgui.IsItemHovered() then
-       imgui.BeginTooltip() 
-       imgui.Text(text)
-       imgui.EndTooltip()
-    end
-end
+
 function log(text) -- записываем лог
 	local data_today = os.date("*t") -- узнаем дату сегодня
 	local log = (getWorkingDirectory()..'\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 	local file = io.open(log,"a")
 	if file then file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(text, 3)..'\n') file:close() end
 end
-function daysPassed(year1, month1, day1) -- узнаем разницу в днях
-    local currentDate = os.date("*t")
-    currentDate.year = year1
-    currentDate.month = month1
-    currentDate.day = day1
-    local currentTimestamp = os.time(currentDate)
-    local secondsPassed = os.difftime(os.time(), currentTimestamp)
-    local daysPassed = math.floor(secondsPassed / (24 * 60 * 60))
-    return daysPassed
-end
-function scanDirectory(path) -- Проверяем все файлы в папке
-    files_chatlogs = {}
-	local lfs = require("lfs")
-    for file in lfs.dir(path) do
-        if file ~= "." and file ~= ".." then
-            local fullPath = path .. "/" .. file
-            local attributes = lfs.attributes(fullPath)
-            if attributes.mode == "directory" then
-                local nestedFiles = scanDirectory(fullPath)
-                for _, nestedFile in ipairs(nestedFiles) do table.insert(files_chatlogs, nestedFile) end
-            else table.insert(files_chatlogs, file) end
-        end
-    end
-    return files_chatlogs
-end
 
-function directory_exists(directory) return os.rename(directory,directory) end -- Проверка наличия папки
 
-function string.rlower(s) -- перевод русских букв в прописные
-    s = s:lower()
-    local strlen = s:len()
-    if strlen == 0 then return s end
-    s = s:lower()
-    local output = ''
-    for i = 1, strlen do
-        local ch = s:byte(i)
-        if ch >= 192 and ch <= 223 then output = output .. russian_characters[ch + 32]
-        elseif ch == 168 then output = output .. russian_characters[184] -- буква ё
-		else output = output .. string.char(ch) end
-    end
-    return output
-end
 function uu() -- для вкладок
     for i = 0,2 do menu[i] = false end
 end
 function uu2() -- для вкладок
     for i = 0,10 do menu2[i] = false end
 end
-function textSplit(str, delim, plain) -- разбиение текста по определенным триггерам
-    local tokens, pos, plain = {}, 1, not (plain == false)
-    repeat
-        local npos, epos = string.find(str, delim, pos, plain)
-        table.insert(tokens, string.sub(str, pos, npos and npos - 1))
-        pos = epos and epos + 1
-    until not pos
-    return tokens
-end
-function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
-	nick = tostring(nick)
-	local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	if nick == sampGetPlayerNickname(myid) then return myid end
-	for i = 0, 301 do if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == nick then return i end end
-end
 function render_admins()
 	while true do
 		wait(30000)
-		while sampIsDialogActive() do wait(800) end
+		while sampIsDialogActive() do wait(500) end
 		if not AFK then sampSendChat('/admins') end
 	end
 end
@@ -3107,7 +3111,7 @@ end
 function autoonline() 
 	while true do
 		wait(61000) 
-		while sampIsDialogActive() do wait(800) end 
+		while sampIsDialogActive() do wait(500) end 
 		if not AFK then sampSendChat("/online") end 
 	end 
 end
@@ -3157,33 +3161,8 @@ function inputChat()
 end
 ------------- Input Helper -------------
 
-function imgui.NewInputText(lable, val, width, hint, hintpos) -- Поле ввода с подсказкой
-    local hint = hint and hint or ''
-    local hintpos = tonumber(hintpos) and tonumber(hintpos) or 1
-    local cPos = imgui.GetCursorPos()
-    imgui.PushItemWidth(width)
-    local result = imgui.InputText(lable, val)
-    if #val.v == 0 then
-        local hintSize = imgui.CalcTextSize(hint)
-        if hintpos == 2 then imgui.SameLine(cPos.x + (width - hintSize.x) / 2)
-        elseif hintpos == 3 then imgui.SameLine(cPos.x + (width - hintSize.x - 5))
-        else imgui.SameLine(cPos.x + 5) end
-        imgui.TextColored(imgui.ImVec4(1.00, 1.00, 1.00, 0.40), tostring(hint))
-    end
-    imgui.PopItemWidth()
-    return result
-end
 function onWindowMessage(msg, wparam, lparam) -- блокировка ALT + Enter
 	if msg == 261 and wparam == 13 then consumeWindowMessage(true, true) end
-end
-function playersToStreamZone() -- игроки в радиусе
-	local peds, streaming_player = getAllChars(), {}
-	local _, pid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	for key, v in pairs(peds) do
-		local result, id = sampGetPlayerIdByCharHandle(v)
-		if result and id ~= pid and id ~= tonumber(control_recon_playerid) then streaming_player[key] = id end
-	end
-	return streaming_player
 end
 function ScriptExport()
 	lua_thread.create(function()
@@ -3243,26 +3222,6 @@ function binder_key()
 	end
 end
 --============= Wallhack + RGB color ==============--
-function getBodyPartCoordinates(id, handle)
-	local pedptr = getCharPointer(handle)
-	local vec = ffi.new("float[3]")
-	getBonePosition(ffi.cast("void*", pedptr), vec, id, true)
-	return vec[0], vec[1], vec[2]
-end
-function join_argb(a, r, g, b)
-	local argb = b  -- b
-	argb = bit.bor(argb, bit.lshift(g, 8))  -- g
-	argb = bit.bor(argb, bit.lshift(r, 16)) -- r
-	argb = bit.bor(argb, bit.lshift(a, 24)) -- a
-	return argb
-end
-function explode_argb(argb)
-    local a = bit.band(bit.rshift(argb, 24), 0xFF)
-    local r = bit.band(bit.rshift(argb, 16), 0xFF)
-    local g = bit.band(bit.rshift(argb, 8), 0xFF)
-    local b = bit.band(argb, 0xFF)
-    return a, r, g, b
-end
 function on_wallhack() -- Включение WallHack (свойства)
 	local pStSet = sampGetServerSettingsPtr();
 	NTdist = mem.getfloat(pStSet + 39)
@@ -3280,102 +3239,7 @@ function off_wallhack() -- Выключение WallHack (свойства)
 	mem.setint8(pStSet + 56, 1)
 	nameTag = false
 end
---============= Wall hack + RGB color ==============--
-
-function imgui.CenterText(text) -- центрирование текста
-    imgui.SetCursorPosX( imgui.GetWindowWidth() / 2 - imgui.CalcTextSize(text).x / 2 ) 			
-    imgui.Text(text)
-end
-function imgui.Link(label, description) -- гиперссылка
-    local size = imgui.CalcTextSize(label)
-	local p = imgui.GetCursorScreenPos()
-	local p2 = imgui.GetCursorPos()
-	local result = imgui.InvisibleButton(label, size)
-    imgui.SetCursorPos(p2)
-    if imgui.IsItemHovered() then
-        if description then imgui.BeginTooltip() imgui.PushTextWrapPos(600) imgui.TextUnformatted(description) imgui.PopTextWrapPos() imgui.EndTooltip() end
-        imgui.TextColored(imgui.GetStyle().Colors[imgui.Col.CheckMark], label)
-        imgui.GetWindowDrawList():AddLine(imgui.ImVec2(p.x, p.y + size.y), imgui.ImVec2(p.x + size.x, p.y + size.y), imgui.GetColorU32(imgui.GetStyle().Colors[imgui.Col.CheckMark]))
-	else imgui.TextColored(imgui.GetStyle().Colors[imgui.Col.CheckMark], label) end
-    return result
-end
 -------================= Определяем нажатую клавишу, инициализируем её свойства ============------------------------
-function getDownKeys()
-    local curkeys, bool = "", false
-    for k, v in pairs(vkeys) do if isKeyDown(v) and (v == VK_MENU or v == VK_CONTROL or v == VK_SHIFT or v == VK_LMENU or v == VK_RMENU or v == VK_RCONTROL or v == VK_LCONTROL or v == VK_LSHIFT or v == VK_RSHIFT) then if v ~= VK_MENU and v ~= VK_CONTROL and v ~= VK_SHIFT then curkeys = v end end end
-    for k, v in pairs(vkeys) do if isKeyDown(v) and (v ~= VK_MENU and v ~= VK_CONTROL and v ~= VK_SHIFT and v ~= VK_LMENU and v ~= VK_RMENU and v ~= VK_RCONTROL and v ~= VK_LCONTROL and v ~= VK_LSHIFT and v ~= VK_RSHIFT) then if tostring(curkeys):len() == 0 then curkeys = v else curkeys = curkeys .. " " .. v end bool = true end end return curkeys, bool
-end
-
-function getDownKeysText()
-	tKeys = textSplit(getDownKeys(), " ")
-	if #tKeys ~= 0 then
-		for i = 1, #tKeys do
-			if i == 1 then str = vkeys.id_to_name(tonumber(tKeys[i]))
-			else str = str .. "+" .. vkeys.id_to_name(tonumber(tKeys[i])) end
-		end
-		return str
-	else return "None" end
-end
-
-function strToIdKeys(str)
-	tKeys = textSplit(str, "+")
-	if #tKeys ~= 0 then
-		for i = 1, #tKeys do
-			if i == 1 then str = vkeys.name_to_id(tKeys[i], false)
-			else str = str .. " " .. vkeys.name_to_id(tKeys[i], false) end
-		end
-		return tostring(str)
-	else return "((" end
-end
-
-function isKeysDown(keylist, pressed)
-    local tKeys = textSplit(keylist, " ")
-    if pressed == nil then pressed = false end
-    if tKeys[1] == nil then return false end
-    local bool = false
-    local key = #tKeys < 2 and tonumber(tKeys[1]) or tonumber(tKeys[2])
-    local modified = tonumber(tKeys[1])
-    if #tKeys < 2 then
-        if not isKeyDown(VK_RMENU) and not isKeyDown(VK_LMENU) and not isKeyDown(VK_LSHIFT) and not isKeyDown(VK_RSHIFT) and not isKeyDown(VK_LCONTROL) and not isKeyDown(VK_RCONTROL) then
-            if wasKeyPressed(key) and not pressed then bool = true
-            elseif isKeyDown(key) and pressed then bool = true end
-        end
-    else if isKeyDown(modified) and not wasKeyReleased(modified) then if wasKeyPressed(key) and not pressed then bool = true elseif isKeyDown(key) and pressed then bool = true end end end
-    if nextLockKey == keylist then if pressed and not wasKeyReleased(key) then bool = false else bool = false nextLockKey = "" end end
-    return bool
-end
--------================= Определяем нажатую клавишу, инициализируем её свойства ============------------------------
-function update() -- Обновление скрипта
-	imgui.Process = false
-	local dlstatus = require('moonloader').download_status
-	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", getWorkingDirectory() .. "//config//AT//rules.txt", function(id, status)  end)
-	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", getWorkingDirectory() .. "//resource//AT_Trassera.lua", function(id, status) end)
-	if update_mp then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", getWorkingDirectory() .. "//resource//AT_MP.lua", function(id, status)
-			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
-				if not (update_fs or update_main) then reloadScripts() end
-			end 
-		end) 
-	end
-	if update_fs then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", getWorkingDirectory() .. "//resource//AT_FastSpawn.lua", function(id, status)
-			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
-				if not (update_mp or update_main) then reloadScripts() end
-			end  
-		end) 
-	end
-	if update_main then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
-			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
-				reloadScripts()
-			end 
-		end) 
-	end
-end
-
-function notify(title, text)
-	if notify_report then notify_report.addNotify(title, text, 2,1,12) end
-end
 
 function render_text()
 	while true do
@@ -3443,60 +3307,7 @@ function start_my_answer()
 	end
 end
 
-function imgui.TextColoredRGB(text) -- цветной рендер админс
-    local style = imgui.GetStyle()
-    local colors = style.Colors
-    local ImVec4 = imgui.ImVec4
 
-    local explode_argb = function(argb)
-        local a = bit.band(bit.rshift(argb, 24), 0xFF)
-        local r = bit.band(bit.rshift(argb, 16), 0xFF)
-        local g = bit.band(bit.rshift(argb, 8), 0xFF)
-        local b = bit.band(argb, 0xFF)
-        return a, r, g, b
-    end
-
-    local getcolor = function(color)
-        if color:sub(1, 6):upper() == 'SSSSSS' then
-            local r, g, b = colors[1].x, colors[1].y, colors[1].z
-            local a = tonumber(color:sub(7, 8), 16) or colors[1].w * 255
-            return ImVec4(r, g, b, a / 255)
-        end
-        local color = type(color) == 'string' and tonumber(color, 16) or color
-        if type(color) ~= 'number' then return end
-        local r, g, b, a = explode_argb(color)
-        return imgui.ImColor(r, g, b, a):GetVec4()
-    end
-
-    local render_text = function(text_)
-        for w in text_:gmatch('[^\r\n]+') do
-            local text, colors_, m = {}, {}, 1
-            w = w:gsub('{(......)}', '{%1FF}')
-            while w:find('{........}') do
-                local n, k = w:find('{........}')
-                local color = getcolor(w:sub(n + 1, k - 1))
-                if color then
-                    text[#text], text[#text + 1] = w:sub(m, n - 1), w:sub(k + 1, #w)
-                    colors_[#colors_ + 1] = color
-                    m = n
-                end
-                w = w:sub(1, n - 1) .. w:sub(k + 1, #w)
-            end
-            if text[0] then
-                for i = 0, #text do
-                    imgui.TextColored(colors_[i] or colors[1], u8(text[i]))
-                    imgui.SameLine(nil, 0)
-                end
-                imgui.NewLine()
-            else imgui.Text(u8(w)) end
-        end
-    end
-    render_text(text)
-end
-function file_exists(name) -- проверяем существование файла
-	local f = io.open(name, "r")
-	return f ~= nil and io.close(f)
- end
 ---========================== /KEYSYNC =============================----
 local keys = {
 	["onfoot"] = {},
@@ -3691,337 +3502,25 @@ function keysync(playerId)
 		end
 	end
 end
-local transliterationTable = {
-    ['й'] = 'q', ['ц'] = 'w', ['у'] = 'e', ['к'] = 'r', ['е'] = 't', ['н'] = 'y', ['г'] = 'u', ['ш'] = 'i', ['щ'] = 'o',
-    ['з'] = 'p', ['х'] = '[', ['ъ'] = ']', ['ф'] = 'a', ['ы'] = 's', ['в'] = 'd', ['а'] = 'f', ['п'] = 'g', ['р'] = 'h',
-    ['о'] = 'j', ['л'] = 'k', ['д'] = 'l', ['ж'] = ';', ['э'] = "'", ['я'] = 'z', ['ч'] = 'x', ['с'] = 'c', ['м'] = 'v',
-    ['и'] = 'b', ['т'] = 'n', ['ь'] = 'm', ['б'] = ',', ['ю'] = '.', ['ё'] = '`',
-    
-    ['q'] = 'й', ['w'] = 'ц', ['e'] = 'у', ['r'] = 'к', ['t'] = 'е', ['y'] = 'н', ['u'] = 'г', ['i'] = 'ш', ['o'] = 'щ',
-    ['p'] = 'з', ['['] = 'х', [']'] = 'ъ', ['a'] = 'ф', ['s'] = 'ы', ['d'] = 'в', ['f'] = 'а', ['g'] = 'п', ['h'] = 'р',
-    ['j'] = 'о', ['k'] = 'л', ['l'] = 'д', [';'] = 'ж', ["'"] = 'э', ['z'] = 'я', ['x'] = 'ч', ['c'] = 'с', ['v'] = 'м',
-    ['b'] = 'и', ['n'] = 'т', ['m'] = 'ь', [','] = 'б', ['.'] = '/', ['`'] = 'ё', ['/'] = '.',
-}
-
-function translateText(input)
-    local output = ''
-    for i = 1, string.len(input) do
-		local translatedChar = nil
-        local char = string.sub(input, i, i)
-		for k,v in pairs(transliterationTable) do
-        	if k == char then
-				translatedChar = v
-				break
-			elseif v == chat then
-				translatedChar = k
-				break
-			end
-		end
-        if translatedChar then output = output .. translatedChar
-		else output = output .. char end
-    end
-    return output
+function notify(title, text)
+	if plagin_notify then plagin_notify.addNotify(title, text, 2,1,12) end
 end
-function encrypt(text, shift)
-	local encrypted = ""
-	for i = 1, #text do
-	  local char = text:sub(i, i)
-	  if char >= "a" and char <= "z" then
-		local ascii = string.byte(char)
-		ascii = (ascii - 97 + shift) % 26 + 97
-		char = string.char(ascii)
-	  elseif char >= "A" and char <= "Z" then
-		local ascii = string.byte(char)
-		ascii = (ascii - 65 + shift) % 26 + 65
-		char = string.char(ascii)
-	  elseif char >= "а" and char <= "я" then
-		local ascii = string.byte(char)
-		ascii = (ascii - 224 + shift) % 32 + 224
-		char = string.char(ascii)
-	  elseif char >= "А" and char <= "Я" then
-		local ascii = string.byte(char)
-		ascii = (ascii - 192 + shift) % 32 + 192
-		char = string.char(ascii)
-	  end
-	  encrypted = encrypted .. char
-	end
-	return encrypted
+function scanDirectory(path) -- Проверяем все файлы в папке
+    files_chatlogs = {}
+	local lfs = require("lfs")
+    for file in lfs.dir(path) do
+        if file ~= "." and file ~= ".." then
+            local fullPath = path .. "/" .. file
+            local attributes = lfs.attributes(fullPath)
+            if attributes.mode == "directory" then
+                local nestedFiles = scanDirectory(fullPath)
+                for _, nestedFile in ipairs(nestedFiles) do table.insert(files_chatlogs, nestedFile) end
+            else table.insert(files_chatlogs, file) end
+        end
+    end
+    return files_chatlogs
 end
 ----------------- ДЛЯ ID В КИЛЛ ЧАТЕ ----------- ТЕМЫ -------------------(НИЖЕ БОЛЬШЕ НИЧЕГО НЕТ.)
-function style(id) -- ТЕМЫ
-    imgui.SwitchContext()
-    local style = imgui.GetStyle()
-    local colors = style.Colors
-    local clr = imgui.Col
-    local ImVec4 = imgui.ImVec4
-    style.IndentSpacing = 25.0
-    style.GrabMinSize = 15.0
-    style.GrabRounding = 7.0
-    style.ChildWindowRounding = 8.0
-    style.FrameRounding = 6.0
-    if id == 0 then -- Темно-Синяя
-		colors[clr.Text]                 = ImVec4(1.00, 1.00, 1.00, 1.00)
-		colors[clr.TextDisabled]         = ImVec4(0.73, 0.75, 0.74, 1.00)
-		colors[clr.WindowBg]             = ImVec4(0.00, 0.00, 0.00, 0.94)
-		colors[clr.ChildWindowBg]        = ImVec4(0.00, 0.00, 0.00, 0.00)
-		colors[clr.PopupBg]              = ImVec4(0.08, 0.08, 0.08, 0.94)
-		colors[clr.Border]               = ImVec4(0.20, 0.20, 0.20, 0.50)
-		colors[clr.BorderShadow]         = ImVec4(0.00, 0.00, 0.00, 0.00)
-		colors[clr.FrameBg]              = ImVec4(0.26, 0.37, 0.98, 0.54)
-		colors[clr.FrameBgHovered]       = ImVec4(0.33, 0.33, 0.93, 0.40)
-		colors[clr.FrameBgActive]        = ImVec4(0.44, 0.44, 0.99, 0.67)
-		colors[clr.TitleBg]              = ImVec4(0.30, 0.33, 0.95, 0.67)
-		colors[clr.TitleBgActive]        = ImVec4(0.00, 0.16, 1.00, 1.00)
-		colors[clr.TitleBgCollapsed]     = ImVec4(0.22, 0.19, 1.00, 0.67)
-		colors[clr.MenuBarBg]            = ImVec4(0.39, 0.56, 1.00, 1.00)
-		colors[clr.ScrollbarBg]          = ImVec4(0.02, 0.02, 0.02, 0.53)
-		colors[clr.ScrollbarGrab]        = ImVec4(0.31, 0.31, 0.31, 1.00)
-		colors[clr.ScrollbarGrabHovered] = ImVec4(0.41, 0.41, 0.41, 1.00)
-		colors[clr.ScrollbarGrabActive]  = ImVec4(0.51, 0.51, 0.51, 1.00)
-		colors[clr.ComboBg]              = ImVec4(0.20, 0.20, 0.20, 0.99)
-		colors[clr.CheckMark]            = ImVec4(1.00, 1.00, 1.00, 1.00)
-		colors[clr.SliderGrab]           = ImVec4(0.30, 0.41, 0.99, 1.00)
-		colors[clr.SliderGrabActive]     = ImVec4(0.52, 0.52, 0.97, 1.00)
-		colors[clr.Button]               = ImVec4(0.11, 0.13, 0.93, 0.65)
-		colors[clr.ButtonHovered]        = ImVec4(0.41, 0.57, 1.00, 0.65)
-		colors[clr.ButtonActive]         = ImVec4(0.20, 0.20, 0.20, 0.50)
-		colors[clr.Header]               = ImVec4(0.15, 0.19, 1.00, 0.54)
-		colors[clr.HeaderHovered]        = ImVec4(0.03, 0.24, 0.57, 0.65)
-		colors[clr.HeaderActive]         = ImVec4(0.36, 0.40, 0.95, 0.00)
-		colors[clr.Separator]            = ImVec4(0.43, 0.43, 0.50, 0.50)
-		colors[clr.SeparatorHovered]     = ImVec4(0.20, 0.42, 0.98, 0.54)
-		colors[clr.SeparatorActive]      = ImVec4(0.20, 0.40, 0.93, 0.54)
-		colors[clr.ResizeGrip]           = ImVec4(0.01, 0.17, 1.00, 0.54)
-		colors[clr.ResizeGripHovered]    = ImVec4(0.21, 0.51, 0.98, 0.45)
-		colors[clr.ResizeGripActive]     = ImVec4(0.04, 0.55, 0.95, 0.66)
-		colors[clr.CloseButton]          = ImVec4(0.41, 0.41, 0.41, 1.00)
-		colors[clr.CloseButtonHovered]   = ImVec4(0.10, 0.21, 0.98, 1.00)
-		colors[clr.CloseButtonActive]    = ImVec4(0.02, 0.26, 1.00, 1.00)
-		colors[clr.PlotLines]            = ImVec4(0.61, 0.61, 0.61, 1.00)
-		colors[clr.PlotLinesHovered]     = ImVec4(0.18, 0.15, 1.00, 1.00)
-		colors[clr.PlotHistogram]        = ImVec4(0.90, 0.70, 0.00, 1.00)
-		colors[clr.PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00)
-		colors[clr.TextSelectedBg]       = ImVec4(0.26, 0.59, 0.98, 0.35)
-		colors[clr.ModalWindowDarkening] = ImVec4(0.80, 0.80, 0.80, 0.35)
-    elseif id == 1 then -- Красная
-		colors[clr.FrameBg]                = ImVec4(0.48, 0.16, 0.16, 0.54)
-		colors[clr.FrameBgHovered]         = ImVec4(0.98, 0.26, 0.26, 0.40)
-		colors[clr.FrameBgActive]          = ImVec4(0.98, 0.26, 0.26, 0.67)
-		colors[clr.TitleBg]                = ImVec4(0.48, 0.16, 0.16, 1.00)
-		colors[clr.TitleBgActive]          = ImVec4(0.48, 0.16, 0.16, 1.00)
-		colors[clr.TitleBgCollapsed]       = ImVec4(0.48, 0.16, 0.16, 1.00)
-		colors[clr.CheckMark]              = ImVec4(0.98, 0.26, 0.26, 1.00)
-		colors[clr.SliderGrab]             = ImVec4(0.88, 0.26, 0.24, 1.00)
-		colors[clr.SliderGrabActive]       = ImVec4(0.98, 0.26, 0.26, 1.00)
-		colors[clr.Button]                 = ImVec4(0.98, 0.26, 0.26, 0.70)
-		colors[clr.ButtonHovered]          = ImVec4(0.98, 0.26, 0.26, 1.00)
-		colors[clr.ButtonActive]           = ImVec4(0.98, 0.06, 0.06, 1.00)
-		colors[clr.Header]                 = ImVec4(0.98, 0.26, 0.26, 0.31)
-		colors[clr.HeaderHovered]          = ImVec4(0.98, 0.26, 0.26, 0.80)
-		colors[clr.HeaderActive]           = ImVec4(0.98, 0.26, 0.26, 1.00)
-		colors[clr.Separator]              = colors[clr.Border]
-		colors[clr.SeparatorHovered]       = ImVec4(0.75, 0.10, 0.10, 0.78)
-		colors[clr.SeparatorActive]        = ImVec4(0.75, 0.10, 0.10, 1.00)
-		colors[clr.ResizeGrip]             = ImVec4(0.98, 0.26, 0.26, 0.25)
-		colors[clr.ResizeGripHovered]      = ImVec4(0.98, 0.26, 0.26, 0.67)
-		colors[clr.ResizeGripActive]       = ImVec4(0.98, 0.26, 0.26, 0.95)
-		colors[clr.TextSelectedBg]         = ImVec4(0.98, 0.26, 0.26, 0.35)
-		colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
-		colors[clr.TextDisabled]           = ImVec4(0.50, 0.50, 0.50, 1.00)
-		colors[clr.WindowBg]               = ImVec4(0.06, 0.06, 0.06, 0.94)
-		colors[clr.ChildWindowBg]          = ImVec4(1.00, 1.00, 1.00, 0.00)
-		colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
-		colors[clr.ComboBg]                = colors[clr.PopupBg]
-		colors[clr.Border]                 = ImVec4(0.43, 0.43, 0.50, 0.50)
-		colors[clr.BorderShadow]           = ImVec4(0.00, 0.00, 0.00, 0.00)
-		colors[clr.MenuBarBg]              = ImVec4(0.14, 0.14, 0.14, 1.00)
-		colors[clr.ScrollbarBg]            = ImVec4(0.02, 0.02, 0.02, 0.53)
-		colors[clr.ScrollbarGrab]          = ImVec4(0.31, 0.31, 0.31, 1.00)
-		colors[clr.ScrollbarGrabHovered]   = ImVec4(0.41, 0.41, 0.41, 1.00)
-		colors[clr.ScrollbarGrabActive]    = ImVec4(0.51, 0.51, 0.51, 1.00)
-		colors[clr.CloseButton]            = ImVec4(0.41, 0.41, 0.41, 0.50)
-		colors[clr.CloseButtonHovered]     = ImVec4(0.98, 0.39, 0.36, 1.00)
-		colors[clr.CloseButtonActive]      = ImVec4(0.98, 0.39, 0.36, 1.00)
-		colors[clr.PlotLines]              = ImVec4(0.61, 0.61, 0.61, 1.00)
-		colors[clr.PlotLinesHovered]       = ImVec4(1.00, 0.43, 0.35, 1.00)
-		colors[clr.PlotHistogram]          = ImVec4(0.90, 0.70, 0.00, 1.00)
-		colors[clr.PlotHistogramHovered]   = ImVec4(1.00, 0.60, 0.00, 1.00)
-		colors[clr.ModalWindowDarkening]   = ImVec4(0.80, 0.80, 0.80, 0.35)
-    elseif id == 2 then -- зеленая тема
-		colors[clr.Text]                   = ImVec4(0.90, 0.90, 0.90, 1.00)
-		colors[clr.TextDisabled]           = ImVec4(0.60, 0.60, 0.60, 1.00)
-		colors[clr.WindowBg]               = ImVec4(0.08, 0.08, 0.08, 1.00)
-		colors[clr.ChildWindowBg]          = ImVec4(0.10, 0.10, 0.10, 1.00)
-		colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 1.00)
-		colors[clr.Border]                 = ImVec4(0.70, 0.70, 0.70, 0.40)
-		colors[clr.BorderShadow]           = ImVec4(0.00, 0.00, 0.00, 0.00)
-		colors[clr.FrameBg]                = ImVec4(0.15, 0.15, 0.15, 1.00)
-		colors[clr.FrameBgHovered]         = ImVec4(0.19, 0.19, 0.19, 0.71)
-		colors[clr.FrameBgActive]          = ImVec4(0.34, 0.34, 0.34, 0.79)
-		colors[clr.TitleBg]                = ImVec4(0.00, 0.69, 0.33, 0.60)
-		colors[clr.TitleBgActive]          = ImVec4(0.00, 0.74, 0.36, 0.60)
-		colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.69, 0.33, 0.50)
-		colors[clr.MenuBarBg]              = ImVec4(0.00, 0.80, 0.38, 1.00)
-		colors[clr.ScrollbarBg]            = ImVec4(0.16, 0.16, 0.16, 1.00)
-		colors[clr.ScrollbarGrab]          = ImVec4(0.00, 0.69, 0.33, 1.00)
-		colors[clr.ScrollbarGrabHovered]   = ImVec4(0.00, 0.82, 0.39, 1.00)
-		colors[clr.ScrollbarGrabActive]    = ImVec4(0.00, 1.00, 0.48, 1.00)
-		colors[clr.ComboBg]                = ImVec4(0.20, 0.20, 0.20, 0.99)
-		colors[clr.CheckMark]              = ImVec4(0.00, 0.69, 0.33, 1.00)
-		colors[clr.SliderGrab]             = ImVec4(0.00, 0.69, 0.33, 1.00)
-		colors[clr.SliderGrabActive]       = ImVec4(0.00, 0.77, 0.37, 1.00)
-		colors[clr.Button]                 = ImVec4(0.00, 0.69, 0.33, 0.50)
-		colors[clr.ButtonHovered]          = ImVec4(0.00, 0.82, 0.39, 1.00)
-		colors[clr.ButtonActive]           = ImVec4(0.00, 0.87, 0.42, 1.00)
-		colors[clr.Header]                 = ImVec4(0.00, 0.69, 0.33, 1.00)
-		colors[clr.HeaderHovered]          = ImVec4(0.00, 0.76, 0.37, 0.57)
-		colors[clr.HeaderActive]           = ImVec4(0.00, 0.88, 0.42, 0.89)
-		colors[clr.Separator]              = ImVec4(1.00, 1.00, 1.00, 0.40)
-		colors[clr.SeparatorHovered]       = ImVec4(1.00, 1.00, 1.00, 0.60)
-		colors[clr.SeparatorActive]        = ImVec4(1.00, 1.00, 1.00, 0.80)
-		colors[clr.ResizeGrip]             = ImVec4(0.00, 0.69, 0.33, 1.00)
-		colors[clr.ResizeGripHovered]      = ImVec4(0.00, 0.76, 0.37, 1.00)
-		colors[clr.ResizeGripActive]       = ImVec4(0.00, 0.86, 0.41, 1.00)
-		colors[clr.CloseButton]            = ImVec4(0.00, 0.82, 0.39, 1.00)
-		colors[clr.CloseButtonHovered]     = ImVec4(0.00, 0.88, 0.42, 1.00)
-		colors[clr.CloseButtonActive]      = ImVec4(0.00, 1.00, 0.48, 1.00)
-		colors[clr.PlotLines]              = ImVec4(0.00, 0.69, 0.33, 1.00)
-		colors[clr.PlotLinesHovered]       = ImVec4(0.00, 0.74, 0.36, 1.00)
-		colors[clr.PlotHistogram]          = ImVec4(0.00, 0.69, 0.33, 1.00)
-		colors[clr.PlotHistogramHovered]   = ImVec4(0.00, 0.80, 0.38, 1.00)
-		colors[clr.TextSelectedBg]         = ImVec4(0.00, 0.69, 0.33, 0.72)
-		colors[clr.ModalWindowDarkening]   = ImVec4(0.17, 0.17, 0.17, 0.48)
-    elseif id == 3 then -- бирюзовая
-        colors[clr.Text]                 = ImVec4(0.86, 0.93, 0.89, 0.78)
-		colors[clr.TextDisabled]         = ImVec4(0.36, 0.42, 0.47, 1.00)
-		colors[clr.WindowBg]             = ImVec4(0.11, 0.15, 0.17, 1.00)
-		colors[clr.ChildWindowBg]        = ImVec4(0.15, 0.18, 0.22, 1.00)
-		colors[clr.PopupBg]              = ImVec4(0.08, 0.08, 0.08, 0.94)
-		colors[clr.Border]               = ImVec4(0.43, 0.43, 0.50, 0.50)
-		colors[clr.BorderShadow]         = ImVec4(0.00, 0.00, 0.00, 0.00)
-		colors[clr.FrameBg]              = ImVec4(0.20, 0.25, 0.29, 1.00)
-		colors[clr.FrameBgHovered]       = ImVec4(0.12, 0.20, 0.28, 1.00)
-		colors[clr.FrameBgActive]        = ImVec4(0.09, 0.12, 0.14, 1.00)
-		colors[clr.TitleBg]                = ImVec4(0.04, 0.04, 0.04, 1.00)
-		colors[clr.TitleBgActive]          = ImVec4(0.16, 0.48, 0.42, 1.00)
-		colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.00, 0.00, 0.51)
-		colors[clr.MenuBarBg]            = ImVec4(0.15, 0.18, 0.22, 1.00)
-		colors[clr.ScrollbarBg]          = ImVec4(0.02, 0.02, 0.02, 0.39)
-		colors[clr.ScrollbarGrab]        = ImVec4(0.20, 0.25, 0.29, 1.00)
-		colors[clr.ScrollbarGrabHovered] = ImVec4(0.18, 0.22, 0.25, 1.00)
-		colors[clr.ScrollbarGrabActive]  = ImVec4(0.09, 0.21, 0.31, 1.00)
-		colors[clr.ComboBg]                = colors[clr.PopupBg]
-		colors[clr.CheckMark]              = ImVec4(0.26, 0.98, 0.85, 1.00)
-		colors[clr.SliderGrab]             = ImVec4(0.24, 0.88, 0.77, 1.00)
-		colors[clr.SliderGrabActive]       = ImVec4(0.26, 0.98, 0.85, 1.00)
-		colors[clr.Button]                 = ImVec4(0.26, 0.98, 0.85, 0.35)
-		colors[clr.ButtonHovered]          = ImVec4(0.26, 0.98, 0.85, 0.50)
-		colors[clr.ButtonActive]           = ImVec4(0.06, 0.98, 0.82, 0.50)
-		colors[clr.Header]                 = ImVec4(0.26, 0.98, 0.85, 0.31)
-		colors[clr.HeaderHovered]          = ImVec4(0.26, 0.98, 0.85, 0.80)
-		colors[clr.HeaderActive]           = ImVec4(0.26, 0.98, 0.85, 1.00)
-		colors[clr.Separator]            = ImVec4(0.50, 0.50, 0.50, 1.00)
-		colors[clr.SeparatorHovered]     = ImVec4(0.60, 0.60, 0.70, 1.00)
-		colors[clr.SeparatorActive]      = ImVec4(0.70, 0.70, 0.90, 1.00)
-		colors[clr.ResizeGrip]           = ImVec4(0.26, 0.59, 0.98, 0.25)
-		colors[clr.ResizeGripHovered]    = ImVec4(0.26, 0.59, 0.98, 0.67)
-		colors[clr.ResizeGripActive]     = ImVec4(0.06, 0.05, 0.07, 1.00)
-		colors[clr.CloseButton]          = ImVec4(0.40, 0.39, 0.38, 0.16)
-		colors[clr.CloseButtonHovered]   = ImVec4(0.40, 0.39, 0.38, 0.39)
-		colors[clr.CloseButtonActive]    = ImVec4(0.40, 0.39, 0.38, 1.00)
-		colors[clr.PlotLines]            = ImVec4(0.61, 0.61, 0.61, 1.00)
-		colors[clr.PlotLinesHovered]     = ImVec4(1.00, 0.43, 0.35, 1.00)
-		colors[clr.PlotHistogram]        = ImVec4(0.90, 0.70, 0.00, 1.00)
-		colors[clr.PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00)
-		colors[clr.TextSelectedBg]       = ImVec4(0.25, 1.00, 0.00, 0.43)
-		colors[clr.ModalWindowDarkening] = ImVec4(1.00, 0.98, 0.95, 0.73)
-	elseif id == 4 then -- Розовая тема
-		colors[clr.FrameBg]                = ImVec4(0.46, 0.11, 0.29, 1.00)
-		colors[clr.FrameBgHovered]         = ImVec4(0.69, 0.16, 0.43, 1.00)
-		colors[clr.FrameBgActive]          = ImVec4(0.58, 0.10, 0.35, 1.00)
-		colors[clr.TitleBg]                = ImVec4(0.00, 0.00, 0.00, 1.00)
-		colors[clr.TitleBgActive]          = ImVec4(0.61, 0.16, 0.39, 1.00)
-		colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.00, 0.00, 0.51)
-		colors[clr.CheckMark]              = ImVec4(0.94, 0.30, 0.63, 1.00)
-		colors[clr.SliderGrab]             = ImVec4(0.85, 0.11, 0.49, 1.00)
-		colors[clr.SliderGrabActive]       = ImVec4(0.89, 0.24, 0.58, 1.00)
-		colors[clr.Button]                 = ImVec4(0.46, 0.11, 0.29, 1.00)
-		colors[clr.ButtonHovered]          = ImVec4(0.69, 0.17, 0.43, 1.00)
-		colors[clr.ButtonActive]           = ImVec4(0.59, 0.10, 0.35, 1.00)
-		colors[clr.Header]                 = ImVec4(0.46, 0.11, 0.29, 1.00)
-		colors[clr.HeaderHovered]          = ImVec4(0.69, 0.16, 0.43, 1.00)
-		colors[clr.HeaderActive]           = ImVec4(0.58, 0.10, 0.35, 1.00)
-		colors[clr.Separator]              = ImVec4(0.69, 0.16, 0.43, 1.00)
-		colors[clr.SeparatorHovered]       = ImVec4(0.58, 0.10, 0.35, 1.00)
-		colors[clr.SeparatorActive]        = ImVec4(0.58, 0.10, 0.35, 1.00)
-		colors[clr.ResizeGrip]             = ImVec4(0.46, 0.11, 0.29, 0.70)
-		colors[clr.ResizeGripHovered]      = ImVec4(0.69, 0.16, 0.43, 0.67)
-		colors[clr.ResizeGripActive]       = ImVec4(0.70, 0.13, 0.42, 1.00)
-		colors[clr.TextSelectedBg]         = ImVec4(1.00, 0.78, 0.90, 0.35)
-		colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
-		colors[clr.TextDisabled]           = ImVec4(0.60, 0.19, 0.40, 1.00)
-		colors[clr.WindowBg]               = ImVec4(0.06, 0.06, 0.06, 0.94)
-		colors[clr.ChildWindowBg]          = ImVec4(1.00, 1.00, 1.00, 0.00)
-		colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
-		colors[clr.ComboBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
-		colors[clr.Border]                 = ImVec4(0.49, 0.14, 0.31, 1.00)
-		colors[clr.BorderShadow]           = ImVec4(0.49, 0.14, 0.31, 0.00)
-		colors[clr.MenuBarBg]              = ImVec4(0.15, 0.15, 0.15, 1.00)
-		colors[clr.ScrollbarBg]            = ImVec4(0.02, 0.02, 0.02, 0.53)
-		colors[clr.ScrollbarGrab]          = ImVec4(0.31, 0.31, 0.31, 1.00)
-		colors[clr.ScrollbarGrabHovered]   = ImVec4(0.41, 0.41, 0.41, 1.00)
-		colors[clr.ScrollbarGrabActive]    = ImVec4(0.51, 0.51, 0.51, 1.00)
-		colors[clr.CloseButton]            = ImVec4(0.41, 0.41, 0.41, 0.50)
-		colors[clr.CloseButtonHovered]     = ImVec4(0.98, 0.39, 0.36, 1.00)
-		colors[clr.CloseButtonActive]      = ImVec4(0.98, 0.39, 0.36, 1.00)
-		colors[clr.ModalWindowDarkening]   = ImVec4(0.80, 0.80, 0.80, 0.35)
-    elseif id == 5 then -- голубая тема
-		colors[clr.Text]                   = ImVec4(2.00, 2.00, 2.00, 1.00)
-		colors[clr.TextDisabled]           = ImVec4(0.28, 0.30, 0.35, 1.00)
-		colors[clr.WindowBg]               = ImVec4(0.16, 0.18, 0.22, 1.00)
-		colors[clr.ChildWindowBg]          = ImVec4(0.19, 0.22, 0.26, 1)
-		colors[clr.PopupBg]                = ImVec4(0.05, 0.05, 0.10, 0.90)
-		colors[clr.Border]                 = ImVec4(0.19, 0.22, 0.26, 1.00)
-		colors[clr.BorderShadow]           = ImVec4(0.00, 0.00, 0.00, 0.00)
-		colors[clr.FrameBg]                = ImVec4(0.19, 0.22, 0.26, 1.00)
-		colors[clr.FrameBgHovered]         = ImVec4(0.22, 0.25, 0.30, 1.00)
-		colors[clr.FrameBgActive]          = ImVec4(0.22, 0.25, 0.29, 1.00)
-		colors[clr.TitleBg]                = ImVec4(0.19, 0.22, 0.26, 1.00)
-		colors[clr.TitleBgActive]          = ImVec4(0.19, 0.22, 0.26, 1.00)
-		colors[clr.TitleBgCollapsed]       = ImVec4(0.19, 0.22, 0.26, 0.59)
-		colors[clr.MenuBarBg]              = ImVec4(0.19, 0.22, 0.26, 1.00)
-		colors[clr.ScrollbarBg]            = ImVec4(0.20, 0.25, 0.30, 0.60)
-		colors[clr.ScrollbarGrab]          = ImVec4(0.41, 0.55, 0.78, 1.00)
-		colors[clr.ScrollbarGrabHovered]   = ImVec4(0.49, 0.63, 0.86, 1.00)
-		colors[clr.ScrollbarGrabActive]    = ImVec4(0.49, 0.63, 0.86, 1.00)
-		colors[clr.ComboBg]                = ImVec4(0.20, 0.20, 0.20, 0.99)
-		colors[clr.CheckMark]              = ImVec4(0.90, 0.90, 0.90, 0.50)
-		colors[clr.SliderGrab]             = ImVec4(1.00, 1.00, 1.00, 0.30)
-		colors[clr.SliderGrabActive]       = ImVec4(0.80, 0.50, 0.50, 1.00)
-		colors[clr.Button]                 = ImVec4(0.41, 0.55, 0.78, 0.50)
-		colors[clr.ButtonHovered]          = ImVec4(0.49, 0.62, 0.85, 1.00)
-		colors[clr.ButtonActive]           = ImVec4(0.49, 0.62, 0.85, 1.00)
-		colors[clr.Header]                 = ImVec4(0.19, 0.22, 0.26, 1.00)
-		colors[clr.HeaderHovered]          = ImVec4(0.22, 0.24, 0.28, 1.00)
-		colors[clr.HeaderActive]           = ImVec4(0.22, 0.24, 0.28, 1.00)
-		colors[clr.Separator]              = ImVec4(0.41, 0.55, 0.78, 1.00)
-		colors[clr.SeparatorHovered]       = ImVec4(0.41, 0.55, 0.78, 1.00)
-		colors[clr.SeparatorActive]        = ImVec4(0.41, 0.55, 0.78, 1.00)
-		colors[clr.ResizeGrip]             = ImVec4(0.41, 0.55, 0.78, 1.00)
-		colors[clr.ResizeGripHovered]      = ImVec4(0.49, 0.61, 0.83, 1.00)
-		colors[clr.ResizeGripActive]       = ImVec4(0.49, 0.62, 0.83, 1.00)
-		colors[clr.CloseButton]            = ImVec4(0.41, 0.55, 0.78, 1.00)
-		colors[clr.CloseButtonHovered]     = ImVec4(0.50, 0.63, 0.84, 1.00)
-		colors[clr.CloseButtonActive]      = ImVec4(0.41, 0.55, 0.78, 1.00)
-		colors[clr.PlotLines]              = ImVec4(1.00, 1.00, 1.00, 1.00)
-		colors[clr.PlotLinesHovered]       = ImVec4(0.90, 0.70, 0.00, 1.00)
-		colors[clr.PlotHistogram]          = ImVec4(0.90, 0.70, 0.00, 1.00)
-		colors[clr.PlotHistogramHovered]   = ImVec4(1.00, 0.60, 0.00, 1.00)
-		colors[clr.TextSelectedBg]         = ImVec4(0.41, 0.55, 0.78, 1.00)
-		colors[clr.ModalWindowDarkening]   = ImVec4(0.16, 0.18, 0.22, 0.76)
-	end
-end
-style(checkbox.style_selected.v)
 
 ffi.cdef[[
 struct stKillEntry
