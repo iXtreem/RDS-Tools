@@ -54,33 +54,32 @@ function daysPassed(year1, month1, day1) -- узнаем разницу в днях
 end
 
 
-function scanDirectory(path) -- Проверяем все файлы в папке
-    files_chatlogs = {}
-	local lfs = require("lfs")
-    for file in lfs.dir(path) do
-        if file ~= "." and file ~= ".." then
-            local fullPath = path .. "/" .. file
-            local attributes = lfs.attributes(fullPath)
-            if attributes.mode == "directory" then
-                local nestedFiles = scanDirectory(fullPath)
-                for _, nestedFile in ipairs(nestedFiles) do table.insert(files_chatlogs, nestedFile) end
-            else table.insert(files_chatlogs, file) end
-        end
-    end
-    return files_chatlogs
-end
-
 function directory_exists(directory) return os.rename(directory,directory) end -- Проверка наличия папки
 
+function textSplit(str, delim, plain) -- разбиение текста по определенным триггерам
+    local tokens, pos, plain = {}, 1, not (plain == false)
+    repeat
+        local npos, epos = string.find(str, delim, pos, plain)
+        table.insert(tokens, string.sub(str, pos, npos and npos - 1))
+        pos = epos and epos + 1
+    until not pos
+    return tokens
+end
+function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
+	nick = tostring(nick)
+	local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+	if nick == sampGetPlayerNickname(myid) then return myid end
+	for i = 0, 301 do if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == nick then return i end end
+end
+
 function string.rlower(s) -- перевод русских букв в прописные
-    s = s:lower()
+	local s = s:lower()
     local strlen = s:len()
     if strlen == 0 then return s end
-    s = s:lower()
     local output = ''
+	local russian_characters = {[168] = 'Ё', [184] = 'ё', [192] = 'А', [193] = 'Б', [194] = 'В', [195] = 'Г', [196] = 'Д', [197] = 'Е', [198] = 'Ж', [199] = 'З', [200] = 'И', [201] = 'Й', [202] = 'К', [203] = 'Л', [204] = 'М', [205] = 'Н', [206] = 'О', [207] = 'П', [208] = 'Р', [209] = 'С', [210] = 'Т', [211] = 'У', [212] = 'Ф', [213] = 'Х', [214] = 'Ц', [215] = 'Ч', [216] = 'Ш', [217] = 'Щ', [218] = 'Ъ', [219] = 'Ы', [220] = 'Ь', [221] = 'Э', [222] = 'Ю', [223] = 'Я', [224] = 'а', [225] = 'б', [226] = 'в', [227] = 'г', [228] = 'д', [229] = 'е', [230] = 'ж', [231] = 'з', [232] = 'и', [233] = 'й', [234] = 'к', [235] = 'л', [236] = 'м', [237] = 'н', [238] = 'о', [239] = 'п', [240] = 'р', [241] = 'с', [242] = 'т', [243] = 'у', [244] = 'ф', [245] = 'х', [246] = 'ц', [247] = 'ч', [248] = 'ш', [249] = 'щ', [250] = 'ъ', [251] = 'ы', [252] = 'ь', [253] = 'э', [254] = 'ю', [255] = 'я'}
     for i = 1, strlen do
         local ch = s:byte(i)
-		local russian_characters = {[168] = 'Ё', [184] = 'ё', [192] = 'А', [193] = 'Б', [194] = 'В', [195] = 'Г', [196] = 'Д', [197] = 'Е', [198] = 'Ж', [199] = 'З', [200] = 'И', [201] = 'Й', [202] = 'К', [203] = 'Л', [204] = 'М', [205] = 'Н', [206] = 'О', [207] = 'П', [208] = 'Р', [209] = 'С', [210] = 'Т', [211] = 'У', [212] = 'Ф', [213] = 'Х', [214] = 'Ц', [215] = 'Ч', [216] = 'Ш', [217] = 'Щ', [218] = 'Ъ', [219] = 'Ы', [220] = 'Ь', [221] = 'Э', [222] = 'Ю', [223] = 'Я', [224] = 'а', [225] = 'б', [226] = 'в', [227] = 'г', [228] = 'д', [229] = 'е', [230] = 'ж', [231] = 'з', [232] = 'и', [233] = 'й', [234] = 'к', [235] = 'л', [236] = 'м', [237] = 'н', [238] = 'о', [239] = 'п', [240] = 'р', [241] = 'с', [242] = 'т', [243] = 'у', [244] = 'ф', [245] = 'х', [246] = 'ц', [247] = 'ч', [248] = 'ш', [249] = 'щ', [250] = 'ъ', [251] = 'ы', [252] = 'ь', [253] = 'э', [254] = 'ю', [255] = 'я'}
         if ch >= 192 and ch <= 223 then output = output .. russian_characters[ch + 32]
         elseif ch == 168 then output = output .. russian_characters[184] -- буква ё
 		else output = output .. string.char(ch) end
@@ -126,21 +125,7 @@ function explode_argb(argb)
     local b = bit.band(argb, 0xFF)
     return a, r, g, b
 end
-function textSplit(str, delim, plain) -- разбиение текста по определенным триггерам
-    local tokens, pos, plain = {}, 1, not (plain == false)
-    repeat
-        local npos, epos = string.find(str, delim, pos, plain)
-        table.insert(tokens, string.sub(str, pos, npos and npos - 1))
-        pos = epos and epos + 1
-    until not pos
-    return tokens
-end
-function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
-	nick = tostring(nick)
-	local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	if nick == sampGetPlayerNickname(myid) then return myid end
-	for i = 0, 301 do if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == nick then return i end end
-end
+
 
 function imgui.CenterText(text) -- центрирование текста
     imgui.SetCursorPosX( imgui.GetWindowWidth() / 2 - imgui.CalcTextSize(text).x / 2 ) 			
@@ -514,49 +499,45 @@ function style(id) -- ТЕМЫ
         colors[clr.TextSelectedBg]       = ImVec4(0.54, 0.00, 1.00, 0.34)
         colors[clr.ModalWindowDarkening] = ImVec4(0.20, 0.20, 0.20, 0.34)
 	elseif id == 4 then -- Розовая тема
-		colors[clr.Text]                 = ImVec4(1.00, 1.00, 1.00, 1.00)
-		colors[clr.TextDisabled]         = ImVec4(0.36, 0.42, 0.47, 1.00)
-		colors[clr.WindowBg] 			 = ImVec4(0.11, 0.15, 0.17, 1.00)
-		colors[clr.ChildWindowBg]        = ImVec4(0.15, 0.18, 0.22, 1.00)
-		colors[clr.PopupBg]              = ImVec4(0.08, 0.08, 0.08, 0.94)
-		colors[clr.Border]               = ImVec4(0.43, 0.43, 0.50, 0.50)
-		colors[clr.BorderShadow]         = ImVec4(0.00, 0.00, 0.00, 0.00)
-		colors[clr.FrameBg]              = ImVec4(0.20, 0.25, 0.29, 1.00)
-		colors[clr.FrameBgHovered]       = ImVec4(0.19, 0.12, 0.28, 1.00)
-		colors[clr.FrameBgActive]        = ImVec4(0.09, 0.12, 0.14, 1.00)
-		colors[clr.TitleBg]              = ImVec4(0.04, 0.04, 0.04, 1.00)
-		colors[clr.TitleBgActive]        = ImVec4(0.41, 0.19, 0.63, 1.00)
-		colors[clr.TitleBgCollapsed]     = ImVec4(0.00, 0.00, 0.00, 0.51)
-		colors[clr.MenuBarBg]            = ImVec4(0.15, 0.18, 0.22, 1.00)
-		colors[clr.ScrollbarBg]          = ImVec4(0.02, 0.02, 0.02, 0.39)
-		colors[clr.ScrollbarGrab]        = ImVec4(0.20, 0.25, 0.29, 1.00)
-		colors[clr.ScrollbarGrabHovered] = ImVec4(0.18, 0.22, 0.25, 1.00)
-		colors[clr.ScrollbarGrabActive]  = ImVec4(0.20, 0.09, 0.31, 1.00)
-		colors[clr.ComboBg]              = ImVec4(0.20, 0.25, 0.29, 1.00)
-		colors[clr.CheckMark]            = ImVec4(0.59, 0.28, 1.00, 1.00)
-		colors[clr.SliderGrab]           = ImVec4(0.41, 0.19, 0.63, 1.00)
-		colors[clr.SliderGrabActive]     = ImVec4(0.41, 0.19, 0.63, 1.00)
-		colors[clr.Button]               = ImVec4(0.41, 0.19, 0.63, 0.44)
-		colors[clr.ButtonHovered]        = ImVec4(0.41, 0.19, 0.63, 0.86)
-		colors[clr.ButtonActive]         = ImVec4(0.64, 0.33, 0.94, 1.00)
-		colors[clr.Header]               = ImVec4(0.20, 0.25, 0.29, 0.55)
-		colors[clr.HeaderHovered]        = ImVec4(0.51, 0.26, 0.98, 0.80)
-		colors[clr.HeaderActive]         = ImVec4(0.53, 0.26, 0.98, 1.00)
-		colors[clr.Separator]            = ImVec4(0.50, 0.50, 0.50, 1.00)
-		colors[clr.SeparatorHovered]     = ImVec4(0.60, 0.60, 0.70, 1.00)
-		colors[clr.SeparatorActive]      = ImVec4(0.70, 0.70, 0.90, 1.00)
-		colors[clr.ResizeGrip]           = ImVec4(0.59, 0.26, 0.98, 0.25)
-		colors[clr.ResizeGripHovered]    = ImVec4(0.61, 0.26, 0.98, 0.67)
-		colors[clr.ResizeGripActive]     = ImVec4(0.06, 0.05, 0.07, 1.00)
-		colors[clr.CloseButton]          = ImVec4(0.40, 0.39, 0.38, 0.16)
-		colors[clr.CloseButtonHovered]   = ImVec4(0.40, 0.39, 0.38, 0.39)
-		colors[clr.CloseButtonActive]    = ImVec4(0.40, 0.39, 0.38, 1.00)
-		colors[clr.PlotLines]            = ImVec4(0.61, 0.61, 0.61, 1.00)
-		colors[clr.PlotLinesHovered]     = ImVec4(1.00, 0.43, 0.35, 1.00)
-		colors[clr.PlotHistogram]        = ImVec4(0.90, 0.70, 0.00, 1.00)
-		colors[clr.PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00)
-		colors[clr.TextSelectedBg]       = ImVec4(0.25, 1.00, 0.00, 0.43)
-		colors[clr.ModalWindowDarkening] = ImVec4(1.00, 0.98, 0.95, 0.73)
+		colors[clr.FrameBg]                = ImVec4(0.46, 0.11, 0.29, 1.00)
+		colors[clr.FrameBgHovered]         = ImVec4(0.69, 0.16, 0.43, 1.00)
+		colors[clr.FrameBgActive]          = ImVec4(0.58, 0.10, 0.35, 1.00)
+		colors[clr.TitleBg]                = ImVec4(0.00, 0.00, 0.00, 1.00)
+		colors[clr.TitleBgActive]          = ImVec4(0.61, 0.16, 0.39, 1.00)
+		colors[clr.TitleBgCollapsed]       = ImVec4(0.00, 0.00, 0.00, 0.51)
+		colors[clr.CheckMark]              = ImVec4(0.94, 0.30, 0.63, 1.00)
+		colors[clr.SliderGrab]             = ImVec4(0.85, 0.11, 0.49, 1.00)
+		colors[clr.SliderGrabActive]       = ImVec4(0.89, 0.24, 0.58, 1.00)
+		colors[clr.Button]                 = ImVec4(0.46, 0.11, 0.29, 1.00)
+		colors[clr.ButtonHovered]          = ImVec4(0.69, 0.17, 0.43, 1.00)
+		colors[clr.ButtonActive]           = ImVec4(0.59, 0.10, 0.35, 1.00)
+		colors[clr.Header]                 = ImVec4(0.46, 0.11, 0.29, 1.00)
+		colors[clr.HeaderHovered]          = ImVec4(0.69, 0.16, 0.43, 1.00)
+		colors[clr.HeaderActive]           = ImVec4(0.58, 0.10, 0.35, 1.00)
+		colors[clr.Separator]              = ImVec4(0.69, 0.16, 0.43, 1.00)
+		colors[clr.SeparatorHovered]       = ImVec4(0.58, 0.10, 0.35, 1.00)
+		colors[clr.SeparatorActive]        = ImVec4(0.58, 0.10, 0.35, 1.00)
+		colors[clr.ResizeGrip]             = ImVec4(0.46, 0.11, 0.29, 0.70)
+		colors[clr.ResizeGripHovered]      = ImVec4(0.69, 0.16, 0.43, 0.67)
+		colors[clr.ResizeGripActive]       = ImVec4(0.70, 0.13, 0.42, 1.00)
+		colors[clr.TextSelectedBg]         = ImVec4(1.00, 0.78, 0.90, 0.35)
+        colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
+		colors[clr.TextDisabled]           = ImVec4(0.60, 0.19, 0.40, 1.00)
+		colors[clr.WindowBg] 			   = ImVec4(0.11, 0.15, 0.17, 1.00)
+		colors[clr.ChildWindowBg]          = ImVec4(1.00, 1.00, 1.00, 0.00)
+		colors[clr.PopupBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
+		colors[clr.ComboBg]                = ImVec4(0.08, 0.08, 0.08, 0.94)
+		colors[clr.Border]                 = ImVec4(0.49, 0.14, 0.31, 1.00)
+		colors[clr.BorderShadow]           = ImVec4(0.49, 0.14, 0.31, 0.00)
+		colors[clr.MenuBarBg]              = ImVec4(0.15, 0.15, 0.15, 1.00)
+		colors[clr.ScrollbarBg]            = ImVec4(0.02, 0.02, 0.02, 0.53)
+		colors[clr.ScrollbarGrab]          = ImVec4(0.31, 0.31, 0.31, 1.00)
+		colors[clr.ScrollbarGrabHovered]   = ImVec4(0.41, 0.41, 0.41, 1.00)
+		colors[clr.ScrollbarGrabActive]    = ImVec4(0.51, 0.51, 0.51, 1.00)
+		colors[clr.CloseButton]            = ImVec4(0.41, 0.41, 0.41, 0.50)
+		colors[clr.CloseButtonHovered]     = ImVec4(0.98, 0.39, 0.36, 1.00)
+		colors[clr.CloseButtonActive]      = ImVec4(0.98, 0.39, 0.36, 1.00)
+		colors[clr.ModalWindowDarkening]   = ImVec4(0.80, 0.80, 0.80, 0.35)
     elseif id == 5 then -- голубая тема
 		colors[clr.Text]                   = ImVec4(1.00, 1.00, 1.00, 1.00)
 		colors[clr.TextDisabled]           = ImVec4(0.28, 0.30, 0.35, 1.00)
