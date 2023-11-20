@@ -2966,8 +2966,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		text[1] = string.gsub(string.gsub(text[1], '{%w%w%w%w%w%w}', ''), 'Игрок: ', '')
 		text[4] = string.gsub(string.gsub(text[4], '{%w%w%w%w%w%w}', ''), 'Жалоба: ', '')
 		autor = text[1]																			--1
-		if sampIsPlayerConnected(autor) then autorid = sampGetPlayerIdByNickname(autor)		--1
-		else autorid = 'Не в сети' end     														--1
+		if sampGetPlayerIdByNickname(autor) then autorid = sampGetPlayerIdByNickname(autor)		--1
+		else autorid = 'Не в сети' end 
 		textreport = text[4]																	--4
 		reportid = tonumber(string.match(string.gsub(textreport, '%,','')--[[фикс запятой, из-за нее не видит ID]], '%d[%d.,]*')) --4
 		if not sampIsPlayerConnected(reportid) then 											--4
