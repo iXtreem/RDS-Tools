@@ -3,8 +3,8 @@ require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.61 			 							-- Версия скрипта
-
+local version = 4.7 			 							-- Версия скрипта
+-- при нажатии на слово из предпросмотра оно автоматически вставляется в поле ввода, удобно для быстрого удаления
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
 local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
@@ -380,7 +380,7 @@ function main()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(1)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. '4.6.1' .. ']', 10, sh-20, 0xCCFFFFFF)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. version .. ']', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
@@ -421,7 +421,6 @@ function main()
 				end
 			end
 		end
-
 	end
 end
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
@@ -463,6 +462,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		ror 	= 		'/rmute _ 5000 Оскорблeние/Упоминание родных',
 		rzs 	= 		'/rmute _ 600 Злоупотребление символaми',
 		rrz 	= 		'/rmute _ 5000 Розжиг межнац. рoзни',
+		rkl 	= 		'/rmute _ 3000 Клевeта на администрацию'
 	},
 	jail = {
 		bg 		= 		'/jail _ 300 Багоюз',
@@ -1484,6 +1484,9 @@ function imgui.OnDrawFrame()
 			if imgui.BeginPopup('check_mat') then
 				for i = 1, #mat do
 					imgui.Text(u8(mat[i]))
+					if imgui.IsItemClicked(0) then
+						buffer.newmat.v = u8(mat[i])
+					end
 					if i % 8 ~= 0 then imgui.SameLine() end
 				end
 				imgui.EndPopup()
@@ -1555,6 +1558,9 @@ function imgui.OnDrawFrame()
 			if imgui.BeginPopup('check_osk') then
 				for i = 1, #osk do
 					imgui.Text(u8(osk[i]))
+					if imgui.IsItemClicked(0) then
+						buffer.newosk.v = u8(osk[i])
+					end
 					if i % 8 ~= 0 then imgui.SameLine() end
 				end
 				imgui.EndPopup()
@@ -1686,7 +1692,7 @@ function imgui.OnDrawFrame()
 		imgui.Text(fa.ICON_FILES_O)
 		if imgui.IsItemClicked(0) then 
 			setClipboardText(autor)
-			sampAddChatMessage(tag .. 'Ник скопирован в буффер обмена.', -1)
+			sampAddChatMessage(tag .. 'Ник скопирован в буфер обмена.', -1)
 		end
 		imgui.TextWrapped(u8('Жалоба: ' .. textreport))
 		if wasKeyPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end 
@@ -1855,10 +1861,12 @@ function imgui.OnDrawFrame()
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.CenterText(u8'Выберите причину')
 		for k,v in pairs(basic_command.jail) do
-			local name = string.gsub(v, '/jail _ (%d+) ', '')
-			if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
-				sampSendChat(string.gsub(v, '_', control_player_recon))
-				windows.recon_jail_menu.v = false
+			if not string.sub(v, -3):find('x(%d+)')  then
+				local name = string.gsub(v, '/jail _ (%d+) ', '')
+				if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
+					sampSendChat(string.gsub(v, '_', control_player_recon))
+					windows.recon_jail_menu.v = false
+				end
 			end
 		end
 		imgui.End()
@@ -1872,7 +1880,7 @@ function imgui.OnDrawFrame()
 		imgui.CenterText(u8'Выберите причину')
 		for k,v in pairs(basic_command.mute) do
 			local name = string.gsub(v, '/mute _ (%d+) ', '')
-			if not name:find('x(%d+)') and not name:find('х(%d+)') then
+			if not string.sub(v, -3):find('x(%d+)')  then
 				if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
 					sampSendChat(string.gsub(v, '_', control_player_recon))
 					windows.recon_mute_menu.v = false
@@ -1910,7 +1918,7 @@ function imgui.OnDrawFrame()
 			imgui.SetCursorPosX(10)
 			if imgui.Button(fa.ICON_FILES_O) then
 				setClipboardText(sampGetPlayerNickname(control_player_recon))
-				sampAddChatMessage(tag .. 'Ник скопирован в буффер обмена. (ctrl + v)', -1)
+				sampAddChatMessage(tag .. 'Ник скопирован в буфер обмена. (ctrl + v)', -1)
 			end
 			imgui.SameLine()
 			if sampIsPlayerConnected(control_player_recon) then 
@@ -2195,24 +2203,21 @@ function imgui.OnDrawFrame()
 		if imgui.Button(u8'Сохранить', imgui.ImVec2(250, 24)) then
 			if #(u8:decode(buffer.new_flood_mess.v)) > 3 and #(u8:decode(buffer.title_flood_mess.v)) ~= 0 then
 				if buffer.new_flood_mess.v ~= 0 then
-					cfg.myflood[u8:decode(buffer.title_flood_mess.v)] = u8:decode(buffer.new_flood_mess.v)
-					save()
-					buffer.title_flood_mess.v = ''
-					buffer.new_flood_mess.v = ''
-				else sampAddChatMessage(tag .. 'Вы не указали номер цвета', -1)
-				end
-			else sampAddChatMessage(tag .. 'Что вы собрались сохранять?', -1)
-			end
+					if tonumber(string.sub(buffer.new_flood_mess.v, 1, 1)) then
+						cfg.myflood[u8:decode(buffer.title_flood_mess.v)] = string.gsub(u8:decode(buffer.new_flood_mess.v), '\n', '\\n')
+						save()
+						buffer.title_flood_mess.v = ''
+						buffer.new_flood_mess.v = ''
+					else sampAddChatMessage(tag .. 'Цвет не указан', -1) end
+				else sampAddChatMessage(tag .. 'Вы не указали номер цвета', -1) end
+			else sampAddChatMessage(tag .. 'Что вы собрались сохранять?', -1) end
 		end
 		for k,v in pairs(cfg.myflood) do
 			if imgui.Button(u8(k), imgui.ImVec2(225, 24)) then
-				lua_thread.create(function()
-					v = textSplit(v, '\n')
-					for _,v in pairs(v) do
-						sampSendChat('/mess ' .. v)
-						wait(500)
-					end
-				end)
+				local v = textSplit(v, '\\n')
+				for _,v in pairs(v) do
+					sampSendChat('/mess ' .. v)
+				end
 			end
 			imgui.SameLine()
 			imgui.SetCursorPosX(235)
@@ -2304,7 +2309,7 @@ function imgui.OnDrawFrame()
 		if imgui.IsWindowAppearing() then chat = {1, 500, 1} end -- 1 параметр начало массива, 2 параметр - конец массива, 3 - страница.
 		imgui.PushFont(fontsize)
 		imgui.CenterText(u8'Выберите файл для просмотра')
-		imgui.Text(u8'Примечание: Нажатие по тексту - копирует его в буффер обмена.\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
+		imgui.Text(u8'Примечание: Нажатие по тексту - копирует его в буфер обмена.\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
 		imgui.PushItemWidth(sw*0.7 - 30)
 		if imgui.Combo('##chatlog', checkbox.option_find_log, files_chatlogs, checkbox.option_find_log) then chat = {1, 500, 1} end
 		imgui.NewInputText('##searchlog', buffer.find_log, (sw*0.7)-30, u8'Сортировка текста', 2)
@@ -2339,7 +2344,7 @@ function imgui.OnDrawFrame()
 			for i = chat[1], chat[2] do
 				if string.rlower(chatlog_1[i]):find(string.rlower(u8:decode(buffer.find_log.v))) then
 					imgui.Text(u8(chatlog_1[i]))
-					if imgui.IsItemClicked(0) then setClipboardText(chatlog_1[i]) sampAddChatMessage(tag..'Строка скопирована в буффера обмена',-1) end
+					if imgui.IsItemClicked(0) then setClipboardText(chatlog_1[i]) sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) end
 				end
 			end
 		end
@@ -2373,7 +2378,7 @@ function imgui.OnDrawFrame()
 			for i = chat[1], chat[2] do
 				if string.rlower(chatlog_2[i]):find(string.rlower(u8:decode(buffer.find_log.v))) then
 					imgui.Text(u8(chatlog_2[i]))
-					if imgui.IsItemClicked(0) then setClipboardText(chatlog_2[i]) sampAddChatMessage(tag..'Строка скопирована в буффера обмена',-1) end
+					if imgui.IsItemClicked(0) then setClipboardText(chatlog_2[i]) sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) end
 				end
 			end
 		end
@@ -2407,7 +2412,7 @@ function imgui.OnDrawFrame()
 			for i = chat[1], chat[2] do
 				if string.rlower(chatlog_3[i]):find(string.rlower(u8:decode(buffer.find_log.v))) then
 					imgui.Text(u8(chatlog_3[i]))
-					if imgui.IsItemClicked(0) then setClipboardText(chatlog_3[i]) sampAddChatMessage(tag..'Строка скопирована в буффера обмена',-1) end
+					if imgui.IsItemClicked(0) then setClipboardText(chatlog_3[i]) sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) end
 				end
 			end
 		end
@@ -2472,13 +2477,6 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 end
-sampRegisterChatCommand('test', function()
-	autor = ''
-	autorid = 'd'
-	textreport = ''
-	windows.fast_report.v = true
-	imgui.Process = true
-end)
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if command:match('mute (.+) (.+) .+') and string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' then
 		if cfg.settings.forma_na_mute then
@@ -2816,7 +2814,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				control_player_recon = tonumber(string.match(v, '%((%d+)%)')) -- ник игрока в реконе
 				lua_thread.create(function()
 					wait(1000)
-					while (sampIsDialogActive() or sampIsChatInputActive()) do wait(0) end
+					while sampIsDialogActive() do wait(0) end
 					mobile_player = false
 					sampSendChat('/tonline ' .. control_player_recon)
 				end)
@@ -2896,7 +2894,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			local afk = string.match(admins[i], 'AFK: (.+)')
 			local name, id, _, lvl, _, _ = string.match(admins[i], '(.+)%((%d+)%) (%(.+)%) | Уровень: (%d+) | Выговоры: 0 из (%d+) | Репутация: (.+)')
 			local name, id, lvl = tostring(name), tostring(id), tostring(lvl)
-			admins[i] = string.gsub(admins[i], '| Выговоры: %d из %d |', "")
 			admins[i] = string.gsub(admins[i], 'Репутация: (.+)', "")
 			if #rang > 2 then
 				if afk then admins[i] = name .. '(' .. id .. ') ' .. rang .. ' ' .. lvl .. ' AFK: ' .. afk
@@ -3000,7 +2997,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			elseif answer.customans then peremrep = answer.customans
 			elseif answer.uto4 then peremrep = ('Обратитесь с данной проблемой на форум https://forumrds.ru')
 			elseif #(buffer.text_ans.v) ~= 0 and #answer == 0 then
-				if checkbox.button_enter_in_report.v and not answer.moiotvet and #(buffer.text_ans.v) > 5 then
+				if checkbox.button_enter_in_report.v and (not answer.moiotvet) and (#(buffer.text_ans.v) > 5) then
 					for k,v in pairs(cfg.customotvet) do
 						if string.rlower(v):find(string.rlower(u8:decode(buffer.text_ans.v))) or string.rlower(v):find(translateText(string.rlower(u8:decode(buffer.text_ans.v)))) then
 							peremrep = v 
