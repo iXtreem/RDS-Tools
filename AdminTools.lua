@@ -1,10 +1,10 @@
 require 'lib.moonloader'									-- Считываем библиотеки Moonloader
 require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
+require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.7 			 							-- Версия скрипта
--- при нажатии на слово из предпросмотра оно автоматически вставляется в поле ввода, удобно для быстрого удаления
+local version = 4.71 			 							-- Версия скрипта
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
 local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
@@ -27,8 +27,6 @@ local AT_Trassera 		= script.load("\\resource\\AT_Trassera.lua") 	-- подгрузка т
 local plagin_notify		= import('\\lib\\lib_imgui_notf.lua')
 local tag 				= '{2B6CC4}Admin Tools: {F0E68C}' 	-- Задаем название скрипта в самой игре
 local sw, sh 			= getScreenResolution()           	-- Узнаем разрешение экрана пользователя
-if io.open("moonloader\\lib\\my_lib.lua", "r") ~= nil then require 'my_lib'
-else sampAddChatMessage(tag .. "Не обнаружена библиотека скрипта, не могу быть запущен.", -1) end
 
 
 local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсутствует
@@ -231,6 +229,8 @@ local spisokproject = { -- список проектов за который идет автомут
 	[5] = 'монсер',
 	[6] = 'арз',
 	[7] = 'arz',
+	[8] = 'amazing',
+	[9] = 'амазинг',
 }
 --------======================== Задаем шрифт и размер для имгуи текста ============--------------------
 ffi.cdef[[
@@ -380,7 +380,7 @@ function main()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(1)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. version .. ']', 10, sh-20, 0xCCFFFFFF)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. '4.7.1' .. ']', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
@@ -390,6 +390,13 @@ function main()
 		if wasKeyPressed(VK_F3) and not (sampIsDialogActive() or sampIsChatInputActive()) then  -- кнопка активации окна
 			windows.menu_tools.v = not windows.menu_tools.v
 			imgui.Process = true
+			if windows.recon_menu.v then 	-- активация курсора если рекон меню активно
+				lua_thread.create(function()
+					setVirtualKeyDown(70, true)
+					wait(150)
+					setVirtualKeyDown(70, false)
+				end)
+			end
 		end
 		if cfg.settings.wallhack and not AFK then
 			for i = 0, sampGetMaxPlayerId() do
@@ -427,16 +434,16 @@ end
 function color() mcolor = '' math.randomseed( os.time() ) for i = 1, 6 do local b = math.random(1, 16) if b == 1 then mcolor = mcolor .. "A" elseif b == 2 then mcolor = mcolor .. "B" elseif b == 3 then mcolor = mcolor .. "C" elseif b == 4 then mcolor = mcolor .. "D" elseif b == 5 then mcolor = mcolor .. "E" elseif b == 6 then mcolor = mcolor .. "F" elseif b == 7 then mcolor = mcolor .. "0" elseif b == 8 then mcolor = mcolor .. "1" elseif b == 9 then mcolor = mcolor .. "2" elseif b == 10 then mcolor = mcolor .. "3" elseif b == 11 then mcolor = mcolor .. "4" elseif b == 12 then mcolor = mcolor .. "5" elseif b == 13 then mcolor = mcolor .. "6" elseif b == 14 then mcolor = mcolor .. "7" elseif b == 15 then mcolor = mcolor .. "8" elseif b == 16 then mcolor = mcolor .. "9" end end return mcolor end
 local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	ans = { 														-- с вариативностью есть доп/текст или нет
-		nv      =  		'/ot _ Игрок не в сети ',
-		cl      =  		'/ot _ Данный игрок чист. ',
-		pmv     =  		'/ot _ Помогли вам. Обращайтесь ещё ',
-		c       =  		'/ot _ Начал(а) работу над вашей жалобой. ',
-		dpr     =  		'/ot _ У игрока куплены функции за /donate ',
-		afk     =  		'/ot _ Игрок бездействует или находится в AFK ',
-		nak     =  		'/ot _ Игрок был наказан, спасибо за обращение. ',
-		n       =  		'/ot _ Не наблюдаю нарушений со стороны игрока. ',
-		fo      =  		'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru ',
-		rep     =  		'/ot _ Нашли нарушителя? Появился вопрос? Напишите /report!',
+		nv      =  		'/ans _ Игрок не в сети ',
+		cl      =  		'/ans _ Данный игрок чист. ',
+		pmv     =  		'/ans _ Помогли вам. Обращайтесь ещё ',
+		c       =  		'/ans _ Начал(а) работу над вашей жалобой. ',
+		dpr     =  		'/ans _ У игрока куплены функции за /donate ',
+		afk     =  		'/ans _ Игрок бездействует или находится в AFK ',
+		nak     =  		'/ans _ Игрок был наказан, спасибо за обращение. ',
+		n       =  		'/ans _ Не наблюдаю нарушений со стороны игрока. ',
+		fo      =  		'/ans _ Обратитесь с данной проблемой на форум https://forumrds.ru ',
+		rep     =  		'/ans _ Нашли нарушителя? Появился вопрос? Напишите /report! ',
 	},
 	mute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
 		fd      =  		'/mute _ 120 Флуд',					--[[x10]]fd2='/mute _ 240 Флуд x2',fd3='/mute _ 360 Флуд x3',fd4='/mute _ 480 Флуд x4',fd5='/mute _ 600 Флуд x5',fd6='/mute _ 720 Флуд x6',fd7='/mute _ 840 Флуд x7',fd8='/mute _ 960 Флуд x8',fd9='/mute _ 1080 Флуд x9',fd10='/mute _ 1200 Флуд x10',
@@ -489,11 +496,13 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		obm 	= 		'/siban _ 30 Обман/Развод',
 	},
 	kick = {
+		
+		kk3 	= 		'/kick _ Смените ник 3/3',
+		kk2 	= 		'/kick _ Смените ник 2/3',
+		kk1 	= 		'/kick _ Смените ник 1/3',
 		cafk 	= 		'/kick _ AFK in /arena',
 		jk 		= 		'/kick _ DM in jail',
-		kk1 	= 		'/kick _ Смените ник 1/3',
-		kk2 	= 		'/kick _ Смените ник 2/3',
-		kk3 	= 		'/ban _ 7 Смените ник 3/3',
+		
 	},
 	help = {
 		uu      =  		'/unmute _',
@@ -1013,9 +1022,6 @@ function imgui.OnDrawFrame()
 						end)
 					else sampAddChatMessage(tag .. 'Данная опция доступна только в реконе.', -1) end
 				else sampAddChatMessage(tag ..'Функция выключена, включите её и задайте позицию', -1) end
-			end
-			if windows.recon_menu.v then
-				imgui.Text(u8'На данный момент вы находитесь в реконе.\nАктивация курсора - клавиша F или правая кнопка мыши.')
 			end
 			imgui.SetCursorPosY(370)
 			imgui.Separator()
@@ -2183,7 +2189,7 @@ function imgui.OnDrawFrame()
 	if windows.render_admins.v then
 		imgui.ShowCursor = false
 		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.render_admins_positionX, cfg.settings.render_admins_positionY))
-		imgui.Begin('##render_admins', windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.Begin('##render_admins', windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar)
 		for i = 1, #admins - 1 do imgui.TextColoredRGB(admins[i]) end
         imgui.End()
 	end
@@ -2193,7 +2199,7 @@ function imgui.OnDrawFrame()
 		imgui.Begin(u8'Новый флуд', windows.new_flood_mess, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-		if imgui.Button(u8'Скрипт сам допишет /mess\nВам лишь надо указать цвет.', imgui.ImVec2(250,32)) then sampSendChat('/mcolors') end
+		if imgui.Button(u8'Скрипт сам допишет /mess\nВам лишь надо указать цвет.', imgui.ImVec2(250,32)) then sampAddChatMessage(tag .. 'Открыт диалог с цветами',-1) sampSendChat('/mcolors') end
 		imgui.Text(u8'Название: ')
 		imgui.PushItemWidth(250)
 		imgui.InputText('##title_flood_mess', buffer.title_flood_mess)
@@ -2939,7 +2945,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							end
 						end)
 					end
-					exception_admin = nil
 				end
 			end
 			local name, id, rang, lvl, afk, rang, myid = nil
@@ -2949,7 +2954,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		return false
 	elseif dialogId == 1098 then -- автоонлайн
 		sampSendDialogResponse(dialogId, 1, math.floor(sampGetPlayerCount(false) / 10) - 1)
-		sampCloseCurrentDialogWithButton(0)
 		return false
 	elseif dialogId == 16196 then -- окно /offstats где выбор между статистикой и авто используется для /sbanip
 		if find_ip_player then sampSendDialogResponse(dialogId, 1, 0) return false end
@@ -2975,6 +2979,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		end																						--4
 		if cfg.settings.on_custom_answer then windows.fast_report.v,imgui.Process=true,true end
 		lua_thread.create(function()
+			if sampIsChatInputActive() then wait(3000) answer = {} end
 			while windows.fast_report.v and not (answer.rabotay or answer.uto4 or answer.nakajy or answer.customans or answer.slejy or answer.jb or answer.ojid or answer.moiotvet or answer.uto4id or answer.nakazan or answer.otklon or answer.peredamrep) do wait(100) end
 			sampSendDialogResponse(dialogId,1,0)
 		end)
@@ -3011,8 +3016,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end
 			elseif answer.otklon then 
 				sampSendDialogResponse(dialogId, 1, 2) 
-				sampCloseCurrentDialogWithButton(0)
-				return false 
+				return false
 			end
 		end
 		if peremrep then
@@ -3029,13 +3033,11 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				if #(peremrep) < 4 then peremrep = peremrep .. '    ' end
 				if cfg.settings.custom_answer_save and answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
-				sampCloseCurrentDialogWithButton(0)
-				return false 
+				return false
 			end
 		end
 	elseif dialogId == 2351 and peremrep then -- окно с ответом на репорт
 		sampSendDialogResponse(dialogId, 1, _, peremrep)
-		sampCloseCurrentDialogWithButton(0)
 		buffer.text_ans.v = ''
 		lua_thread.create(function()
 			while sampIsDialogActive() do wait(100) end
@@ -3052,8 +3054,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				elseif nakazatreport.oskrod then sampSendChat(command .. autorid .. ' 5000 Оскорбление/Упоминание родни')
 				elseif nakazatreport.capsrep then sampSendChat(command .. autorid .. ' 120 Капс в /report')
 				elseif nakazatreport.matrep then sampSendChat(command .. autorid .. ' 300 Нецензурная лексика')
-				elseif nakazatreport.rozjig then sampSendChat(command .. autorid .. ' 5000 Розжиг межнациональной розни')
-				elseif nakazatreport.kl then sampSendChat(command .. autorid .. ' 3000 Клевета на администрацию') end
+				elseif nakazatreport.rozjig then sampSendChat(command .. autorid .. ' 5000 Розжиг')
+				elseif nakazatreport.kl then sampSendChat(command .. autorid .. ' 3000 Клевета') end
 				command = nil
 				nakazatreport = {}
 			end
