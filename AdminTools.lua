@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.71 			 							-- Версия скрипта
+local version = 4.73 			 							-- Версия скрипта
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
 local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
@@ -328,7 +328,7 @@ function main()
 	local AutoMute_mat = file_exists(getWorkingDirectory() .. "\\config\\AT\\mat.txt") if not AutoMute_mat then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/mat.txt", getWorkingDirectory() .. "\\config\\AT\\mat.txt", function(id, status) end) end
 	local AutoMute_osk = file_exists(getWorkingDirectory() .. "\\config\\AT\\osk.txt") if not AutoMute_osk then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", getWorkingDirectory() .. "\\config\\AT\\osk.txt", function(id, status) end) sampAddChatMessage(tag .. 'Файлы автомута не были обнаружены, докачал их из интернета, перезагрузите скрипт ALT + R пожалуйста.', -1) end	
 	local rules = io.open(getWorkingDirectory() .. "\\config\\AT\\rules.txt","r")
-	if rules then for line in rules:lines() do pravila[#pravila + 1] = u8:decode(line);end rules:close() end
+	if rules then for line in rules:lines() do pravila[#pravila + 1] = line;end rules:close() end
 	
 	--------------------============ АВТОМУТ =====================---------------------------------
 	local AutoMute_mat = io.open(getWorkingDirectory() .. "\\config\\AT\\mat.txt", "r")
@@ -380,7 +380,7 @@ function main()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(1)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. '4.7.1' .. ']', 10, sh-20, 0xCCFFFFFF)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. '4.7.3' .. ']', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
@@ -1213,6 +1213,11 @@ function imgui.OnDrawFrame()
 			imgui.CenterText(u8'[Мои быстрые клавиши]')
 			for k, v in pairs(cfg.binder_key) do
 				imgui.Text(u8('[Клавиша '..k..'] ='))
+				imgui.Tooltip(u8'Нажми, чтобы удалить')
+				if imgui.IsItemClicked(0) then
+					cfg.binder_key[k] = nil
+					save()
+				end
 				imgui.SameLine()
 				imgui.Text(u8(v))
 			end
@@ -2228,9 +2233,19 @@ function imgui.OnDrawFrame()
 			imgui.SameLine()
 			imgui.SetCursorPosX(235)
 			imgui.PushFont(fontsize)
-			if imgui.Button(fa.ICON_BAN ..'    ' .. k, imgui.ImVec2(24,24)) then
-				cfg.myflood[k] = nil
-				save()
+			if imgui.Button(fa.ICON_COG ..'##'..k, imgui.ImVec2(24,24)) then
+				imgui.OpenPopup("settings")
+			end
+			if imgui.BeginPopup('settings') then
+				if imgui.Button(fa.ICON_PENCIL) then
+					buffer.title_flood_mess.v = u8(k)
+					buffer.new_flood_mess.v = (string.gsub(u8(v), '\\n', '\n'))
+				end
+				if imgui.Button(fa.ICON_BAN) then
+					cfg.myflood[k] = nil
+					save()
+				end
+				imgui.EndPopup()
 			end
 			imgui.PopFont()
 		end
@@ -2253,16 +2268,16 @@ function imgui.OnDrawFrame()
 		if checkbox.checked_radio_button.v == 1 then
 			imgui.NewInputText('##SearchBar6', buffer.find_rules, sw*0.5, u8'Поиск по правилам', 2)
 			for i = 1, #pravila do
-				if string.rlower(pravila[i]):find(string.rlower(u8:decode('%s'..buffer.find_rules.v))) then
-					if not u8(pravila[i]):find('%[(%d+) lvl%]') and not u8(pravila[i]):find('SCRIPT')  then
-						imgui.TextWrapped(u8(pravila[i]))
+				if string.rlower(u8:decode(pravila[i])):find(string.rlower(u8:decode(buffer.find_rules.v))) then
+					if not (pravila[i]:find('%[%d+ lvl%]')) then
+						imgui.TextWrapped(pravila[i])
 					end
 				end
 			end
 		elseif checkbox.checked_radio_button.v == 2 then
 			imgui.CenterText(u8'Мои команды')
 			for k,v in pairs(cfg.my_command) do
-				imgui.TextWrapped(u8('/' .. k))
+				imgui.TextWrapped(u8('/' .. k .. ' = ' .. v))
 			end
 			imgui.CenterText(u8'Команды скрипта')
 			for k,v in pairs(basic_command.prochee) do
@@ -2297,10 +2312,13 @@ function imgui.OnDrawFrame()
 				imgui.TextWrapped(u8('/'..k..' = '..v))
 			end
 		elseif checkbox.checked_radio_button.v == 3 then
-			imgui.NewInputText('##SearchBar6', buffer.find_rules, sw*0.5, u8'Поиск по командам', 2)
-			for i = 1, #pravila do
-				if string.rlower(pravila[i]):find(string.rlower(u8:decode('%s'..buffer.find_rules.v))) then
-					if pravila[i]:find('%[%d+ lvl%] ') then imgui.TextWrapped(u8(pravila[i])) end
+			for i = 1, 18 do
+				if imgui.CollapsingHeader(u8('Уровень доступа - ' .. i)) then
+					for b = 1, #pravila do
+						if pravila[b]:find('%['..i..' lvl%]') then
+							imgui.Text(string.gsub(pravila[b], '%[%d+ lvl%]', ''))
+						end
+					end
 				end
 			end
 		end
@@ -2973,7 +2991,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		if sampGetPlayerIdByNickname(autor) then autorid = sampGetPlayerIdByNickname(autor)		--1
 		else autorid = 'Не в сети' end 
 		textreport = text[4]																	--4
-		reportid = tonumber(string.match(string.gsub(textreport, '%,','')--[[фикс запятой, из-за нее не видит ID]], '%d[%d.,]*')) --4
+		reportid = tonumber(string.match(string.gsub(textreport, '%,',' ')--[[фикс запятой, из-за нее не видит ID]], '%d[%d.,]*')) --4
 		if not sampIsPlayerConnected(reportid) then 											--4
 			_, myid = sampGetPlayerIdByCharHandle(PLAYER_PED) 									--4
 		end																						--4
@@ -2988,9 +3006,13 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		if not peremrep then
 			if answer.rabotay then peremrep = ('Начал(а) работу по вашей жалобе!')
 			elseif answer.slejy then
-				if not reportid then peremrep = ('Начинаю слежку.') answer.slejy = nil
+				if not reportid then peremrep = ('Отправляюсь в слежку') answer.slejy = nil
 				elseif reportid and reportid ~= myid then
-					if not sampIsPlayerConnected(reportid) then peremrep = ('Указанный вами игрок под ' .. reportid .. ' ID находится вне сети.') answer.slejy = nil
+					if not sampIsPlayerConnected(reportid) then
+						if reportid < 300 then
+							peremrep = ('Указанный вами игрок под ' .. reportid .. ' ID находится вне сети.') 
+							answer.slejy = nil
+						else peremrep = ('Отправляюсь в слежку') end
 					else peremrep = ('Отправляюсь в слежку за игроком ' .. sampGetPlayerNickname(reportid) .. '['..reportid..']') end
 				elseif myid then if reportid == myid then peremrep = ('Вы указали мой ID :D') answer.slejy = nil end end
 			elseif answer.nakazan then peremrep = ('Данный игрок уже был наказан.')
