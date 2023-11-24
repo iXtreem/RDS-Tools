@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.73 			 							-- Версия скрипта
+local version = 4.75 			 							-- Версия скрипта
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
 local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
@@ -380,7 +380,7 @@ function main()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(1)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. '4.7.3' .. ']', 10, sh-20, 0xCCFFFFFF)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. '4.7.5' .. ']', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
@@ -2838,7 +2838,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				control_player_recon = tonumber(string.match(v, '%((%d+)%)')) -- ник игрока в реконе
 				lua_thread.create(function()
 					wait(1000)
-					while sampIsDialogActive() do wait(0) end
+					while sampIsDialogActive() do wait(100) end
 					mobile_player = false
 					sampSendChat('/tonline ' .. control_player_recon)
 				end)
@@ -2916,7 +2916,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			local rang = string.sub(string.gsub(string.match(admins[i], '(%(.+)%)'), '(%(%d+)%)', ''), 3) --{FFFFFF}N.E.O.N(0) | Уровень: {ff8587}18{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}60
 			admins[i] = string.gsub(admins[i], '{%w%w%w%w%w%w}', "")
 			local afk = string.match(admins[i], 'AFK: (.+)')
-			local name, id, _, lvl, _, _ = string.match(admins[i], '(.+)%((%d+)%) (%(.+)%) | Уровень: (%d+) | Выговоры: 0 из (%d+) | Репутация: (.+)')
+			local name, id, _, lvl, _, _ = string.match(admins[i], '(.+)%((%d+)%) (%(.+)%) | Уровень: (%d+) | Выговоры: (%d+) из 3 | Репутация: (.+)')
 			local name, id, lvl = tostring(name), tostring(id), tostring(lvl)
 			admins[i] = string.gsub(admins[i], 'Репутация: (.+)', "")
 			if #rang > 2 then
@@ -3038,6 +3038,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end
 			elseif answer.otklon then 
 				sampSendDialogResponse(dialogId, 1, 2) 
+				sampCloseCurrentDialogWithButton(0)
 				return false
 			end
 		end
@@ -3060,6 +3061,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		end
 	elseif dialogId == 2351 and peremrep then -- окно с ответом на репорт
 		sampSendDialogResponse(dialogId, 1, _, peremrep)
+		sampCloseCurrentDialogWithButton(0)
 		buffer.text_ans.v = ''
 		lua_thread.create(function()
 			while sampIsDialogActive() do wait(100) end
@@ -3126,7 +3128,7 @@ end
 function render_admins()
 	while true do
 		wait(30000)
-		while sampIsDialogActive() do wait(500) end
+		while sampIsDialogActive() do wait(200) end
 		if not AFK then sampSendChat('/admins') end
 	end
 end
@@ -3134,7 +3136,7 @@ end
 function autoonline() 
 	while true do
 		wait(61000) 
-		while sampIsDialogActive() do wait(500) end 
+		while sampIsDialogActive() do wait(200) end 
 		if not AFK then sampSendChat("/online") end 
 	end 
 end
