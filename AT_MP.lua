@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.74
+local version = 1.8
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local my_lib = require 'my_lib'
@@ -163,15 +163,6 @@ function sampev.onServerMessage(color,text)
             cfg.info[4] = cfg.info[4] + 1
             save()
         end
-    end
-end
-function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
-    if sampIsDialogActive() and windows.secondary_window_state.v then
-        lua_thread.create(function()
-            local command = command
-            while sampIsDialogActive() do wait(100) end
-            sampSendChat(command)
-        end)
     end
 end
 function imgui.OnDrawFrame()
@@ -618,7 +609,7 @@ function imgui.OnDrawFrame()
             imgui.CenterText(u8'Активация курсора - клавиша F')
             imgui.CenterText(u8'Меню взаимодействия с игроком - ПКМ + 1')
         end
-        if wasKeyPressed(VK_F) and not (sampIsDialogActive() and sampIsChatInputActive()) then
+        if wasKeyPressed(VK_F) and not (sampIsDialogActive() or sampIsChatInputActive()) then
             cursor = not cursor
             if cursor then showCursor(false,false)
             else showCursor(true,true) end
@@ -634,52 +625,63 @@ function check_my_auto()
         wait(1000)
     end
 end
+local start_mp = false -- защита от удваивания функции
 function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт (рр, корабль и т.д), цвет месс, интерьер
-    lua_thread.create(function()
-        if not sampIsDialogActive(5343) then sampCloseCurrentDialogWithButton(0) sampSendChat('/mp') end -- если диалог закрыт открываем снова
-        if komnata then
-            sampSendDialogResponse(5343, 1, komnata) -- тп в комнату
-            wait(2000)  -- ждем 2 секунды пока прогрузит интерьер
-            sampSendDialogResponse(5343, 1, komnata) -- тп х2 в комнату
-        end
-        sampSendDialogResponse(5343, 1, 14) -- Настройки
-        sampSendDialogResponse(16066, 1, 1) -- виртуальный мир
-        sampSendDialogResponse(16067, 1, 0, '990') -- виртуальный мир
-        sampSendDialogResponse(16066, 1, 2) -- настройки интерьера
-        sampSendDialogResponse(16068, 1, 1, inter) -- установить интерьер
-        sampSendDialogResponse(16066, 1, 0) -- установить координаты
-        sampSendDialogResponse(16066, 0, 0) -- закрываем окно
-        while not sampIsDialogActive(5343) do wait(200) end -- подстраховка от медленного интернета, ждем когда появится диалог
-        while sampIsDialogActive(5343) do sampCloseCurrentDialogWithButton(0) wait(200) end
-        sampSendChat('/mess '..color.. ' Начинается мероприятие '..name..' успей принять участие')
-        sampSendChat('/mp')
-        sampSendDialogResponse(5343, 1, 0) -- Открываем ввод названия мп
-        sampSendDialogResponse(5344, 1, 1, name) -- название мп
-        while not sampIsDialogActive(5343) do wait(200) end
-        while sampIsDialogActive(5343) do sampCloseCurrentDialogWithButton(0) wait(200) end
-        if #MyTextMP.v == 0 then 
-            for k,v in pairs(textSplit(string.gsub(cfg.AT_MP.text, '_', color),'@')) do
-                if v:find('*') then 
-                    if #(u8:decode(text_myprize.v)) > 0 then sampSendChat(string.gsub(u8:decode(v), '*', u8:decode(text_myprize.v)))
-                    else sampAddChatMessage(tag .. 'Приз не указан.', -1) end
-                else sampSendChat(u8:decode(v)) end
+    if start_mp then
+        return false
+    else
+        start_mp = true
+        lua_thread.create(function()
+            if not sampIsDialogActive(5343) then 
+                sampCloseCurrentDialogWithButton(0) 
+                sampSendChat('/mp')
+                while not sampIsDialogActive(5343) do wait(1) end
+            end -- если диалог закрыт открываем снова
+            if komnata then
+                sampSendDialogResponse(5343, 1, komnata) -- тп в комнату
+                wait(2000)  -- ждем 2 секунды пока прогрузит интерьер
+                sampSendDialogResponse(5343, 1, komnata) -- тп х2 в комнату
             end
-        else
-            if #(MyTextMP_start.v) ~= 0 then
-                MyTextMP_start.v = u8:decode(MyTextMP_start.v)
-                if MyTextMP_start.v:match('\n') then
-                    for a,b in pairs(textSplit(MyTextMP_start.v, '\n')) do
-                        if b:match('wait(%(%d+)%)') then
-                            wait(tonumber(b:match('%d+') .. '000'))
-                        else sampSendChat(b) end
-                    end 
-                else sampSendChat(MyTextMP_start.v) end
-                wait(2000)
+            sampSendDialogResponse(5343, 1, 14) -- Настройки
+            sampSendDialogResponse(16066, 1, 1) -- виртуальный мир
+            sampSendDialogResponse(16067, 1, 0, '990') -- виртуальный мир
+            sampSendDialogResponse(16066, 1, 2) -- настройки интерьера
+            sampSendDialogResponse(16068, 1, 1, inter) -- установить интерьер
+            sampSendDialogResponse(16066, 1, 0) -- установить координаты
+            sampSendDialogResponse(16066, 0, 0) -- закрываем окно
+            while not sampIsDialogActive(5343) do wait(200) end -- подстраховка от медленного интернета, ждем когда появится диалог
+            while sampIsDialogActive(5343) do sampCloseCurrentDialogWithButton(0) wait(200) end
+            sampSendChat('/mess '..color.. ' Начинается мероприятие '..name..' успей принять участие')
+            sampSendChat('/mp')
+            sampSendDialogResponse(5343, 1, 0) -- Открываем ввод названия мп
+            sampSendDialogResponse(5344, 1, 1, name) -- название мп
+            while not sampIsDialogActive(5343) do wait(200) end
+            while sampIsDialogActive(5343) do sampCloseCurrentDialogWithButton(0) wait(200) end
+            if #MyTextMP.v == 0 then 
+                for k,v in pairs(textSplit(string.gsub(cfg.AT_MP.text, '_', color),'@')) do
+                    if v:find('*') then 
+                        if #(u8:decode(text_myprize.v)) > 0 then sampSendChat(string.gsub(u8:decode(v), '*', u8:decode(text_myprize.v)))
+                        else sampAddChatMessage(tag .. 'Приз не указан.', -1) end
+                    else sampSendChat(u8:decode(v)) end
+                end
+            else
+                if #(MyTextMP_start.v) ~= 0 then
+                    MyTextMP_start.v = u8:decode(MyTextMP_start.v)
+                    if MyTextMP_start.v:match('\n') then
+                        for a,b in pairs(textSplit(MyTextMP_start.v, '\n')) do
+                            if b:match('wait(%(%d+)%)') then
+                                wait(tonumber(b:match('%d+') .. '000'))
+                            else sampSendChat(b) end
+                        end 
+                    else sampSendChat(MyTextMP_start.v) end
+                    wait(2000)
+                end
             end
-        end
-        wait(1000)
-        if sampIsDialogActive() then sampCloseCurrentDialogWithButton(0) end -- подстраховка если какой-то диалог останется открытым
-    end)
+            wait(1000)
+            if sampIsDialogActive() then sampCloseCurrentDialogWithButton(0) end -- подстраховка если какой-то диалог останется открытым
+            start_mp = false
+        end)
+    end
 end
 function find_weapon()
     local _, myid = sampGetPlayerIdByCharHandle(playerPed)
