@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.81 			 							-- Версия скрипта
+local version = 4.82 			 							-- Версия скрипта
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
 local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
@@ -359,7 +359,7 @@ function main()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(1)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version[4.8.1]', 10, sh-20, 0xCCFFFFFF)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version[4.8.2]', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
@@ -663,7 +663,11 @@ sampRegisterChatCommand('update', function()
 			while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
 			local _, button, _, _ = sampHasDialogRespond(1111)
 			if button == 1 then
-				sampShowDialog(1111, "Выберите, что хотите обновить", "AdminTools\nFastSpawn\nМероприятия", "Выбрать", nil, DIALOG_STYLE_LIST);
+				local text = ''
+				if update_main then text = text..'AdminTools\n' end
+				if update_fs then text = text .. 'FastSpawn\n' end
+				if update_mp then text = text .. 'Мероприятия\n' end
+				sampShowDialog(1111, "Выберите, что хотите обновить", text, "Выбрать", nil, DIALOG_STYLE_LIST);
 				while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
 				local _, _, button, _ = sampHasDialogRespond(1111)
 				if button == 0 then update('main')
@@ -679,21 +683,21 @@ sampRegisterChatCommand('update', function()
 	end)
 end)
 function update(param)
+	local dlstatus = require('moonloader').download_status
 	if param == 'fs' or param == 'all' then
 		sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
 		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", getWorkingDirectory() .. "//resource//AT_FastSpawn.lua", function(id, status)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
 			end  
-		end) 
-	end
+		end)
+	end 
 	if param == 'mp' or param == 'all' then
 		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", getWorkingDirectory() .. "//resource//AT_MP.lua", function(id, status)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
-				if not (update_fs or update_main) then reloadScripts() end
 			end 
-		end) 
+		end)
 	end
 	if param == 'main' or param == 'all' then
 		sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
@@ -706,7 +710,10 @@ function update(param)
 			end 
 		end)
 	end
-	reloadScripts()
+	lua_thread.create(function()
+		wait(5000)
+		reloadScripts()
+	end)
 end
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
