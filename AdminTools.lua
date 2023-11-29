@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.82 			 							-- Версия скрипта
+local version = 4.83 			 							-- Версия скрипта
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
 local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
@@ -42,7 +42,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		render_admins_positionX = sw - 300,
 		render_admins_positionY = sh - 300,
 		render_admins = false,
-		mytextreport = ' // Приятной игры на RDS <3',
+		mytextreport = '| Приятной игры на RDS <3',
 		position_recon_menu_x = sw - 270,
 		position_recon_menu_y = 0,
 		keysync = true,
@@ -358,8 +358,8 @@ function main()
 	lua_thread.create(function()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
-			wait(1)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version[4.8.2]', 10, sh-20, 0xCCFFFFFF)
+			wait(3)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version[4.8.3]', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
@@ -489,6 +489,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	},
 	prochee = {
 		update  = 		'Обновить скрипт',
+		ahelp 	= 		'Все команды скрипта/сервера и правила',
 		wh 		= 		'Включить WallHack',
 		tool 	= 		'Активировать меню АТ',
 		sbanip 	= 		'Выдать блокировку аккаунта с IP адресом (ФД!)',
@@ -655,6 +656,10 @@ sampRegisterChatCommand('opencl', function(param)
 	windows.menu_chatlogger.v = not windows.menu_chatlogger.v
 	imgui.Process = true
 end)
+sampRegisterChatCommand('ahelp', function()
+	windows.pravila.v = not windows.pravila.v 
+	imgui.Process = true
+end)
 sampRegisterChatCommand('update', function()
 	if sampIsDialogActive() then return false end
 	lua_thread.create(function()
@@ -682,6 +687,7 @@ sampRegisterChatCommand('update', function()
 		end
 	end)
 end)
+
 function update(param)
 	local dlstatus = require('moonloader').download_status
 	if param == 'fs' or param == 'all' then
@@ -711,7 +717,7 @@ function update(param)
 		end)
 	end
 	lua_thread.create(function()
-		wait(5000)
+		wait(8000)
 		reloadScripts()
 	end)
 end
@@ -1678,7 +1684,7 @@ function imgui.OnDrawFrame()
 				imgui.CenterText(u8'Добавить быструю команду')
 				imgui.SameLine()
 				imgui.Text('(?)')
-				imgui.Tooltip(u8'Символ "_" без кавычек принимает введенный аргумент\nКоманда wait добавляет задержку, пример: wait(5) (это 5 сек)\nПример: /mute _ 400 оскорбление')
+				imgui.Tooltip(u8'Символ "_" без кавычек принимает введенный аргумент\nКоманда wait добавляет задержку, пример: wait(5) (это 5 сек)\nПример команды для выдачи своего бана:\nНазвание команды: /cht\nОписание команды:\n/ans _ Здравствуйте, вы наказаны за нарушение правил сервера.\n/iban _ 7 cheat')
 				imgui.NewInputText('##titlecommand5', buffer.new_command_title, 480, u8'Команда (пример: /ok, /dz, /ch)', 2)
 				imgui.InputTextMultiline("##newcommand", buffer.new_command, imgui.ImVec2(480, 200))
 				if imgui.Button(u8'Сохрaнить', imgui.ImVec2(250, 24)) then
@@ -1783,7 +1789,7 @@ function imgui.OnDrawFrame()
 			imgui.Tooltip('R')
 			imgui.SameLine()
 			if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_V) and not sampIsChatInputActive()) then
-				answer.peredamrep = true
+				imgui.OpenPopup('peredat')
 			end
 			imgui.Tooltip('V')
 			if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_G) and not sampIsChatInputActive()) then
@@ -1844,11 +1850,20 @@ function imgui.OnDrawFrame()
 			end
 			imgui.Tooltip('Y')
 			if imgui.BeginPopup('otklon') then
-				if imgui.Button(u8'Оставить репорт другому администратору', imgui.ImVec2(310, 25)) then
+				if imgui.Button(u8'Оставить репорт другому администратору (1)', imgui.ImVec2(350, 25)) or isKeyDown(VK_1) then
 					sampCloseCurrentDialogWithButton(0)
 				end
-				if imgui.Button(u8'Отклонить репорт полностью', imgui.ImVec2(310, 25)) then
+				if imgui.Button(u8'Отклонить репорт полностью (2)', imgui.ImVec2(350, 25)) or isKeyDown(VK_2) then
 					answer.otklon = true
+				end
+				imgui.EndPopup()
+			end
+			if imgui.BeginPopup('peredat') then
+				if imgui.Button(u8'Оставить репорт другому администратору (1)', imgui.ImVec2(350, 25)) or isKeyDown(VK_1) then
+					sampCloseCurrentDialogWithButton(0)
+				end
+				if imgui.Button(u8'Передать репорт (2)', imgui.ImVec2(350, 25)) or isKeyDown(VK_2) then
+					answer.peredamrep = true
 				end
 				imgui.EndPopup()
 			end
@@ -2090,7 +2105,7 @@ function imgui.OnDrawFrame()
 			end)
 		end
 		imgui.SameLine()
-		if imgui.Button(u8'Обновить') or (wasKeyPressed(VK_R) and not (sampIsChatInputActive() or sampIsDialogActive())) then
+		if (imgui.Button(u8'Обновить') or (wasKeyPressed(VK_R)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 			sampSendClickTextdraw(textdraw.refresh)
 			printStyledString('update...', 200, 4)
 			if cfg.settings.keysync then
@@ -2116,7 +2131,6 @@ function imgui.OnDrawFrame()
 		imgui.Begin(u8'Мой ответ', windows.custom_ans, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-		if imgui.IsWindowAppearing() then imgui.SetKeyboardFocusHere(-1) end
 		if wasKeyPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end
 		if not windows.fast_report.v then windows.custom_ans.v = false end
 		imgui.PushFont(fontsize)
@@ -2484,7 +2498,7 @@ function imgui.OnDrawFrame()
 	end
 end
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
-	if command:match('mute (.+) (.+) .+') and string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' then
+	if command:match('mute (.+) (.+) (.+)') and string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' then
 		if cfg.settings.forma_na_mute then
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
@@ -2496,13 +2510,12 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			end
 		end
 		if cfg.settings.smart_automute then
-			local id, second, reason = string.match(command,'(%d+) (%d+) (.+)') -- Узнаем ник наказуемого
-			if sampIsPlayerConnected(id) and not (reason:find('x(%d)') or reason:find('х(%d)')) then -- если игрок в сети
+			local _, id, second, reason = string.match(command,'(.+) (.+) (%d+) (.+)') -- Узнаем ник наказуемого
+			if tonumber(id) and sampIsPlayerConnected(id) and not reason:find('x(%d)') then -- если игрок в сети
 				local nick = string.gsub(sampGetPlayerNickname(id), '%p','') -- присваиваем переменной значение ника и удаляем символы пунктуации
 				for a,b in pairs(cfg.mute_players) do
 					if string.sub(a, 1, #nick) == nick and reason == string.sub(a, #nick+1) then -- Если ник найден в массиве уже наказанных, и причина совпадает
-						if b == 9 then b = 9 second = second * 9
-						else second = second * b end -- если не х10 ,то умножаем наказание
+						second = second * b
 						if second > 5000 then second = 5000 end
 						sampAddChatMessage(tag .. 'Данный игрок уже был наказан ранее, потому я увеличиваю наказание.', -1)
 						if string.sub(command, 1, 6) == '/rmute' then
@@ -2766,7 +2779,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		elseif text:match('Weapon hack %[code: 015%]') and not AFK then
 			if cfg.settings.find_warning_weapon_hack then
 				lua_thread.create(function()
-					while sampIsDialogActive() do wait(500) end
+					while sampIsDialogActive() do wait(1000) end
 					sampSendChat("/iwep " .. string.match(text, "%[(%d+)%]"))
 				end)
 				return false
@@ -2798,7 +2811,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				if not v:match('~g~') then 
 					textdraw.inforeport = id  -- инфо панель в реконе
 					lua_thread.create(function()
-						while not windows.recon_menu.v do wait(1) end
+						while not windows.recon_menu.v do wait(100) end
 						while windows.recon_menu.v do
 							inforeport = textSplit(sampTextdrawGetString(textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
 							if inforeport[3] ==   '-1'   then inforeport[3] = '-' end  --========= ХП АВТО
@@ -2819,24 +2832,23 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				textdraw.name_report = id
 				control_player_recon = tonumber(string.match(v, '%((%d+)%)')) -- ник игрока в реконе
 				lua_thread.create(function()
-					wait(1000)
-					while sampIsDialogActive() do wait(100) end
+					while sampIsDialogActive() do wait(1000) end
 					mobile_player = false
 					sampSendChat('/tonline ' .. control_player_recon)
 				end)
 			elseif v == 'STATS' then 
 				textdraw.stats = id
 				lua_thread.create(function()
-					while not (sampTextdrawIsExists(textdraw.close) and sampTextdrawIsExists(textdraw.name_report)) do wait(100) end
-					wait(1)
+					while not (sampTextdrawIsExists(textdraw.close) or sampTextdrawIsExists(textdraw.name_report)) do wait(100) end
+					wait(50)
 					windows.recon_menu.v = true
 					windows.menu_in_recon.v = true
 					imgui.Process = true
 					if cfg.settings.keysync then keysync(control_player_recon) end
 					sampTextdrawSetPos(textdraw.stats, 2000, 0) -- кнопка статистики
 					sampTextdrawSetPos(textdraw.refresh,2000,0) -- кнопка Refresh в реконе
-					sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информация о никнейме игрока
 					wait(300)
+					sampTextdrawSetPos(textdraw.name_report, 2000, 0) -- информация о никнейме игрока
 					sampTextdrawSetPos(textdraw.inforeport, 2000, 0) -- информация
 					sampTextdrawSetPos(textdraw.close, 2000, 0) -- кнопка закрытия рекона
 				end)
@@ -2851,7 +2863,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 	end
 end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- Работа с открытими ДИАЛОГАМИ
-	if text:match('Weapon') then
+	if button1 == 'Готово' then
 		lua_thread.create(function()
 			local text = textSplit(text, '\n')
 			for i = 1, #text - 1 do
@@ -2880,18 +2892,16 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 	elseif title == 'Mobile' and control_player_recon then -- проверка в сети ли игрок
 		lua_thread.create(function()
 			local text = textSplit(text, '\n')
-			for i = 6, #text - 1 do 
-				if text[i] == (sampGetPlayerNickname(control_player_recon)..'('..control_player_recon..')') then 
+			for i = 6, #text - 1 do
+				if text[i] == sampGetPlayerNickname(control_player_recon)..'('..control_player_recon..')' then
 					mobile_player = true 
-					break 
-				end 
+					break
+				end
 			end
 			wait(0)
 			sampCloseCurrentDialogWithButton(0)
 		end)
-	elseif dialogId == 3247 then -- /ahelp
-		lua_thread.create(function() windows.pravila.v = not windows.pravila.v imgui.Process = true wait(0) sampCloseCurrentDialogWithButton(0) end)
-	elseif cfg.settings.render_admins and title:find('Администрация проекта') then
+	elseif title == '{ff8587}Администрация проекта (онлайн)' and cfg.settings.render_admins then
 		admins = textSplit(text, '\n')
 		local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 		for i = 1, #admins - 1 do -- {FFFFFF}N.E.O.N(0) ({2E8B57}Мл.Администратор{FFFFFF}) | Уровень: {ff8587}6{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}
@@ -2984,7 +2994,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			sampSendDialogResponse(dialogId,1,0)
 		end)
 	elseif dialogId == 2350 then -- окно с возможностью принять или отклонить репорт
-		windows.fast_report.v = false
 		if not peremrep then
 			if answer.rabotay then peremrep = ('Начал(а) работу по вашей жалобе!')
 			elseif answer.slejy then
@@ -3021,6 +3030,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			elseif answer.otklon then 
 				sampSendDialogResponse(dialogId, 1, 2) 
 				sampCloseCurrentDialogWithButton(0)
+				windows.fast_report.v = false
 				return false
 			end
 		end
@@ -3038,15 +3048,17 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				if #(peremrep) < 4 then peremrep = peremrep .. '    ' end
 				if cfg.settings.custom_answer_save and answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
+				windows.fast_report.v = false
 				return false
 			end
 		end
+		windows.fast_report.v = false
 	elseif dialogId == 2351 and peremrep then -- окно с ответом на репорт
 		sampSendDialogResponse(dialogId, 1, _, peremrep)
 		sampCloseCurrentDialogWithButton(0)
 		buffer.text_ans.v = ''
 		lua_thread.create(function()
-			while sampIsDialogActive() do wait(100) end
+			while sampIsDialogActive() do wait(200) end
 			if answer.control_player then sampSendChat('/re ' .. autorid)
 			elseif answer.slejy then sampSendChat('/re ' .. reportid)
 			elseif answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
@@ -3103,7 +3115,7 @@ end
 function render_admins()
 	wait(5000)
 	while true do
-		while sampIsDialogActive() do wait(200) end
+		while sampIsDialogActive() do wait(1000) end
 		if not AFK then sampSendChat('/admins') end
 		wait(30000)
 	end
@@ -3111,8 +3123,8 @@ end
 
 function autoonline() 
 	while true do
-		wait(61000) 
-		while sampIsDialogActive() do wait(200) end 
+		wait(65000) 
+		while sampIsDialogActive() do wait(1000) end 
 		if not AFK then sampSendChat("/online") end 
 	end 
 end
@@ -3188,25 +3200,24 @@ function wait_accept_form()
 		while true do
 			wait(1)
 			if admin_form.bool and admin_form.timer and admin_form.sett then
-				timer = os.clock() - admin_form.timer 
-				if admin_form.probid then
-					if sampIsPlayerConnected(admin_form.probid) then renderFontDrawText(fonts, '{FFFFFF}Нажми U чтобы принять или J чтобы отклонить\nФорма: {F0E68C}' .. admin_form.forma .. '{FFFFFF}' .. ' на игрока '.. '{F0E68C}' .. admin_form.nickid .. '[' .. admin_form.probid .. ']'.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
-					else renderFontDrawText(fonts, '{FFFFFF}Нажми U чтобы принять или J чтобы отклонить\nФорма: {F0E68C}' .. admin_form.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF) end
-				else renderFontDrawText(fonts, '{FFFFFF}Нажми U чтобы принять или J чтобы отклонить\nФорма: {F0E68C}' .. admin_form.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF) end
+				timer = os.clock() - admin_form.timer
+				renderFontDrawText(fonts, '{FFFFFF}Обнаружена форма от администратора.\nНажми U, чтобы принять или J - чтобы отклонить\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
 				if timer>8 then break end
 			end
-			if wasKeyPressed(VK_U) and not (sampIsChatInputActive() or sampIsDialogActive()) then
-				if sampIsPlayerConnected(admin_form.idadmin) then
-					if not admin_form.styleform then wait(500) sampSendChat(admin_form.forma .. ' // ' .. sampGetPlayerNickname(admin_form.idadmin))
-					else wait(500) sampSendChat(admin_form.forma) end
-					wait(800)
-					sampSendChat('/a AT - Принято.')
-				else sampAddChatMessage(tag .. 'Администратор не в сети.', -1) end
-				break
-			end
-			if wasKeyPressed(VK_J) and not (sampIsChatInputActive() or sampIsDialogActive()) then
-				sampAddChatMessage(tag .. 'форма отклонена', -1)
-				break
+			if not (sampIsChatInputActive() or sampIsDialogActive()) then
+				if wasKeyPressed(VK_U) then
+					if sampIsPlayerConnected(admin_form.idadmin) then
+						if not admin_form.styleform then wait(500) sampSendChat(admin_form.forma .. ' // ' .. sampGetPlayerNickname(admin_form.idadmin))
+						else wait(500) sampSendChat(admin_form.forma) end
+						wait(800)
+						sampSendChat('/a AT - Принято.')
+					else sampAddChatMessage(tag .. 'Администратор не в сети.', -1) end
+					break
+				end
+				if wasKeyPressed(VK_J) then
+					sampAddChatMessage(tag .. 'форма отклонена', -1)
+					break
+				end
 			end
 		end
 		admin_form = {}
@@ -3237,7 +3248,7 @@ function binder_key()
 				end 
 			end
 		end
-		wait(30)
+		wait(40)
 	end
 end
 --============= Wallhack ==============--
@@ -3445,11 +3456,11 @@ function auto_update_recon()
 	if not start_update_recon then
 		start_update_recon = true
 		lua_thread.create(function()
-			wait(1000)
+			wait(1500)
 			while not doesCharExist(target) and windows.recon_menu.v do
 				sampSendClickTextdraw(textdraw.refresh)
 				printStyledString('auto - update...', 500, 4)
-				wait(1000)
+				wait(1500)
 				keysync(control_player_recon)
 			end
 			start_update_recon = false
@@ -3506,18 +3517,16 @@ end
 function keysync(playerId)
 	if playerId == "off" then
 		target = -1
-		return
 	else
 		playerId = tonumber(playerId)
 		if playerId ~= nil then
 			local pedExist, ped = sampGetCharHandleBySampPlayerId(playerId)
 			if pedExist then
 				target = ped
-				return true
 			end
-			return
 		end
 	end
+	return
 end
 function notify(title, text)
 	if plagin_notify then plagin_notify.addNotify(title, text, 2,1,12) end
