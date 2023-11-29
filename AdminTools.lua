@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.75 			 							-- Версия скрипта
+local version = 4.8 			 							-- Версия скрипта
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
 local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
@@ -70,9 +70,9 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		fast_key_addText = 'None',
 		fast_key_wallhack = 'None',
 		prefixh = '',
-		prefixma = '2E8B57',
-		prefixa = '87CEEB',
-		prefixsa = 'FF4500',
+		prefixma = '',
+		prefixa = '',
+		prefixsa = '',
 		autoprefix = true,
 		forma_na_ban = false,
 		forma_na_jail = false,
@@ -81,6 +81,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		add_mynick_in_form = false,
 		size_text_f6 = 12,
 		enter_report = true,
+		open_tool = 'F3',
 	},
 	customotvet = {},
 	myflood = {},
@@ -134,6 +135,7 @@ local checkbox = {
 	check_color_report 		= imgui.ImBool(cfg.settings.on_color_report),
 	checked_radio_button 	= imgui.ImInt(1),
 	custom_ans 				= imgui.ImInt(4),
+	new_binder_key 			= imgui.ImInt(1),
 	style_selected 			= imgui.ImInt(cfg.settings.style),
 	selected_item 			= imgui.ImInt(cfg.settings.size_adminchat),
 	option_find_log 		= imgui.ImInt(0),
@@ -144,7 +146,6 @@ local checkbox = {
 	check_answer_player_report = imgui.ImBool(cfg.settings.answer_player_report),
 	check_on_custom_recon_menu = imgui.ImBool(cfg.settings.on_custom_recon_menu),
 }
-
 ------=================== Ввод данных в ImGui окне ===================----------------------
 local buffer = {
 	text_ans 			= imgui.ImBuffer(256),
@@ -380,24 +381,13 @@ function main()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(1)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. '4.7.5' .. ']', 10, sh-20, 0xCCFFFFFF)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version['.. version .. ']', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
         wait(1)
 		if isPauseMenuActive() or isGamePaused() then AFK = true end
 		if AFK and not (isPauseMenuActive() or isGamePaused()) then AFK = false end
-		if wasKeyPressed(VK_F3) and not (sampIsDialogActive() or sampIsChatInputActive()) then  -- кнопка активации окна
-			windows.menu_tools.v = not windows.menu_tools.v
-			imgui.Process = true
-			if windows.recon_menu.v then 	-- активация курсора если рекон меню активно
-				lua_thread.create(function()
-					setVirtualKeyDown(70, true)
-					wait(150)
-					setVirtualKeyDown(70, false)
-				end)
-			end
-		end
 		if cfg.settings.wallhack and not AFK then
 			for i = 0, sampGetMaxPlayerId() do
 				if sampIsPlayerConnected(i) then
@@ -434,16 +424,16 @@ end
 function color() mcolor = '' math.randomseed( os.time() ) for i = 1, 6 do local b = math.random(1, 16) if b == 1 then mcolor = mcolor .. "A" elseif b == 2 then mcolor = mcolor .. "B" elseif b == 3 then mcolor = mcolor .. "C" elseif b == 4 then mcolor = mcolor .. "D" elseif b == 5 then mcolor = mcolor .. "E" elseif b == 6 then mcolor = mcolor .. "F" elseif b == 7 then mcolor = mcolor .. "0" elseif b == 8 then mcolor = mcolor .. "1" elseif b == 9 then mcolor = mcolor .. "2" elseif b == 10 then mcolor = mcolor .. "3" elseif b == 11 then mcolor = mcolor .. "4" elseif b == 12 then mcolor = mcolor .. "5" elseif b == 13 then mcolor = mcolor .. "6" elseif b == 14 then mcolor = mcolor .. "7" elseif b == 15 then mcolor = mcolor .. "8" elseif b == 16 then mcolor = mcolor .. "9" end end return mcolor end
 local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	ans = { 														-- с вариативностью есть доп/текст или нет
-		nv      =  		'/ans _ Игрок не в сети ',
-		cl      =  		'/ans _ Данный игрок чист. ',
-		pmv     =  		'/ans _ Помогли вам. Обращайтесь ещё ',
-		c       =  		'/ans _ Начал(а) работу над вашей жалобой. ',
-		dpr     =  		'/ans _ У игрока куплены функции за /donate ',
-		afk     =  		'/ans _ Игрок бездействует или находится в AFK ',
-		nak     =  		'/ans _ Игрок был наказан, спасибо за обращение. ',
-		n       =  		'/ans _ Не наблюдаю нарушений со стороны игрока. ',
-		fo      =  		'/ans _ Обратитесь с данной проблемой на форум https://forumrds.ru ',
-		rep     =  		'/ans _ Нашли нарушителя? Появился вопрос? Напишите /report! ',
+		nv      =  		'/ans _ Игрок не в сети',
+		cl      =  		'/ans _ Данный игрок чист.',
+		pmv     =  		'/ans _ Помогли вам. Обращайтесь ещё',
+		c       =  		'/ans _ Начал(а) работу над вашей жалобой.',
+		dpr     =  		'/ans _ У игрока куплены функции за /donate',
+		afk     =  		'/ans _ Игрок бездействует или находится в AFK',
+		nak     =  		'/ans _ Игрок был наказан, спасибо за обращение.',
+		n       =  		'/ans _ Не наблюдаю нарушений со стороны игрока.',
+		fo      =  		'/ans _ Обратитесь с данной проблемой на форум https://forumrds.ru',
+		rep     =  		'/ans _ Нашли нарушителя? Появился вопрос? Напишите /report!',
 	},
 	mute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
 		fd      =  		'/mute _ 120 Флуд',					--[[x10]]fd2='/mute _ 240 Флуд x2',fd3='/mute _ 360 Флуд x3',fd4='/mute _ 480 Флуд x4',fd5='/mute _ 600 Флуд x5',fd6='/mute _ 720 Флуд x6',fd7='/mute _ 840 Флуд x7',fd8='/mute _ 960 Флуд x8',fd9='/mute _ 1080 Флуд x9',fd10='/mute _ 1200 Флуд x10',
@@ -683,7 +673,7 @@ sampRegisterChatCommand('size_chat', function(param)
 	else sampAddChatMessage(tag.. 'Команда принимает значения от 8 до 18 (1 = выключить)', -1) end
 end)
 sampRegisterChatCommand('opencl', function(param)
-	windows.menu_chatlogger.v = true
+	windows.menu_chatlogger.v = not windows.menu_chatlogger.v
 	imgui.Process = true
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
@@ -705,16 +695,16 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.SetCursorPosX(120)
 		if imgui.Button(fa.ICON_ADDRESS_BOOK, imgui.ImVec2(30, 30)) then uu2() menu2[1] = true end imgui.SameLine()
-		if imgui.Button(fa.ICON_COGS, imgui.ImVec2(30, 30)) then uu2() menu2[3] = true end imgui.SameLine()
-		if imgui.Button(fa.ICON_PENCIL_SQUARE, imgui.ImVec2(30, 30)) then uu2() menu2[4] = true end imgui.SameLine()
-		if imgui.Button(fa.ICON_CALENDAR_CHECK_O, imgui.ImVec2(30, 30)) then uu2() menu2[5] = true end imgui.SameLine()
-		if imgui.Button(fa.ICON_RSS, imgui.ImVec2(30, 30)) then uu2() menu2[7] = true end imgui.SameLine()
-		if imgui.Button(fa.ICON_BOOKMARK, imgui.ImVec2(30, 30)) then uu2() menu2[2] = true end imgui.SameLine()
-		if imgui.Button(fa.ICON_CLOUD, imgui.ImVec2(30, 30)) then uu2() menu2[8] = true end
+		if imgui.Button(fa.ICON_COGS, imgui.ImVec2(30, 30)) then uu2() menu2[2] = true end imgui.SameLine()
+		if imgui.Button(fa.ICON_PENCIL_SQUARE, imgui.ImVec2(30, 30)) then uu2() menu2[3] = true end imgui.SameLine()
+		if imgui.Button(fa.ICON_CALENDAR_CHECK_O, imgui.ImVec2(30, 30)) then uu2() menu2[4] = true end imgui.SameLine()
+		if imgui.Button(fa.ICON_RSS, imgui.ImVec2(30, 30)) then uu2() menu2[5] = true end imgui.SameLine()
+		if imgui.Button(fa.ICON_BOOKMARK, imgui.ImVec2(30, 30)) then uu2() menu2[6] = true end imgui.SameLine()
+		if imgui.Button(fa.ICON_CLOUD, imgui.ImVec2(30, 30)) then uu2() menu2[7] = true end
         imgui.Separator()
         imgui.NewLine()
         imgui.SameLine(2)
-		if menu2[1] then
+		if menu2[1] then -- основной мультивыбор
 			imgui.SetCursorPosX(8)
 			if imadd.ToggleButton("##autoonline", checkbox.check_autoonline) then
 				if cfg.settings.autoonline then
@@ -739,6 +729,8 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Перевод команд')
 			if imadd.ToggleButton("##WallHack", checkbox.check_WallHack) then
 				if cfg.settings.wallhack then off_wallhack() else on_wallhack() end
+				cfg.settings.wallhack = not cfg.settings.wallhack
+				save()
 			end
 			imgui.SameLine()
 			imgui.Text('WallHack')
@@ -1036,11 +1028,8 @@ function imgui.OnDrawFrame()
 			if imgui.Link("https://vk.com/club222702914", u8"Нажми, чтобы открыть ссылку в браузере") then
 				os.execute(('explorer.exe "%s"'):format("https://vk.com/club222702914"))
 			end
-			imgui.Text(u8'Есть предложения по улучшению проекта?')
-			imgui.Text(u8'Произошёл баг или краш скрипта?')
-			imgui.Text(u8'Отправляй скрин в VK (Ё ~) или файл moonloader/moonloader.log')
 		end
-		if menu2[3] then
+		if menu2[2] then -- мульти выбор
 			imgui.SetCursorPosX(8)
 			imgui.CenterText(u8'Дополнительный текст команд')
 			imgui.PushItemWidth(485)
@@ -1139,7 +1128,7 @@ function imgui.OnDrawFrame()
 			imgui.SameLine()
 			if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(228, 24)) then ScriptExport() end
 		end
-		if menu2[4] then
+		if menu2[3] then -- блокнот
 			buffer.bloknotik.v = string.gsub(buffer.bloknotik.v, "\\n", "\n")
 			if imgui.InputTextMultiline("##1", buffer.bloknotik, imgui.ImVec2(495, 500)) then
 				buffer.bloknotik.v = string.gsub(buffer.bloknotik.v, "\n", "\\n")
@@ -1147,19 +1136,22 @@ function imgui.OnDrawFrame()
 				save()	
 			end
 		end
-		if menu2[5] then
+		if menu2[4] then -- быстрые клавиши
 			imgui.SetCursorPosX(8)
 			imgui.NewInputText('##SearchBar7', buffer.new_binder_key, 485, u8'Текст биндера', 2)
+			imgui.PushItemWidth(485)
+			imgui.Combo("##Метод отправки", checkbox.new_binder_key, {u8"Отправить серверу", u8"Отправить клиенту", u8"Добавить в поле ввода"}, 3)
+			imgui.PopItemWidth()
 			if imgui.Button(u8'Добавить', imgui.ImVec2(250,24)) and #(u8:decode(buffer.new_binder_key.v)) ~= 0 then
-				if getDownKeysText() then
-					cfg.binder_key[getDownKeysText()] = u8:decode(buffer.new_binder_key.v)
+				if getDownKeysText() and not getDownKeysText():find('+') then
+					cfg.binder_key[getDownKeysText()] = checkbox.new_binder_key.v ..'\\n'.. u8:decode(buffer.new_binder_key.v)
 					save()
-				else sampAddChatMessage(tag .. 'Зажмите клавишу, на которую хотите сохранить биндер', -1) end
+				end
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Удалить', imgui.ImVec2(228,24)) and #(u8:decode(buffer.new_binder_key.v)) ~= 0 then
 				for k,v in pairs(cfg.binder_key) do
-					if u8:decode(buffer.new_binder_key.v) == v then
+					if (u8:decode(buffer.new_binder_key.v) == string.sub(v, 4)) then
 						cfg.binder_key[k] = nil
 						save()
 						sampAddChatMessage(tag .. 'Биндер удален.', -1)
@@ -1167,6 +1159,20 @@ function imgui.OnDrawFrame()
 				end 
 			end
 			imgui.Separator()
+			imgui.CenterText(u8'Открытие меню AT:')
+			imgui.SameLine()
+			imgui.Text(u8(cfg.settings.open_tool))
+			if imgui.Button(u8"Сoxpaнить.", imgui.ImVec2(250, 24)) then
+				if getDownKeysText() and not getDownKeysText():find('+') then
+					cfg.settings.open_tool = getDownKeysText()
+					save()
+				end
+			end
+			imgui.SameLine()
+			if imgui.Button(u8'Сброcить', imgui.ImVec2(228,24)) then
+				cfg.settings.open_tool = 'None'
+				save()
+			end
 			imgui.CenterText(u8'Открытие репорта:')
 			imgui.SameLine()
 			imgui.Text(u8(cfg.settings.fast_key_ans))
@@ -1177,7 +1183,7 @@ function imgui.OnDrawFrame()
 				end
 			end
 			imgui.SameLine()
-			if imgui.Button(u8'Сброcить', imgui.ImVec2(228,24)) then
+			if imgui.Button(u8'Сбрocить', imgui.ImVec2(228,24)) then
 				cfg.settings.fast_key_ans = 'None'
 				save()
 			end
@@ -1195,35 +1201,21 @@ function imgui.OnDrawFrame()
 				cfg.settings.fast_key_addText = 'None'
 				save()
 			end
-			imgui.CenterText(u8"Вкл/выкл WallHack")
-			imgui.SameLine()
-			imgui.Text(u8(cfg.settings.fast_key_wallhack))
-			if imgui.Button(u8"Coxрaнить. ", imgui.ImVec2(250, 24)) then
-				if getDownKeysText() and not getDownKeysText():find('+') then
-					cfg.settings.fast_key_wallhack = getDownKeysText()
-					save()
-				end
-			end
-			imgui.SameLine()
-			if imgui.Button(u8'Сбрoсить', imgui.ImVec2(228,24)) then
-				cfg.settings.fast_key_wallhack = 'None'
-				save()
-			end
 			imgui.Separator()
 			imgui.CenterText(u8'[Мои быстрые клавиши]')
 			for k, v in pairs(cfg.binder_key) do
-				imgui.Text(u8('[Клавиша '..k..'] ='))
+				imgui.Text(u8('[Клавиша '..k..'] = '))
 				imgui.Tooltip(u8'Нажми, чтобы удалить')
 				if imgui.IsItemClicked(0) then
 					cfg.binder_key[k] = nil
 					save()
 				end
 				imgui.SameLine()
-				imgui.Text(u8(v))
+				imgui.Text(u8(string.sub(v, 4)))
 			end
 			imgui.SetCursorPosY(475)
-			if getDownKeysText() then imgui.Text(u8'Зажата клавиша: ' .. getDownKeysText())
-			else imgui.Text(u8'Нет зажатых клавиш') end
+			if getDownKeysText() and not getDownKeysText():find('+') then imgui.Text(u8'Зажата клавиша: ' .. getDownKeysText())
+			else imgui.Text(u8'Нет зажатой клавиши') end
 			imgui.SameLine()
 			imgui.SetCursorPosX(253)
 			if imgui.Button(u8"Сбросить значения моих клавиш") then
@@ -1231,7 +1223,7 @@ function imgui.OnDrawFrame()
 				save()
 			end
 		end
-		if menu2[7] then
+		if menu2[5] then -- флуды
 			imgui.SetCursorPosX(50)
 			if imgui.Button(u8'Мои флуды', imgui.ImVec2(410, 25)) then
 				windows.new_flood_mess.v = not windows.new_flood_mess.v 
@@ -1459,7 +1451,7 @@ function imgui.OnDrawFrame()
 				sampSendChat('/mess 8 --------===================| Мероприятие Догонялки |================-----------')
 			end
 		end
-		if menu2[2] then
+		if menu2[6] then -- быстрые ответы
 			imgui.SetCursorPosX(125)
 			if imgui.Button(u8'Добавить мой ответ', imgui.ImVec2(250, 24)) and #(buffer.custom_answer.v) > 1 then
 				if #(buffer.custom_answer.v) < 80 then
@@ -1480,7 +1472,7 @@ function imgui.OnDrawFrame()
 				imgui.Tooltip(u8'Нажми, чтобы удалить ответ.')
 			end
 		end
-		if menu2[8] then
+		if menu2[7] then -- автомут, быстрые команды, стиль имгуи
 			imgui.SetCursorPosX(10)
 			imgui.Checkbox('##celoeslovo', checkbox.add_full_words)
 			imgui.Tooltip(u8'Вкл = добавление исключительно целого слова, а не ключевых')
@@ -2744,7 +2736,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			if cfg.settings.render_admins then return false end
 		elseif text:match("(.+)%((%d+)%) пытался написать в чат: ") and not AFK then
 			sampAddChatMessage('',-1)
-			sampAddChatMessage(text,0xff6347) -- чтобы не пропускали такие сообщения
+			sampAddChatMessage(text, 0xff6347) -- чтобы не пропускали такие сообщения
 			sampAddChatMessage('',-1)
 			return false
 		elseif text:match("Администратор (.+) заткнул%(.+%) игрока (.+) на (.+) секунд. Причина:") then
@@ -2816,7 +2808,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				if not v:match('~g~') then 
 					textdraw.inforeport = id  -- инфо панель в реконе
 					lua_thread.create(function()
-						while not windows.recon_menu.v do wait(0) end
+						while not windows.recon_menu.v do wait(1) end
 						while windows.recon_menu.v do
 							inforeport = textSplit(sampTextdrawGetString(textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
 							if inforeport[3] ==   '-1'   then inforeport[3] = '-' end  --========= ХП АВТО
@@ -2928,7 +2920,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			end
 			if cfg.settings.autoprefix then
 				local lvl, rang, id = tonumber(lvl), string.gsub(rang, '{%w%w%w%w%w%w}', ''), tonumber(id)
-				if not management_team then if id == myid and lvl == 18 and rang ~= 'Ст.Администратор' then management_team = true end
+				if not management_team then if id == myid and lvl == 18 and rang ~= 'Ст.Администратор' then print('Вы - руководящий состав') management_team = true end
 				elseif id ~= myid then
 					for i = 1, #(cfg.render_admins_exception) do if cfg.render_admins_exception[i] == sampGetPlayerNickname(id) then  exception_admin = true end end
 					if not exception_admin then
@@ -3115,21 +3107,22 @@ function log(text) -- записываем лог
 	local data_today = os.date("*t") -- узнаем дату сегодня
 	local log = (getWorkingDirectory()..'\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 	local file = io.open(log,"a")
-	if file then file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(text, 3)..'\n') file:close() end
+	if file~=nil then file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(text, 3)..'\n') file:close() end
 end
 
 
 function uu() -- для вкладок
-    for i = 0,2 do menu[i] = false end
+    for i = 0,1 do menu[i] = false end
 end
 function uu2() -- для вкладок
-    for i = 0,10 do menu2[i] = false end
+    for i = 0,6 do menu2[i] = false end
 end
 function render_admins()
+	wait(5000)
 	while true do
-		wait(30000)
 		while sampIsDialogActive() do wait(200) end
 		if not AFK then sampSendChat('/admins') end
+		wait(30000)
 	end
 end
 
@@ -3146,6 +3139,8 @@ function translite(text)
 end
 function inputChat()
 	local font = renderCreateFont("Calibri", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW)
+	local _, pID = sampGetPlayerIdByCharHandle(playerPed) -- myid
+	local name = sampGetPlayerNickname(--[[int]] pID) -- mynick
 	while true do
 		wait(5)
 		if sampIsChatInputActive() then
@@ -3168,8 +3163,7 @@ function inputChat()
 			local in1 = getStructElement(in1, 0x8, 4)
 			local in2 = getStructElement(--[[int]] in1, --[[int]] 0x8, --[[int]] 4)
 			local in3 = getStructElement(--[[int]] in1, --[[int]] 0xC, --[[int]] 4)
-			local _, pID = sampGetPlayerIdByCharHandle(playerPed) -- myid
-			local name = sampGetPlayerNickname(--[[int]] pID) -- mynick
+
 			local ping = sampGetPlayerPing(--[[int]] pID) -- ping
 			local caps = (ffi.load("user32")).GetKeyState(0x14) -- Код клавиши CapsLock
 
@@ -3218,7 +3212,7 @@ function wait_accept_form()
 				else renderFontDrawText(fonts, '{FFFFFF}Нажми U чтобы принять или J чтобы отклонить\nФорма: {F0E68C}' .. admin_form.forma.. '{FFFFFF}' .. '\nВремени на раздумья 8 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF) end
 				if timer>8 then break end
 			end
-			if wasKeyPressed(VK_U) and not sampIsChatInputActive() and not sampIsDialogActive() then
+			if wasKeyPressed(VK_U) and not (sampIsChatInputActive() or sampIsDialogActive()) then
 				if sampIsPlayerConnected(admin_form.idadmin) then
 					if not admin_form.styleform then wait(500) sampSendChat(admin_form.forma .. ' // ' .. sampGetPlayerNickname(admin_form.idadmin))
 					else wait(500) sampSendChat(admin_form.forma) end
@@ -3227,7 +3221,7 @@ function wait_accept_form()
 				else sampAddChatMessage(tag .. 'Администратор не в сети.', -1) end
 				break
 			end
-			if wasKeyPressed(VK_J) and not sampIsChatInputActive() and not sampIsDialogActive() then
+			if wasKeyPressed(VK_J) and not (sampIsChatInputActive() or sampIsDialogActive()) then
 				sampAddChatMessage(tag .. 'форма отклонена', -1)
 				break
 			end
@@ -3237,16 +3231,33 @@ function wait_accept_form()
 end
 function binder_key()
 	while true do
-		if not (sampIsChatInputActive() or sampIsDialogActive() or windows.menu_tools.v or windows.answer_player_report.v or windows.fast_report.v or AFK) then
-			if wasKeyPressed(strToIdKeys(cfg.settings.fast_key_ans)) then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0)
-			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_addText)) then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport) sampSetChatInputEnabled(true)
-			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_wallhack)) then sampProcessChatInput("/wh") end
-			for k,v in pairs(cfg.binder_key) do if wasKeyPressed(strToIdKeys(k)) then sampSendChat(v) end end
+		if not (sampIsChatInputActive() or sampIsDialogActive() or windows.answer_player_report.v or windows.fast_report.v or AFK) then
+			if wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then  -- кнопка активации окна
+				windows.menu_tools.v = not windows.menu_tools.v
+				imgui.Process = true
+				if windows.recon_menu.v then 	-- активация курсора если рекон меню активно
+					lua_thread.create(function()
+						setVirtualKeyDown(70, true)
+						wait(150)
+						setVirtualKeyDown(70, false)
+					end)
+				end
+			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_ans)) and not windows.menu_tools.v then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0)
+			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_addText)) and not windows.menu_tools.v then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport) sampSetChatInputEnabled(true)
+			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_wallhack)) and not windows.menu_tools.v then sampProcessChatInput("/wh") end
+			for k,v in pairs(cfg.binder_key) do 
+				if wasKeyPressed(strToIdKeys(k)) and not windows.menu_tools.v then
+					local check_v, v = string.match(v, '(%d)\\n(.+)')
+					if check_v == '0' then sampSendChat(v)
+					elseif check_v == '1' then sampProcessChatInput(v)
+					elseif check_v == '2' then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. v) sampSetChatInputEnabled(true) end
+				end 
+			end
 		end
-		wait(1)
+		wait(30)
 	end
 end
---============= Wallhack + RGB color ==============--
+--============= Wallhack ==============--
 function on_wallhack() -- Включение WallHack (свойства)
 	local pStSet = sampGetServerSettingsPtr();
 	NTdist = mem.getfloat(pStSet + 39)
@@ -3255,17 +3266,15 @@ function on_wallhack() -- Включение WallHack (свойства)
 	mem.setfloat(pStSet + 39, 500.0)
 	mem.setint8(pStSet + 47, 0)
 	mem.setint8(pStSet + 56, 1)
-	nameTag = true
 end
 function off_wallhack() -- Выключение WallHack (свойства)
 	local pStSet = sampGetServerSettingsPtr();
 	mem.setfloat(pStSet + 39, 30)
 	mem.setint8(pStSet + 47, 0)
 	mem.setint8(pStSet + 56, 1)
-	nameTag = false
 end
--------================= Определяем нажатую клавишу, инициализируем её свойства ============------------------------
 
+---============ render admin chat and ears chat ================--
 function render_text()
 	while true do
 		wait(1)
@@ -3280,6 +3289,7 @@ function render_text()
 	end
 end
 
+---============ подзагрузка важных файлов ================-----
 function start_my_answer()
 	if start_download then sampAddChatMessage('Процесс загрузки уже идёт.', -1)
 	else
@@ -3404,7 +3414,6 @@ mimgui.OnFrame(
 					KeyCap("D", (keys[plState]["D"] ~= nil), mimgui.ImVec2(30, 30))
 				mimgui.EndGroup()
 				mimgui.SameLine(nil, 20)
-
 				if plState == "onfoot" then
 					mimgui.BeginGroup()
 						KeyCap("Shift", (keys[plState]["Shift"] ~= nil), mimgui.ImVec2(75, 30)); mimgui.SameLine()
