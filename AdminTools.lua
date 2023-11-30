@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.83 			 							-- Версия скрипта
+local version = 4.85 			 							-- Версия скрипта
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
 local sampev		 	= require 'lib.samp.events'					-- Считывание текста из чата
@@ -359,7 +359,7 @@ function main()
 		local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
 		while true do 
 			wait(3)
-			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version[4.8.3]', 10, sh-20, 0xCCFFFFFF)
+			renderFontDrawText(font_watermark, tag .. '{A9A9A9}version[4.8.5]', 10, sh-20, 0xCCFFFFFF)
 		end	
 	end)
 	while true do
@@ -668,16 +668,20 @@ sampRegisterChatCommand('update', function()
 			while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
 			local _, button, _, _ = sampHasDialogRespond(1111)
 			if button == 1 then
-				local text = ''
-				if update_main then text = text..'AdminTools\n' end
-				if update_fs then text = text .. 'FastSpawn\n' end
-				if update_mp then text = text .. 'Мероприятия\n' end
-				sampShowDialog(1111, "Выберите, что хотите обновить", text, "Выбрать", nil, DIALOG_STYLE_LIST);
+				local text = {[0] = '\n', [1] = '\n', [2] = ''}
+				if update_main then text[0] = 'AdminTools\n' end
+				if update_fs then text[1] = 'FastSpawn\n' end
+				if update_mp then text[2] = 'Мероприятия' end
+				sampShowDialog(1111, "Выберите, что хотите обновить", (text[0]..text[1]..text[2]), "Выбрать", nil, DIALOG_STYLE_LIST);
 				while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
 				local _, _, button, _ = sampHasDialogRespond(1111)
-				if button == 0 then update('main')
+				if button == 0 then
+					if text[0] ~= '\n' then update('main') end
 				elseif button == 1 then update('fs')
-				elseif button == 2 then update('mp') end
+					if text[1] ~= '\n' then update('fs') end
+				elseif button == 2 then update('mp')
+					if text[2] ~= '' then update('mp') end
+				end
 			end
 		else 
 			sampShowDialog(1111, "", "Обновлений не обнаружено, у вас актуальная версия.\nЖелаете переустановить пакет AT?", "Да", "Нет", DIALOG_STYLE_MSGBOX) -- сам диалог
