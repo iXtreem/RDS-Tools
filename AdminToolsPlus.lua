@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1.1
+local version = 1
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -81,6 +81,7 @@ function main()
 			os.remove(getWorkingDirectory() .. "//AdminToolsPlus.ini")
 		end
     end)
+	wait(500)
 	if update_state then
 		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.lua", thisScript().path, function(id, status)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
@@ -99,6 +100,7 @@ function main()
 		elseif AFK and not (isPauseMenuActive() or isGamePaused()) then AFK = false end
 	end
 end
+
 function imgui.OnDrawFrame()
 	if not main_window_state.v and not secondary_window_state.v and not dektor_window_state.v then
 		imgui.Process = false
