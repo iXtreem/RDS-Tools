@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1
+local version = 1.1
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -95,8 +95,8 @@ function main()
 	sampAddChatMessage(tag .. 'Скрипт инициализирован. Активация: /atp', -1)
 	while true do
 		wait(100)
-		if isPauseMenuActive() or isGamePaused() then AFK = true end
-		if AFK and not (isPauseMenuActive() or isGamePaused()) then AFK = false end
+		if isPauseMenuActive() or isGamePaused() then AFK = true
+		elseif AFK and not (isPauseMenuActive() or isGamePaused()) then AFK = false end
 	end
 end
 function imgui.OnDrawFrame()
@@ -252,12 +252,12 @@ function imgui.OnDrawFrame()
 					end
 					buffer.text_buffer.v = buffer.text_buffer.v .. '---------------------------------------------\n'
 					for _,k in pairs(topadm) do
-						countball = string.sub(string.match(string.sub(k, -7), '%S+$'), 1, -4) -- КОЛ-ВО БАЛЛОВ
 						nick = string.gsub(string.sub(k, 1, -4), '%s%s', '')-- LONDON = 100
 						peremball = tonumber(string.match(string.sub(nick, -5), '%d[%d.,]*'))
 						nick = string.gsub(nick, '= (%d+)', '')
-						if tonumber(buffer.text_buffer2.v) <= tonumber(countball) and  tonumber(buffer.text_buffer3.v) >= tonumber(countball) then
+						if (tonumber(buffer.text_buffer2.v) <= peremball) and (peremball <= tonumber(buffer.text_buffer3.v)) then
 							for k,v in pairs(offadmins) do
+								
 								peremlvl = tonumber(string.match(string.sub(v,-3), '%d[%d.,]*'))
 								v = string.gsub(v, '=(%d+)', '')
 								nick = string.gsub(nick, '=(%d+)', '')
@@ -271,6 +271,7 @@ function imgui.OnDrawFrame()
 										k,v = nil, nil
 									end
 								end
+								
 								if v then
 									if v:find(nick) or v:find(string.sub(nick,1,-2)) then -- записываем в конфиг информацию о Кае
 										for d,s in pairs(kai) do -- защита от повторного открытия списка, удаляем повторяшек
@@ -304,6 +305,7 @@ function imgui.OnDrawFrame()
 											kai[#kai + 1] = 'Кай снять пред 2 ' .. nick_kai
 										end
 										if tonumber(peremlvl) ~= 18 then -- Записываем информацию о /makeadmin и выводим инфу
+											
 											if newlvl ~= 'Skip' then
 												if tonumber(newlvl) + tonumber(peremlvl) > 18 then
 													newnewlvl = tonumber(newlvl) - 1
@@ -333,7 +335,7 @@ function imgui.OnDrawFrame()
 						for k,v in pairs(offadmins) do
 							v = string.gsub(string.gsub(v,'=(.+)', ''), '%s', '')
 							for d,s in pairs(topadm) do 
-								s = string.gsub(string.gsub(s, '= (.+)', ''), '%s', '')	
+								s = string.gsub(string.gsub(s, '= (.+)', ''), '%s', '')
 								if v:match(s) then 
 									a = true 
 								end 
@@ -627,41 +629,6 @@ sampRegisterChatCommand('newadm', function(param)
 			sampAddChatMessage(tag .. 'Выбранный вами администратор - ' .. param .. ' был успешно добавлен в исключения', -1)
 			a = nil
 		end
-	end
-end)
-sampRegisterChatCommand('prfma', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Мл.Администратор " .. cfg.settings.prefixma)
-	end
-end)
-sampRegisterChatCommand('prfa', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Администратор " .. cfg.settings.prefixa)
-	end
-end)
-sampRegisterChatCommand('prfsa', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Ст.Администратор " .. cfg.settings.prefixsa)
-	end
-end)
-sampRegisterChatCommand('prfpga', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Помощник.Глав.Администратора " .. color())
-	end
-end)
-sampRegisterChatCommand('prfzga', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Зам.Глав.Администратора " .. color())
-	end
-end)
-sampRegisterChatCommand('prfga', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Главный-Администратор " .. color())
-	end
-end)
-sampRegisterChatCommand('prfcpec', function(param) 
-	if(param:match("(%d+)")) then
-		sampSendChat("/prefix " .. param .. " Спец.Администратор " .. color())
 	end
 end)
 sampRegisterChatCommand('atp', function()
