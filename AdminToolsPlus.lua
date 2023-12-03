@@ -3,11 +3,11 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1
+local version = 1.1
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
-u8 = encoding.UTF8 
+local u8 = encoding.UTF8 
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local dektor_window_state = imgui.ImBool(false)
@@ -38,9 +38,6 @@ local cfg = inicfg.load({
 inicfg.save(cfg, 'AT//ATPlus.ini')
 
 local buffer = {
-	PrefixMa = imgui.ImBuffer(cfg.settings.prefixma, 256),
-	PrefixA = imgui.ImBuffer(cfg.settings.prefixa, 256),
-	PrefixSa = imgui.ImBuffer(cfg.settings.prefixsa, 256),
 	text_buffer = imgui.ImBuffer(16384),
 	text_buffer2 = imgui.ImBuffer(1024),
 	text_buffer3 = imgui.ImBuffer(1024),
@@ -81,7 +78,7 @@ function main()
 			os.remove(getWorkingDirectory() .. "//AdminToolsPlus.ini")
 		end
     end)
-	wait(500)
+	wait(1000)
 	if update_state then
 		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.lua", thisScript().path, function(id, status)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
