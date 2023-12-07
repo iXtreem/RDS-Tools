@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.91 			 							-- Версия скрипта
+local version = 4.92 			 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -455,25 +455,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		n       =  		'/ans _ Нарушений со стороны игрока не наблюдается.',
 		fo      =  		'/ans _ Обратитесь с данной проблемой на форум https://forumrds.ru',
 		rep     =  		'/ans _ Нашли нарушителя? Появился вопрос? Напишите /report!',
-		ps 		= 		'/ans _ Доброго времени суток, вам необходима команда /passive',
-		st 		= 		'/ans _ Доброго времени суток, для просмотра статистики используйте /statpl',
-		tn		=		'/ans _ Приобрести тюнинг на ваше персональное авто можно в /tp - разное - автозапчасти.',
-		tx 		= 		'/ans _ Обратитесь в тех.раздел на нашем форуме https://forumrds.ru/',
 		sl  	=		'/ans _ Слежу за данным игроком!',
-		bk  	= 		'/ans _ Оплатить дом/бизнес/отель можно в любом из банков /bank',
-		vp 		=		'/ans _ Ознакомиться с преимуществами VIP или его приобретением можно в /help - VIP.',
-		lv 		= 		'/ans _ /leave - организация; /gleave - банда; /fleave - семья.',
-		yes 	= 		'/ans _ Совершенно верно.',
-		no		=		'/ans _ К сожалению, это не так.',
-		tk		=		'/ans _ Имеется несколько способ передачи игровой валюты.\n'..
-						'/ans _ /giverub - рубли /givecoin - коины, /givescore - очки, /givemoney - вирты.',
-		cs		= 		'/ans _ Личное казино приобретается в /donate - донат-рубли - личное казино\n'..
-					   	'/ans _ По умолчанию казино приносит 8 рублей в пейдей и прочие плюшки если прокачаны столы\n'..
-						'/ans _ Но его можно улучшить в панели /cpanel и прибыль будет увеличена до 16 рублей.\n'..
-						'/ans _ Общая стоимость прокачки казино около 3000 донат-рублей, без налогов.',
-		bkp		= 		'/ans _ Личный банк можно приобрести в /donate - донат-рубли - собственный банк\n'..
-						'/ans _ Стоимость личного банка 2000 донат-рублей, оплачивать налоги не нужно.\n'..
-						'/ans _ Каждый PayDay будет приносить по 10 донат-рублей.',
 		al 		=		'/ans _ Здравствуйте! Вы забыли ввести /alogin !\n'..
 						'/ans _ Введите /alogin и свой пароль, пожалуйста.',
 	},
@@ -740,6 +722,21 @@ sampRegisterChatCommand('atr', function()
 	if not atr then sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы{32CD32} включили режим TakeReport.', 0x32CD32)
 	else sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32) end
 	atr = not atr
+end)
+sampRegisterChatCommand('h', function(param)
+	if windows.fast_report.v or windows.help_ans.v or sampIsDialogActive() then return end
+	if param:match('(%d+)') then
+		local control = param:match('(%d+)')
+		if sampIsPlayerConnected(control_id) then
+			lua_thread.create(function()
+				control_id = control
+				windows.help_ans.v = true
+				imgui.Process = true
+				while windows.help_ans.v do wait(500) end
+				control_id = nil
+			end)
+		else sampAddChatMessage(tag .. 'Данный игрок в сети не обнаружен.', -1) end
+	else sampAddChatMessage(tag .. 'ID игрока не обнаружен или указан неверно.', -1) end
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
@@ -2509,6 +2506,44 @@ function imgui.OnDrawFrame()
 				if string.rlower(chatlog_3[i]):find(string.rlower(u8:decode(buffer.find_log.v))) then
 					imgui.Text(u8(chatlog_3[i]))
 					if imgui.IsItemClicked(0) then setClipboardText(chatlog_3[i]) sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) end
+				end
+			end
+		end
+		imgui.PopFont()
+		imgui.End()
+	end
+	if windows.help_ans.v then
+		imgui.ShowCursor = true
+		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowSize(imgui.ImVec2(700,600), imgui.Cond.FirstUseEver)
+		imgui.Begin(u8'Ответ игроку', windows.help_ans, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
+		if imgui.IsWindowAppearing() then imgui.SetKeyboardFocusHere(-1) end
+		if wasKeyPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end
+		imgui.PushFont(fontsize)
+		if sampIsPlayerConnected(control_id) then
+		imgui.CenterText(u8'Какой ответ вы хотите отправить игроку ' .. sampGetPlayerNickname(control_id) .. '['..control_id..'] ?')
+		else sampAddChatMessage(tag .. 'Игрок вышел из сети.', -1) windows.help_ans.v = false end
+		imgui.NewInputText('##SearchBar', buffer.text_ans, 690, u8'Введите ваш ответ.', 2)
+		imgui.Tooltip('Space')
+		local find = string.rlower(u8:decode(buffer.text_ans.v))
+		if imgui.Checkbox(u8"При нажатии на Enter отправить сохраненный ответ", checkbox.button_enter_in_report) then
+			cfg.settings.enter_report = not cfg.settings.enter_report
+			save()
+		end
+		for k,v in pairs(cfg.customotvet) do
+			if string.rlower(v):find(find) or string.rlower(v):find(translateText(find)) then
+				if cfg.settings.enter_report then
+					if imgui.Button( u8(v) ) or wasKeyPressed(VK_RETURN) then
+						windows.help_ans.v = false
+						sampSendChat('/ans ' .. control_id ..' '.. v)
+						break
+					end
+				else
+					if imgui.Button( u8(v) ) then
+						windows.help_ans.v = false
+						sampSendChat('/ans ' .. control_id ..' '.. v)
+					end
 				end
 			end
 		end
