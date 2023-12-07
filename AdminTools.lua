@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.92 			 							-- Версия скрипта
+local version = 4.91 			 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -3256,14 +3256,13 @@ function binder_key()
 					end)
 				end
 			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_ans)) and not windows.menu_tools.v then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0)
-			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_addText)) and not windows.menu_tools.v then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport) sampSetChatInputEnabled(true)
-			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_wallhack)) and not windows.menu_tools.v then sampProcessChatInput("/wh") end
+			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_addText)) and not windows.menu_tools.v then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport) sampSetChatInputEnabled(true) end
 			for k,v in pairs(cfg.binder_key) do 
 				if wasKeyPressed(strToIdKeys(k)) and not windows.menu_tools.v then
 					local check_v, v = string.match(v, '(%d)\\n(.+)')
 					if check_v == '0' then sampSendChat(v)
 					elseif check_v == '1' then sampProcessChatInput(v)
-					elseif check_v == '2' then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. v) sampSetChatInputEnabled(true) end
+					elseif check_v == '2' then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. v .. ' ') sampSetChatInputEnabled(true) end
 				end 
 			end
 		end
