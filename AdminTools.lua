@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.91 			 							-- Версия скрипта
+local version = 4.92 			 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -695,7 +695,7 @@ sampRegisterChatCommand('update', function()
 			while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
 			local _, button, _, _ = sampHasDialogRespond(1111)
 			if button == 1 then
-				local text = {[0] = '\n', [1] = '\n', [2] = ''}
+				local text = {[0] = '-\n', [1] = '-\n', [2] = '-'}
 				if update_main then text[0] = 'AdminTools\n' end
 				if update_fs then text[1] = 'FastSpawn\n' end
 				if update_mp then text[2] = 'Мероприятия' end
@@ -703,11 +703,11 @@ sampRegisterChatCommand('update', function()
 				while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
 				local _, _, button, _ = sampHasDialogRespond(1111)
 				if button == 0 then
-					if text[0] ~= '\n' then update('main') end
+					if text[0] ~= '-\n' then update('main') end
 				elseif button == 1 then update('fs')
-					if text[1] ~= '\n' then update('fs') end
+					if text[1] ~= '-\n' then update('fs') end
 				elseif button == 2 then update('mp')
-					if text[2] ~= '' then update('mp') end
+					if text[2] ~= '-' then update('mp') end
 				end
 			end
 		else 
@@ -3138,6 +3138,7 @@ function update(param)
 		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
+				reloadScripts()
 			end 
 		end)
 	end
