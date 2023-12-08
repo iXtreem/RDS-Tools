@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.8
+local version = 1.9
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local my_lib = require 'my_lib'
@@ -287,6 +287,7 @@ function imgui.OnDrawFrame()
         end
         if imgui.Button(u8'Выдать приз', imgui.ImVec2(200, 30)) then
             windows.menu_window_state.v = false
+            showCursor(false,false)
             lua_thread.create(function()
                 sampSendChat('/mess ' .. option_color.v .. ' =============================| Победитель |=============================')
                 sampSendChat('/mess ' .. option_color.v .. ' Победитель мероприятия - ' .. sampGetPlayerNickname(id) .. '[' .. id .. '] получает свой приз, поздравим его!')
@@ -294,7 +295,6 @@ function imgui.OnDrawFrame()
                 local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
                 sampSendChat('/tweap ' .. myid)
                 sampSendChat('/delcarall')
-                showCursor(false,false)
                 if #(u8:decode(text_myprize.v)) ~= 0 then
                     wait(2000)
                     sampShowDialog(6405, "Выдать вознаграждение", "Пример: /giverub id 300\n/givescore 24 500000", "Выдать", nil, DIALOG_STYLE_INPUT) -- сам диалог
@@ -679,7 +679,6 @@ function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт
             end
             wait(1000)
             if sampIsDialogActive() then sampCloseCurrentDialogWithButton(0) end -- подстраховка если какой-то диалог останется открытым
-            start_mp = false
         end)
     end
 end
@@ -746,7 +745,4 @@ end
 sampRegisterChatCommand('state', function()
     windows.static_window_state.v = not windows.static_window_state.v
     imgui.Process = windows.static_window_state.v
-end)
-sampRegisterChatCommand('mpoff', function()
-    thisScript():unload()
 end)
