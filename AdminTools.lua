@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.95 			 							-- Версия скрипта
+local version = 4.96 			 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -2799,7 +2799,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						flood.message[oskid] = nil
 						sampAddChatMessage(tag .. 'Обнаружен флуд в чате! Нарушитель ' .. sampGetPlayerNickname(oskid) .. ' отправил {FFFFFF}4 {F0E68C}сообщения за {FFFFFF}' .. math.ceil(os.clock() - flood.time[oskid]) .. ' {F0E68C}секунд.', 0xA9A9A9)
 						sampAddChatMessage(tag .. 'Сообщение-дубликат можно наблюдать ниже. Его сообщения также сохранены в chat-loger.', 0xA9A9A9)
-						sampSendChat('/mute ' .. oskid .. ' 120 Флуд - 4 sms ' .. math.ceil(os.clock() - flood.time[oskid]) .. '/40 сек.')
+						sampSendChat('/mute ' .. oskid .. ' 120 Флуд - ' .. math.ceil(os.clock() - flood.time[oskid]) .. '/40')
 					else flood.count[oskid] = flood.count[oskid] + 1 end
 				end
 			else
@@ -2915,9 +2915,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack and not AFK then
 			if not check_weapon then
 				lua_thread.create(function()
-					_, check_weapon = text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b}')
+					check_weapon = true
 					while sampIsDialogActive() do wait(1000) end
-					sampSendChat('/iwep '.. check_weapon)
+					sampSendChat('/iwep '.. string.match(text, "%[(%d+)%]")
 					check_weapon = false
 				end)
 			end
