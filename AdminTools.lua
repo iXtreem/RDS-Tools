@@ -2799,7 +2799,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						flood.message[oskid] = nil
 						sampAddChatMessage(tag .. 'Обнаружен флуд в чате! Нарушитель ' .. sampGetPlayerNickname(oskid) .. ' отправил {FFFFFF}4 {F0E68C}сообщения за {FFFFFF}' .. math.ceil(os.clock() - flood.time[oskid]) .. ' {F0E68C}секунд.', 0xA9A9A9)
 						sampAddChatMessage(tag .. 'Сообщение-дубликат можно наблюдать ниже. Его сообщения также сохранены в chat-loger.', 0xA9A9A9)
-						sampSendChat('/mute ' .. oskid .. ' 120 Флуд - 4 сообщения за ' .. math.ceil(os.clock() - flood.time[oskid]) .. ' сек.')
+						sampSendChat('/mute ' .. oskid .. ' 120 Флуд - 4 sms ' .. math.ceil(os.clock() - flood.time[oskid]) .. '/40 сек.')
 					else flood.count[oskid] = flood.count[oskid] + 1 end
 				end
 			else
@@ -2914,10 +2914,12 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			return false
 		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack and not AFK then
 			if not check_weapon then
-				_, check_weapon = text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b}')
-				while sampIsDialogActive() do wait(1000) end
-				sampSendChat('/iwep '.. check_weapon)
-				check_weapon = false
+				lua_thread.create(function()
+					_, check_weapon = text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b}')
+					while sampIsDialogActive() do wait(1000) end
+					sampSendChat('/iwep '.. check_weapon)
+					check_weapon = false
+				end)
 			end
 			return false
 		end
