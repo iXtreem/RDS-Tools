@@ -2917,7 +2917,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				lua_thread.create(function()
 					check_weapon = true
 					while sampIsDialogActive() do wait(1000) end
-					sampSendChat('/iwep '.. string.match(text, "%[(%d+)%]")
+					sampSendChat('/iwep '.. string.match(text, "%[(%d+)%]"))
 					check_weapon = false
 				end)
 			end
