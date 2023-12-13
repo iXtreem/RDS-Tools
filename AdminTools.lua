@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 5 			 								-- Версия скрипта
+local version = 5.1 			 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -68,6 +68,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		fast_key_ans = 'None',
 		fast_key_addText = 'None',
 		fast_key_wallhack = 'None',
+		key_start_fraps = 'None',
 		prefixh = '',
 		prefixma = '',
 		prefixa = '',
@@ -85,6 +86,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		color_report = '*',
 		autoaccept_form = false,
 		bloknotik = '',
+		start_fraps = false,
 	},
 	customotvet = {},
 	myflood = {},
@@ -147,6 +149,7 @@ local checkbox = {
 	button_enter_in_report 	= imgui.ImBool(cfg.settings.enter_report),
 	check_render_ears 		= imgui.ImBool(false),
 	add_full_words 			= imgui.ImBool(true),
+	check_start_fraps 		= imgui.ImBool(cfg.settings.start_fraps),
 	inputhelper			  	= imgui.ImBool(cfg.settings.inputhelper),
 	check_answer_player_report = imgui.ImBool(cfg.settings.answer_player_report),
 	check_on_custom_recon_menu = imgui.ImBool(cfg.settings.on_custom_recon_menu),
@@ -184,7 +187,6 @@ local textdraw 			= {} 											-- узнаем ид текстравов для взаимодействия с н
 local admin_form 		= {} 											-- Работа с админ-формами
 local nakazatreport 	= {}											-- Возможность наказать прямо из репорта
 local answer 			= {} 											-- Выбор ответа в репорте
-local kill_chat 		= {}											-- автомут на 0
 local adminchat 		= {}											-- Все админ-сообщения хранятся тут
 local ears 				= {}											-- Все /ears сообщения хранятся тут
 local inforeport 		= {}											-- Вся информация о игроке в реконе хранится тут
@@ -193,6 +195,7 @@ local menu 				= 'Главное меню' 								-- Разные вкладки в F3
 local menu_in_recon 	= 'Главное меню'								-- Разные вкладки в реконе
 local atr 				= false											-- альтернатива /tr
 local check_weapon		= false											-- проверка игрока на читы, защита от бага с диалогом
+local start_fraps		= false											-- переменная автоматического запуска фрапса
 local flood = { -- сборник ID
 	message = {}, -- Сообщение
 	time = {}, -- время отправки
@@ -217,11 +220,6 @@ local spisokoskrod = { -- автомут на оск род
 local spisokrz = {  -- примерный розжиг
 	'слава укр', 
 	'слава росс'
-}
-local killmute = {
-	'0',
-	'ноль',
-	'нуль'
 }
 local spisokor = { -- список возможных вариаций оскорбления родни (мат + что-то из этого списка, или что-то из списка и оск)
 	'сын',
@@ -276,12 +274,6 @@ function sampev.onPlayerDeathNotification(killerId, killedId, reason)
 	killer,killed,reasonkill = killerId,killedId,reason
 	local n_killer = ( sampIsPlayerConnected(killerId) or killerId == myid ) and sampGetPlayerNickname(killerId) or nil
 	local n_killed = ( sampIsPlayerConnected(killedId) or killedId == myid ) and sampGetPlayerNickname(killedId) or nil
-	if #kill_chat == 5 then
-		for i = 1, #kill_chat do
-			if i ~= #kill_chat then kill_chat[i] = kill_chat[i+1]
-			else kill_chat[#kill_chat] = killerId..'-'..killedId end
-		end
-	else kill_chat[#kill_chat + 1] = killerId..'-'..killedId end
 	lua_thread.create(function()
 		wait(0)
 		if n_killer then kill.killEntry[4].szKiller = ffi.new('char[25]', ( n_killer .. '[' .. killerId .. ']' ):sub(1, 24) ) end
@@ -532,20 +524,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	},
 }
 --------============= Инициализируем команды, указанные выше ===========================---------------------------
-for k,v in pairs(basic_command.ans) do
-	sampRegisterChatCommand(k, function(param)
-		if #param ~= 0 then
-			for k,v in pairs(textSplit(v, '\n')) do
-				if cfg.settings.add_answer_report then
-							if k ~= #(textSplit(v,'\n')) then 	-- убираем лишние доп.сообщения чтоб не было изобилия
-								sampSendChat(string.gsub(v, '_', param) ..' '.. cfg.settings.mytextreport)
-							else sampSendChat(string.gsub(v, '_', param)) end
-				else sampSendChat(string.gsub(v, '_', param)) end
-				--wait(500) 
-			end
-		else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end 
-	end) 
-end
+for k,v in pairs(basic_command.ans) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then for k,v in pairs(textSplit(v, '\n')) do sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 for k,v in pairs(basic_command.mute) do  sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
 for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
@@ -744,14 +723,14 @@ sampRegisterChatCommand('c', function(param)
 	if (not sampIsPlayerConnected(tonumber(param))) or (not flood.message[param]) then sampAddChatMessage(tag .. 'ID игрока указан неверно, или игрок не писал ничего в чат.', -1) return false end
 	sampev.onShowDialog(2349, DIALOG_STYLE_INPUT, 'tipa title', 'button1', 'button2', 'Игрок: '..sampGetPlayerNickname(param)..'\n\n\nЖалоба:' .. flood.message[param])
 	lua_thread.create(function()
-		showCursor(true,true)
+		showCursor(true,false)
 		while not windows.fast_report.v do wait(300) end
 		while windows.fast_report.v and not (answer.rabotay or answer.uto4 or answer.nakajy or answer.customans or answer.slejy or answer.jb or answer.ojid or answer.moiotvet or answer.uto4id or answer.nakazan or answer.otklon or answer.peredamrep) do wait(200) end
 		showCursor(false,false)
 		if not sampev.onShowDialog(2350, DIALOG_STYLE_INPUT, 'aboba', 'Действие', 'Назад', 'aboba') and peremrep then
 			if answer.control_player then sampSendChat('/re ' .. autorid)
 			elseif answer.slejy then sampSendChat('/re ' .. reportid)
-			elseif answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport) end 
+			elseif answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport) end
 			sampSendChat('/ans ' .. param .. ' ' .. peremrep)
 			if answer.slejy and not copies_player_recon and tonumber(autorid) and cfg.settings.answer_player_report then
 				local copies_report_id = reportid
@@ -923,50 +902,18 @@ function imgui.OnDrawFrame()
 				imgui.Tooltip(u8'Автоматически пробивает /iwep новых варнингов на чит-оружие\nМожет вызывать проблемы с открытием диалога\nПри наличии чита - автоматически банит\nПомните, что впервую очередь за все блокировки ответственность несете вы.\nСкриншот сохраняет в:\nC:\\Users\\User\\Документы\\GTA San Andreas User Files\\screens')
 				imgui.SameLine()
 				imgui.Text(u8'Реакция на чит-оружие')
-				if imadd.ToggleButton("##renderEars", checkbox.check_render_ears) then
-					if not sampIsDialogActive() then
-						if checkbox.check_render_ears.v then ears = {} end
-						sampSendChat('/ears')
-					else sampAddChatMessage(tag .. 'У вас открыт диалог.',-1) end
-				end
-				imgui.SameLine()
-				imgui.Text(u8'Рендер /ears')    
-				imgui.SameLine()
-				imgui.SetCursorPosX(190)
-				if imgui.Button(fa.ICON_ARROWS..'##2') then imgui.OpenPopup('settings_ears') end
-				if imgui.BeginPopup('settings_ears') then  
-					imgui.CenterText(u8'Размер: ')
-					if imgui.SliderInt('##Slider1', checkbox.selected_ears, 8, 15) then
-						cfg.settings.size_ears = checkbox.selected_ears.v
+				if imadd.ToggleButton("##rendervideo", checkbox.check_start_fraps) then
+					if cfg.settings.key_start_fraps ~= 'None' then
+						cfg.settings.start_fraps = not cfg.settings.start_fraps
 						save()
-						font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
+					else 
+						sampAddChatMessage(tag .. 'Стоило бы сначала обозначить на какую клавишу будем запускать видео', -1)
+						checkbox.check_start_fraps.v = false
 					end
-					imgui.CenterText(u8'Кол-во строк: ')
-					if imgui.SliderInt('##Slider2', checkbox.selected_ears2, 3, 20) then
-						cfg.settings.strok_ears = checkbox.selected_ears2.v
-						save()
-						if #ears > cfg.settings.strok_ears then for i = cfg.settings.strok_ears, #ears do ears[i] = nil end end
-					end
-					if imgui.Button(u8'Изменить позицию',imgui.ImVec2(140,24)) then
-						if checkbox.check_render_ears.v then
-							lua_thread.create(function()
-								if not ears[1] then ears[1] = 'Тестовое сообщение для видимости новой позиции.' end 
-								sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
-								sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
-								local old_pos_x, old_pos_y = cfg.settings.position_ears_x, cfg.settings.position_ears_y
-								while true do
-									cfg.settings.position_ears_x, cfg.settings.position_ears_y = getCursorPos()
-									if wasKeyPressed(VK_RETURN) then save() break end
-									if wasKeyPressed(VK_ESCAPE) then cfg.settings.position_ears_x = old_pos_x cfg.settings.position_ears_y = old_pos_y break end
-									wait(1)
-								end
-							end)
-						else sampAddChatMessage(tag .. 'Функция выключена, включите её и сохраните позицию.', -1) end
-					end
-					imgui.SameLine()
-					if imgui.Button(u8'Сбросить чат',imgui.ImVec2(125, 24)) then ears = {} end
-					imgui.EndPopup()
 				end
+				imgui.Tooltip(u8'Автоматически нажимает клавишу, указанную в 3-ем меню\nТуда заносите свою клавишу в программе для записи игр\nПримеры программ: Bandicam, OBS, DXTORY, Fraps ...\nПри входе в рекон видео автоматически запускается с информированием\nПри выходе аналогично - выключается.') 
+				imgui.SameLine()
+				imgui.Text(u8'Авто-видеофиксация')
 				imgui.SameLine()
 				imgui.SetCursorPosX(250)
 				if imadd.ToggleButton("##AdminChat", checkbox.check_admin_chat) then
@@ -1057,26 +1004,43 @@ function imgui.OnDrawFrame()
 					save()
 				end
 				imgui.SameLine()
-				imgui.Text(u8'Кастом рекон меню')
+				imgui.Text(u8'Рендер /ears')
 				imgui.SameLine()
 				imgui.SetCursorPosX(435)
-				if imgui.Button(fa.ICON_ARROWS..'##5') then
-					if cfg.settings.on_custom_recon_menu then
-						if windows.recon_menu.v then
+				if imgui.Button(fa.ICON_ARROWS..'##2') then imgui.OpenPopup('settings_ears') end
+				if imgui.BeginPopup('settings_ears') then  
+					imgui.CenterText(u8'Размер: ')
+					if imgui.SliderInt('##Slider1', checkbox.selected_ears, 8, 15) then
+						cfg.settings.size_ears = checkbox.selected_ears.v
+						save()
+						font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
+					end
+					imgui.CenterText(u8'Кол-во строк: ')
+					if imgui.SliderInt('##Slider2', checkbox.selected_ears2, 3, 20) then
+						cfg.settings.strok_ears = checkbox.selected_ears2.v
+						save()
+						if #ears > cfg.settings.strok_ears then for i = cfg.settings.strok_ears, #ears do ears[i] = nil end end
+					end
+					if imgui.Button(u8'Изменить позицию',imgui.ImVec2(140,24)) then
+						if checkbox.check_render_ears.v then
 							lua_thread.create(function()
+								if not ears[1] then ears[1] = 'Тестовое сообщение для видимости новой позиции.' end 
 								sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
 								sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
-								local old_pos_x, old_pos_y = cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y
+								local old_pos_x, old_pos_y = cfg.settings.position_ears_x, cfg.settings.position_ears_y
 								while true do
-									cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y = getCursorPos()
+									cfg.settings.position_ears_x, cfg.settings.position_ears_y = getCursorPos()
 									if wasKeyPressed(VK_RETURN) then save() break end
-									if wasKeyPressed(VK_ESCAPE) then cfg.settings.position_recon_menu_x = old_pos_x cfg.settings.position_recon_menu_y = old_pos_y break end
+									if wasKeyPressed(VK_ESCAPE) then cfg.settings.position_ears_x = old_pos_x cfg.settings.position_ears_y = old_pos_y break end
 									wait(1)
 								end
 							end)
-						else sampAddChatMessage(tag .. 'Данная опция доступна только в реконе.', -1) end
-					else sampAddChatMessage(tag ..'Функция выключена, включите её и задайте позицию', -1) end
-				end
+						else sampAddChatMessage(tag .. 'Функция выключена, включите её и сохраните позицию.', -1) end
+					end
+					imgui.SameLine()
+					if imgui.Button(u8'Сбросить чат',imgui.ImVec2(125, 24)) then ears = {} end
+					imgui.EndPopup()
+				end 
 				if imadd.ToggleButton("##virtualkey", checkbox.check_keysync) then
 					cfg.settings.keysync = not cfg.settings.keysync
 					save()
@@ -1100,9 +1064,37 @@ function imgui.OnDrawFrame()
 						end)
 					else sampAddChatMessage(tag .. 'Данная опция доступна только в реконе.', -1) end
 				end
+				imgui.SameLine()
+				imgui.SetCursorPosX(250)
+				if imadd.ToggleButton("##renderEars", checkbox.check_render_ears) then
+					if not sampIsDialogActive() then
+						if checkbox.check_render_ears.v then ears = {} end
+						sampSendChat('/ears')
+					else sampAddChatMessage(tag .. 'У вас открыт диалог.',-1) end
+				end
+				imgui.SameLine()
+				imgui.Text(u8'Кастом рекон меню')
+				imgui.SameLine()
+				imgui.SetCursorPosX(435)
+				if imgui.Button(fa.ICON_ARROWS..'##5') then
+					if cfg.settings.on_custom_recon_menu then
+						if windows.recon_menu.v then
+							lua_thread.create(function()
+								sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
+								sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
+								local old_pos_x, old_pos_y = cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y
+								while true do
+									cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y = getCursorPos()
+									if wasKeyPressed(VK_RETURN) then save() break end
+									if wasKeyPressed(VK_ESCAPE) then cfg.settings.position_recon_menu_x = old_pos_x cfg.settings.position_recon_menu_y = old_pos_y break end
+									wait(1)
+								end
+							end)
+						else sampAddChatMessage(tag .. 'Данная опция доступна только в реконе.', -1) end
+					else sampAddChatMessage(tag ..'Функция выключена, включите её и задайте позицию', -1) end
+				end
 				imgui.SetCursorPosY(400)
 				imgui.Separator()
-				imgui.Text(u8'Команда /ahelp содержит всю информацию о командах и правилах')
 				imgui.Text(u8'Разработчик скрипта - N.E.O.N')
 				imgui.Text(u8'Обратная связь:')
 				imgui.SameLine()
@@ -1266,7 +1258,7 @@ function imgui.OnDrawFrame()
 				end
 				imgui.CenterText(u8"Отправка в чат моего текста:")
 				imgui.SameLine()
-				imgui.Text(u8(cfg.settings.fast_key_addText))
+				imgui.Text(cfg.settings.fast_key_addText)
 				if imgui.Button(u8"Coxрaнить.", imgui.ImVec2(250, 24)) then
 					if getDownKeysText() and not getDownKeysText():find('+') then
 						cfg.settings.fast_key_addText = getDownKeysText()
@@ -1277,6 +1269,22 @@ function imgui.OnDrawFrame()
 				if imgui.Button(u8'Сбросить', imgui.ImVec2(228,24)) then
 					cfg.settings.fast_key_addText = 'None'
 					save()
+				end
+				imgui.CenterText(u8'Клавиша запуска видеофиксации: ')
+				imgui.SameLine()
+				imgui.Text(cfg.settings.key_start_fraps)
+				if imgui.Button(u8'Соxpaнить.', imgui.ImVec2(250, 24)) then
+					if getDownKeysText() and not getDownKeysText():find('+') then
+						cfg.settings.key_start_fraps = getDownKeysText()
+						save()
+					end
+				end
+				imgui.SameLine()
+				if imgui.Button(u8'Сбpocить', imgui.ImVec2(228, 24)) then
+					cfg.settings.key_start_fraps = 'None'
+					save()
+					cfg.settings.start_fraps = false
+					checkbox.check_start_fraps.v = false
 				end
 				imgui.Separator()
 				imgui.CenterText(u8'[Мои быстрые клавиши]')
@@ -1802,7 +1810,7 @@ function imgui.OnDrawFrame()
 				if string.rlower(v):find(string.rlower(u8:decode(buffer.text_ans.v))) or string.rlower(v):find(translateText(string.rlower(u8:decode(buffer.text_ans.v)))) then
 					if imgui.Button(u8(v), imgui.ImVec2((sw * 0.5) - 295, 24)) or (wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
 						if not answer.customans then 
-							answer.customans = u8(v)
+							answer.customans = v
 						end
 					end
 				end
@@ -2744,27 +2752,19 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						return false
 					end
 				end
-				for i = 1, #killmute do
-					if text:match(' ' .. killmute[i]) then
-						for k,v in pairs(kill_chat) do
-							local v = textSplit(v,'-')
-							if v[1] == oskid or v[2] == oskid then
-								sampAddChatMessage('==========================================================================', 0x00FF00)
-								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-								sampAddChatMessage('==========================================================================', 0x00FF00)
-								lua_thread.create(function()
-									sampSendChat('/mute ' .. oskid .. ' 400 Оскорбление/Унижение')
-									wait(500)
-									ffi.cast("void (*__stdcall)()", sampGetBase() + 0x70FC0)()
-								end)
-								return false
-							end
-						end
-					end
-				end
 			end
 			for i = 1, #osk do	-- МАССИВ НАЧИНАЕТСЯ С 1
 				if not text:match(' я ') and text:match('%s'.. osk[i]) then
+					for a = 1, #spisokor do
+						if text:match(spisokor[a]) then
+							sampAddChatMessage('==========================================================================', 0x00FF00)
+							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
+							sampAddChatMessage('==========================================================================', 0x00FF00)
+							sampSendChat(command .. oskid .. ' 5000 Оскорбление/Упоминание родни')
+							notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевые слово: ' .. osk[i] .. ' - ' .. spisokor[a])
+							return false
+						end
+					end
 					sampAddChatMessage('==========================================================================', 0x00FF00)
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('==========================================================================', 0x00FF00)
@@ -2775,6 +2775,16 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			end
 			for i = 1, #mat do -- МАССИВ НАЧИНАЕТСЯ С 1
 				if text:match(' '.. mat[i]) then
+					for a = 1, #spisokor do
+						if text:match(spisokor[a]) then
+							sampAddChatMessage('==========================================================================', 0x00FF00)
+							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
+							sampAddChatMessage('==========================================================================', 0x00FF00)
+							sampSendChat(command .. oskid .. ' 5000 Оскорбление/Упоминание родни')
+							notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевые слово: ' .. mat[i] .. ' - ' .. spisokor[a])
+							return false
+						end
+					end
 					sampAddChatMessage('==========================================================================', 0x00FF00)
 					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
 					sampAddChatMessage('==========================================================================', 0x00FF00)
@@ -2891,24 +2901,6 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 						return
 					end
 				end
-				for i = 1, #killmute do
-					if text:match(' ' .. killmute[i]) then
-						for k,v in pairs(kill_chat) do
-							local v = textSplit(v,'-')
-							if v[1] == oskid or v[2] == oskid then
-								sampAddChatMessage('==========================================================================', 0x00FF00)
-								sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-								sampAddChatMessage('==========================================================================', 0x00FF00)
-								lua_thread.create(function()
-									sampSendChat('/mute ' .. oskid .. ' 400 Оскорбление/Унижение')
-									wait(500)
-									ffi.cast("void (*__stdcall)()", sampGetBase() + 0x70FC0)()
-								end)
-								return
-							end
-						end
-					end
-				end
 			end
 			return false
 		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack and not AFK then
@@ -2933,7 +2925,13 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				if not v:match('~g~') then 
 					textdraw.inforeport = id  -- инфо панель в реконе
 					lua_thread.create(function()
-						while not windows.recon_menu.v do wait(100) end
+						if not start_fraps and cfg.settings.start_fraps then ---- автозапуск фрапса -----
+							printStyledString('~r~video on', 1500, 5)
+							setVirtualKeyDown(strToIdKeys(cfg.settings.key_start_fraps), true)
+							wait(1000)
+							setVirtualKeyDown(strToIdKeys(cfg.settings.key_start_fraps), false)
+						end
+						while not windows.recon_menu.v do wait(500) end
 						while windows.recon_menu.v do
 							inforeport = textSplit(sampTextdrawGetString(textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
 							if inforeport[3] ==   '-1'   then inforeport[3] = '-' end  --========= ХП АВТО
@@ -2947,6 +2945,13 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 							elseif inforeport[11] == '5' then inforeport[11] = 'Personal' end
 							--=========== Название ВИП =======--------
 							wait(1000)
+						end
+						if start_fraps and cfg.settings.start_fraps then ---- автозавершение фрапса -----
+							printStyledString('~r~video off', 1500, 5)
+							setVirtualKeyDown(strToIdKeys(cfg.settings.key_start_fraps), true)
+							wait(1000)
+							setVirtualKeyDown(strToIdKeys(cfg.settings.key_start_fraps), false)
+							start_fraps = false
 						end
 					end)
 				else return false end
@@ -3169,9 +3174,10 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end)
 			else
 				if cfg.settings.on_color_report and (#peremrep + 6) < 80 then
-					if cfg.settings.color_report == '*' then peremrep = ('{'..color()..'}' .. peremrep) end
+					if cfg.settings.color_report == '*' then peremrep = ('{'..color()..'}' .. peremrep)
 					else peremrep = (cfg.settings.color_report .. peremrep) end
 					if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = (peremrep ..('{'..color()..'} '..cfg.settings.mytextreport)) end
+				end
 				if #(peremrep) < 4 then peremrep = peremrep .. '    ' end
 				if cfg.settings.custom_answer_save and answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
@@ -3245,6 +3251,7 @@ function render_admins()
 	wait(5000)
 	while true do
 		while sampIsDialogActive() do wait(1000) end
+		wait(1000)
 		if not AFK then sampSendChat('/admins') end
 		wait(30000)
 	end
@@ -3254,7 +3261,7 @@ function autoonline()
 	while true do
 		wait(63000) 
 		while sampIsDialogActive() do wait(500) end
-		wait(200) -- подстраховочка 
+		wait(500) -- подстраховочка 
 		if not AFK then sampSendChat("/online") end 
 	end 
 end
@@ -3310,7 +3317,7 @@ function inputChat()
 	local _, pID = sampGetPlayerIdByCharHandle(playerPed) -- myid
 	local name = sampGetPlayerNickname(pID) -- mynick
 	while true do
-		wait(5)
+		wait(8)
 		if sampIsChatInputActive() and not AFK then
 			local getInput = sampGetChatInputText()
 			if (oldText ~= getInput and #getInput > 0)then
@@ -3409,7 +3416,8 @@ function binder_key()
 					end)
 				end
 			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_ans)) and not windows.menu_tools.v then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0)
-			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_addText)) and not windows.menu_tools.v then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport) sampSetChatInputEnabled(true) end
+			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_addText)) and not windows.menu_tools.v then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport) sampSetChatInputEnabled(true)
+			elseif wasKeyPressed(strToIdKeys(cfg.settings.key_start_fraps)) and not windows.menu_tools.v then start_fraps = not start_fraps end
 			for k,v in pairs(cfg.binder_key) do 
 				if wasKeyPressed(strToIdKeys(k)) and not windows.menu_tools.v then
 					local check_v, v = string.match(v, '(%d)\\n(.+)')
