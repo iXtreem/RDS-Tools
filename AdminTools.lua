@@ -3169,7 +3169,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					sampCloseCurrentDialogWithButton(0)
 				end)
 			else
-				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = peremrep .. ('{' .. color() ..'}' .. cfg.settings.mytextreport) end
+				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = peremrep .. cfg.settings.mytextreport end
 				if cfg.settings.on_color_report and (#peremrep + 6) < 80 then
 					if cfg.settings.color_report == '*' then peremrep = ('{'..color()..'}' .. peremrep) end
 					else peremrep = cfg.settings.color_report .. peremrep end
