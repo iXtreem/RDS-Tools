@@ -4,7 +4,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 4.96 			 							-- Версия скрипта
+local version = 4.97 			 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -2797,9 +2797,13 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				else
 					if flood.count[oskid] == 3 and cfg.settings.smart_automute then -- если 4 сообщения то мут
 						flood.message[oskid] = nil
-						sampAddChatMessage(tag .. 'Обнаружен флуд в чате! Нарушитель ' .. sampGetPlayerNickname(oskid) .. ' отправил {FFFFFF}4 {F0E68C}сообщения за {FFFFFF}' .. math.ceil(os.clock() - flood.time[oskid]) .. ' {F0E68C}секунд.', 0xA9A9A9)
-						sampAddChatMessage(tag .. 'Сообщение-дубликат можно наблюдать ниже. Его сообщения также сохранены в chat-loger.', 0xA9A9A9)
-						sampSendChat('/mute ' .. oskid .. ' 120 Флуд - ' .. math.ceil(os.clock() - flood.time[oskid]) .. '/40')
+						lua_thread.create(function()
+							while sampIsDialogActive() do wait(1000) end
+							sampAddChatMessage(tag .. 'Обнаружен флуд в чате! Нарушитель ' .. sampGetPlayerNickname(oskid)..'['..oskid..']', -1)
+							sampAddChatMessage(tag .. 'Отправил 4 сообщения за ' .. math.ceil(os.clock() - flood.time[oskid]) .. '/40 сек.', 0xA9A9A9)
+							sampAddChatMessage('{00FF00}=== {A9A9A9}' .. sampGetPlayerNickname(oskid)..'['..oskid..']: '..text .. ' {00FF00}===', -1)
+							sampSendChat('/mute ' .. oskid .. ' 120 Флуд/Cпам')
+						end)
 					else flood.count[oskid] = flood.count[oskid] + 1 end
 				end
 			else
@@ -3165,7 +3169,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					sampCloseCurrentDialogWithButton(0)
 				end)
 			else
-				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = peremrep .. ('{'..color()'}' .. cfg.settings.mytextreport) end
+				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = peremrep .. ('{' .. color() ..'}' .. cfg.settings.mytextreport) end
 				if cfg.settings.on_color_report and (#peremrep + 6) < 80 then
 					if cfg.settings.color_report == '*' then peremrep = ('{'..color()..'}' .. peremrep) end
 					else peremrep = cfg.settings.color_report .. peremrep end
