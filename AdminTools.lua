@@ -2019,8 +2019,13 @@ function imgui.OnDrawFrame()
 					sampAddChatMessage(tag .. 'Ник скопирован в буфер обмена. (ctrl + v)', -1)
 				end
 				imgui.SameLine()
-				if sampIsPlayerConnected(control_player_recon) then 
+				if sampIsPlayerConnected(control_player_recon) then
 					imgui.Text(sampGetPlayerNickname(control_player_recon) .. '[' .. control_player_recon .. ']')
+				end
+				if start_fraps then
+					imgui.SameLine()
+					imgui.SetCursorPosX(240)
+					imgui.Text(fa.ICON_VIDEO_CAMERA)
 				end
 				imgui.Separator()
 				if inforeport[14] then
@@ -2926,9 +2931,8 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 					textdraw.inforeport = id  -- инфо панель в реконе
 					lua_thread.create(function()
 						if not start_fraps and cfg.settings.start_fraps then ---- автозапуск фрапса -----
-							printStyledString('~r~video on', 1500, 5)
 							setVirtualKeyDown(strToIdKeys(cfg.settings.key_start_fraps), true)
-							wait(1000)
+							wait(500)
 							setVirtualKeyDown(strToIdKeys(cfg.settings.key_start_fraps), false)
 						end
 						while not windows.recon_menu.v do wait(500) end
@@ -2947,9 +2951,8 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 							wait(1000)
 						end
 						if start_fraps and cfg.settings.start_fraps then ---- автозавершение фрапса -----
-							printStyledString('~r~video off', 1500, 5)
 							setVirtualKeyDown(strToIdKeys(cfg.settings.key_start_fraps), true)
-							wait(1000)
+							wait(500)
 							setVirtualKeyDown(strToIdKeys(cfg.settings.key_start_fraps), false)
 							start_fraps = false
 						end
