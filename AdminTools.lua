@@ -64,7 +64,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		keysyncx = sh/2 + 100,
 		keysyncy = sw/2 + 20,
 		on_color_report = false,
-		color_report = nil,
+		color_report = '*',
 		fast_key_ans = 'None',
 		fast_key_addText = 'None',
 		fast_key_wallhack = 'None',
@@ -82,6 +82,7 @@ local cfg = inicfg.load({   ------------ Загружаем базовый конфиг, если он отсут
 		enter_report = true,
 		open_tool = 'F3',
 		weapon_hack = false,
+		color_report = nil,
 	},
 	customotvet = {},
 	myflood = {},
@@ -1878,14 +1879,13 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта ' .. fa.ICON_DATABASE)
 		if imadd.ToggleButton('##newcolor', checkbox.check_color_report) then
-			if cfg.settings.color_report then
-				cfg.settings.on_color_report = not cfg.settings.on_color_report
-				save()
-			else
-				checkbox.check_color_report = imgui.ImBool(cfg.settings.on_color_report)
-				sampSetChatInputText('/color_report ') 
+			if not cfg.settings.on_color_report then
+				sampAddChatMessage(tag .. 'Если вы желаете изменить цвет - введите HTML цвет в данную команду', -1)
+				sampSetChatInputText('/color_report ')
 				sampSetChatInputEnabled(true)
 			end
+			cfg.settings.on_color_report = not cfg.settings.on_color_report
+			save()
 		end
 		imgui.Tooltip(u8'Добавляет окраску к ответу. Не сработает, если кол-во символов в ответе превысит максимум\nПотому рекомендуется использовать без доп.текста')
 		imgui.SameLine()
