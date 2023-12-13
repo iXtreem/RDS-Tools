@@ -3420,7 +3420,7 @@ function binder_key()
 				end
 			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_ans)) and not windows.menu_tools.v then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0)
 			elseif wasKeyPressed(strToIdKeys(cfg.settings.fast_key_addText)) and not windows.menu_tools.v then sampSetChatInputText(string.sub(sampGetChatInputText(), 1, -2) .. ' '.. cfg.settings.mytextreport) sampSetChatInputEnabled(true)
-			elseif wasKeyPressed(strToIdKeys(cfg.settings.key_start_fraps)) and not windows.menu_tools.v then start_fraps = not start_fraps end
+			elseif wasKeyPressed(strToIdKeys(cfg.settings.key_start_fraps)) and cfg.settings.start_fraps then start_fraps = not start_fraps end
 			for k,v in pairs(cfg.binder_key) do 
 				if wasKeyPressed(strToIdKeys(k)) and not windows.menu_tools.v then
 					local check_v, v = string.match(v, '(%d)\\n(.+)')
