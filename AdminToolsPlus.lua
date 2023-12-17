@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1.1
+local version = 1.2
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -92,9 +92,9 @@ function main()
 	end
 	sampAddChatMessage(tag .. 'Скрипт инициализирован. Активация: /atp', -1)
 	while true do
-		wait(100)
-		if isPauseMenuActive() or isGamePaused() then AFK = true
-		elseif AFK and not (isPauseMenuActive() or isGamePaused()) then AFK = false end
+		wait(1000)
+		if not AFK and (isPauseMenuActive() or isGamePaused()) then AFK = true
+		elseif not (isPauseMenuActive() or isGamePaused()) then AFK = false end
 	end
 end
 
@@ -153,6 +153,8 @@ function imgui.OnDrawFrame()
 			main_window_state.v = not main_window_state.v
 			dektor_window_state.v = not dektor_window_state.v
 		end
+		imgui.Text(u8'/cb - проверить игрока на блокировку')
+		imgui.Text(u8'/cadm - статистика администратора')
 		imgui.End()
 	end
 	if main_window_state.v then
@@ -472,7 +474,7 @@ function sampev.onServerMessage(color,text)
 		sampAddChatMessage(text, -1) 
 		if autorizate_admin ~= myid then
 			lua_thread.create(function()
-				while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
+				while sampIsDialogActive() do wait(100) end
 				sampSendChat('/a ' .. string.gsub(cfg.settings.hello_text, '_', sampGetPlayerNickname(autorizate_admin)))
 			end)
 		end
@@ -482,9 +484,8 @@ function sampev.onServerMessage(color,text)
 		local _, autorizate_admin = text:match('(.+)%((%d+)%)')
 		sampAddChatMessage(text,-1)
 		lua_thread.create(function()
-			while sampIsDialogActive() do wait(0) end
+			while sampIsDialogActive() do wait(100) end
 			sampSendChat('/ans ' .. autorizate_admin .. ' Здравствуйте! Вы забыли ввести /alogin!')
-			wait(500)
 			sampSendChat('/ans ' .. autorizate_admin .. ' Введите команду /alogin и свой пароль, пожалуйста.')
 		end)
 	end
@@ -493,11 +494,10 @@ function sampev.onServerMessage(color,text)
 		if number_report >= cfg.settings.number_report then
 			sampAddChatMessage('{FF0000}[AT]{FFFFFF} ' .. text, -1)
 			lua_thread.create(function()
+				while sampIsDialogActive() do wait(100) end
 				for i = 0, cfg.settings.count_warning do
-					if not sampIsChatInputActive() then
-						sampSendChat('/a ' .. cfg.settings.mytext_warning_report)
-						wait(2000)
-					end
+					sampSendChat('/a ' .. cfg.settings.mytext_warning_report)
+					wait(2500)
 				end
 			end)
 		end
@@ -528,8 +528,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 				sampCloseCurrentDialogWithButton(0)
 			end
 		end)
-	end
-	if dialogId == 4829 and imgui.Process then
+	elseif dialogId == 4829 and imgui.Process then
 		local text = textSplit(text, '\n')
 		for k,v in pairs(text) do
 			local v = string.sub(v, 9)
@@ -556,8 +555,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 			if text[#text-1]:match('Далее >>>') then sampSendDialogResponse(4829, 1, #text-3)
 			else sampCloseCurrentDialogWithButton(0) end
 		end
-	end 
-	if dialogId == 2232 and imgui.Process then
+	elseif dialogId == 2232 and imgui.Process then
 		topadm = {} -- создаем массив
 		local text = textSplit(text, '\n')
 		for k,v in pairs(text) do
@@ -633,6 +631,18 @@ end)
 sampRegisterChatCommand('atp', function()
 	dektor_window_state.v = not dektor_window_state.v
 	imgui.Process = dektor_window_state.v
+end)
+sampRegisterChatCommand('cban', function(param)
+	if sampIsDialogActive() or #param == 0 then return false end
+	sampSendChat('/ap')
+	sampSendDialogResponse(1034, 1, 8)
+	sampSendDialogResponse(6030, 1, 1, param)
+end)
+sampRegisterChatCommand('cadm', function(param)
+	if sampIsDialogActive() or #param == 0 then return false end
+	sampSendChat('/ap')
+	sampSendDialogResponse(1034, 1, 1)
+	sampSendDialogResponse(6020, 1, 1, param)
 end)
 function apply_custom_style()
 	imgui.SwitchContext()
