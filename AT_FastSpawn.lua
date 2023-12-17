@@ -1,6 +1,15 @@
 require 'lib.moonloader'
+require 'my_lib'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
+if not file_exists('moonloader\\control_work_AT.lua') then
+	local dlstatus = require('moonloader').download_status
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader\\control_work_AT.lua', function(id, status)
+		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+			reloadScripts()
+		end
+	end)
+end
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local version = 1.4
 local imgui = require 'imgui' 
@@ -9,7 +18,6 @@ local fa = require 'faicons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
 local inicfg = require 'inicfg'
-local my_lib = require 'my_lib'
 local directIni = 'AT//AT_FS.ini'
 encoding.default = 'CP1251'
 local u8 = encoding.UTF8 
@@ -81,7 +89,6 @@ function main()
 	wait(3000)
 	if autorizate and cfg.AT_FastSpawn.parolalogin and cfg.AT_FastSpawn.autoalogin and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
 		while not access_alogin do
-			wait(0)
 			while sampIsDialogActive() do wait(100) sampCloseCurrentDialogWithButton(0) end
 			sampSendChat('/alogin ' .. cfg.AT_FastSpawn.parolalogin)
 			wait(6000)
@@ -213,12 +220,11 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
     end
 end
 
-
-
 sampRegisterChatCommand('fs', function()
     main_window_state.v = not main_window_state.v
     imgui.Process = main_window_state.v
 end)
-sampRegisterChatCommand('fsoff', function()
-    thisScript():unload()
-end)
+
+
+
+
