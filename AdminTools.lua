@@ -2717,7 +2717,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			if #array.ears == cfg.settings.strok_ears then
 				for i = 0, #array.ears do
 					if i ~= #array.ears then array.ears[i] = array.ears[i + 1]
-					else array.ears[#array.array.ears] = text end
+					else array.ears[#array.ears] = text end
 				end
 			else array.ears[#array.ears + 1] = text end
 			return false
