@@ -27,8 +27,8 @@ function onSystemMessage(msg, type, script)
                 sampShowDialog(252, '{FFFFFF}Кажется, что-то пошло не так ...', 'В скрипте {7B68EE}' .. scripts[i] .. ' {ffffff}произошла ошибка, вследствии чего все скрипты будут перезагружены.\nКод ошибки:\n\n'..msg, 'reload', 'send report', 0)
                 while sampIsDialogActive(252) do wait(500) end
                 local _, button, _, _ = sampHasDialogRespond(252)
-                if button == 1 then
-                    sampShowDialog(252, "Желаете отправить отчет об ошибке?", ('Нет\nДа\nДа, со своими комментариями'), "Выбрать", nil, DIALOG_STYLE_LIST)
+                if button == 0 then
+                    sampShowDialog(252, "Желаете отправить отчет об ошибке?", ('Нет\nДа\nДа, со своими комментариями'), "Выбрать", nil, 2)
                     while sampIsDialogActive(252) do wait(500) end
                     local _, _, button, _ = sampHasDialogRespond(252)
                     if button~=0 then 
