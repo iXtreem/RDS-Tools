@@ -1,4 +1,4 @@
-if file_exists('moonloader\\lib\\VK_API.lua') then vk = require 'VK_API'
+if io.open('moonloader\\lib\\VK_API.lua') then vk = require 'VK_API'
 else
 	local dlstatus = require('moonloader').download_status
 	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/VK_API.lua", 'moonloader\\lib\\VK_API.lua', function(id, status)
