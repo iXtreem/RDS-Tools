@@ -7,7 +7,7 @@ else
 		end
 	end)
 end
-
+local send_report = false
 
 local token = --[[Токен группы VK]]"vk1.a.CeLIzK9OTcpIzmnlvUPNaBk-f8PVBBjBIKYMgOvci7RAq-hi9up1REVQC_T77bW71PpOdeijhTk3k4F1_-9XckYBiAMGiJzlLV3xCR0JI5_sWGi96om1qPLPFRyGFeWVILb1d7Jw8GLIHk_WhfwAydb9070C_vx2fNt0RygHMob7AGRhfHgQanNho6ox7tN-LZuSU7E93WH9scneUzbM1w"
 local ID = "508415544"	-- ID VK кому отправлять
@@ -63,3 +63,22 @@ function textFormatter(msg) -- форматируем текст чтобы нормально отправлялся вк
 	local msg = string.gsub(msg, '	', '')
 	return msg
 end
+
+sampRegisterChatCommand('areport', function()
+    sampShowDialog(252, 'Отчет','Напишите о баге/недоработке или пожелании в разработке\nУчите, раз в день можно отправить 1 такое сообщение.', 'Отправить', nil, 1)
+    while sampIsDialogActive(252) do wait(500) end
+    local _, _, _, input = sampHasDialogRespond(252)
+    add_text = tostring(input)
+    if #add_text > 5 then
+        local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+        local nick = sampGetPlayerNickname(id)
+        local data = (os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year .. ' '..os.date("*t").hour..':'..os.date("*t").min ..':'..os.date("*t").sec)
+        vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
+        if not send_report then
+            send_report = true
+            vk.sendMessage('Администратор ' .. nick .. '\n\nДата: ' .. data .. '\n\nОтправил сообщение: ' .. textFormatter(add_text), ID)
+        end
+    else
+        sampAddChatMessage('Вы не ввели текст, ничего отправлено не было.', -1)
+    end
+end)
