@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1.2
+local version = 1.3
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -69,17 +69,9 @@ local topadm = {}
 function main()
 	while not isSampAvailable() do wait(0) end
 	local dlstatus = require('moonloader').download_status
-    downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.ini", getWorkingDirectory() .. "//AdminToolsPlus.ini", function(id, status)
-		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			AdminToolsPlus = inicfg.load(nil, getWorkingDirectory() .. "//AdminToolsPlus.ini")
-			if tonumber(AdminToolsPlus.script.version) > version then
-				update_state = true
-			end
-			os.remove(getWorkingDirectory() .. "//AdminToolsPlus.ini")
-		end
-    end)
-	wait(1000)
-	if update_state then
+    downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.ini", "moonloader//config//AT//AdminToolsPlus.ini", function(id, status) end)
+	local AdminToolsPlus = inicfg.load(nil, 'moonloader//config//AT//AdminToolsPlus.ini')
+	if tonumber(AdminToolsPlus.script.version) > version then
 		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.lua", thisScript().path, function(id, status)
 			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 				sampAddChatMessage(tag .. 'Основной скрипт успешно обновлен.', -1)
