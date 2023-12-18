@@ -4,10 +4,10 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 5.3 			 							-- Версия скрипта
+local version = 5.4 			 							-- Версия скрипта
 import("\\resource\\AT_MP.lua") 			-- подгрузка плагина для мероприятий
 import("\\resource\\AT_FastSpawn.lua")  	-- подгрузка быстрого спавна
-import("\\resource\\AT_Trassera.lua") 	-- подгрузка трассеров
+import("\\resource\\AT_Trassera.lua") 	    -- подгрузка трассеров
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
