@@ -2,14 +2,6 @@ require 'lib.moonloader'
 require 'my_lib'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
-if not file_exists('moonloader\\control_work_AT.lua') then
-	local dlstatus = require('moonloader').download_status
-	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader\\control_work_AT.lua', function(id, status)
-		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			reloadScripts()
-		end
-	end)
-end
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local version = 1.4
 local imgui = require 'imgui' 
@@ -18,7 +10,6 @@ local fa = require 'faicons'
 local sampev = require 'lib.samp.events'
 local encoding = require 'encoding' 
 local inicfg = require 'inicfg'
-local directIni = 'AT//AT_FS.ini'
 encoding.default = 'CP1251'
 local u8 = encoding.UTF8 
 local key = require 'vkeys'
@@ -32,7 +23,7 @@ cfg2.settings.versionFS = version
 inicfg.save(cfg2,'AT//AT_main.ini')
 style(cfg2.settings.style)
 local cfg = inicfg.load({
-	AT_FastSpawn = {
+	settings = {
         spawn = true,
 		autorizate = false,
 		autoalogin = false,
@@ -44,8 +35,8 @@ local cfg = inicfg.load({
 	},
 	command = {[0] = ''},
 	wait_command = {[0] = 0},
-}, directIni)
-inicfg.save(cfg,directIni)
+}, 'AT//AT_FS.ini')
+inicfg.save(cfg,'AT//AT_FS.ini')
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
 local buffer = {}
 local sw, sh = getScreenResolution()
@@ -54,48 +45,66 @@ local text_buffer = imgui.ImBuffer(4096)
 local text_buffer2 = imgui.ImBuffer(4096)
 local inputCommand = {[0] = imgui.ImBuffer(u8(cfg.command[0]), 256)}
 local inputWait = {[0] = imgui.ImInt(cfg.wait_command[0]),}
-local checked_test = imgui.ImBool(cfg.AT_FastSpawn.autorizate)
-local checked_test2 = imgui.ImBool(cfg.AT_FastSpawn.autoalogin)
-local checked_test3 = imgui.ImBool(cfg.AT_FastSpawn.spawn)
-
+local checked_test = imgui.ImBool(cfg.settings.autorizate)
+local checked_test2 = imgui.ImBool(cfg.settings.autoalogin)
+local checked_test3 = imgui.ImBool(cfg.settings.spawn)
+local access = false
 local secondary_window_state = imgui.ImBool(false)
 local main_window_state = imgui.ImBool(false)
 
-
-function sampev.onServerMessage(color,text)
-	if text == ('Вы успешно авторизовались!') then
-		start_click_shift = true
-	elseif text:match("%[A%] Администратор (.+)%[(%d+)%] %((%d+) level%) авторизовался в админ панели") and text:match(nick) then
-		access_alogin = true
-	end
-end
 function main()
-	while not isSampAvailable() do wait(0) end
-	for k,v in pairs(cfg.command) do if (v and #(v)>1) and k~=0 then inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(tostring(v)), 256) else table.remove(cfg.command, k) inicfg.save(cfg, directIni) end end
+	while not isSampAvailable() do wait(1000) end
+	for k,v in pairs(cfg.command) do if (v and #(v)>1) and k~=0 then inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(tostring(v)), 256) else table.remove(cfg.command, k) inicfg.save(cfg, 'AT//AT_FS.ini') end end
 	for k,v in pairs(cfg.wait_command) do inputWait[#inputWait+1] = imgui.ImInt(v) end
-	if cfg.AT_FastSpawn.spawn then
-		while not sampIsLocalPlayerSpawned() do
-			if not sampIsChatInputActive() and not sampIsDialogActive() and start_click_shift then
-				setVirtualKeyDown(16, true)
-				wait(100)
-				setVirtualKeyDown(16, false) 
+	while true do
+		if sampTextdrawIsExists(0) then
+			if sampIsDialogActive(657) then
+				if sampTextdrawIsExists(452) then
+					break
+				end
+				if cfg.settings.spawn then
+					sampSendDialogResponse(657, 1, 0)
+					sampSendDialogResponse(658, 1, 0)
+					wait(100)
+					sampCloseCurrentDialogWithButton(1)
+					setVirtualKeyDown(13, true)
+					wait(200)						--- а потому что закрывается но не хрена не скрывается
+					setVirtualKeyDown(13, false)
+				end
+				access = true
+				break
+			elseif sampIsDialogActive() then
+				break
+			elseif cfg.settings.spawn then
+				local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+				if not sampIsLocalPlayerSpawned(id) then
+					setVirtualKeyDown(16, true)
+					wait(100)
+					setVirtualKeyDown(16, false)
+				end
 			end
-			wait(200)
+		elseif sampIsDialogActive(1) and not id then
+			if cfg.settings.autorizate and cfg.settings.parolaccount then
+				_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+				if cfg.settings.nickname == sampGetPlayerNickname(id) and cfg.settings.server == sampGetCurrentServerAddress() then
+					printStyledString('~w~Auto authorization ~n~~p~FastSpawn', 4000, 7)
+					sampSendDialogResponse(1, 1, 0, cfg.settings.parolaccount)
+				end
+			end
 		end
-		start_click_shift = nil
+		wait(200)
 	end
-	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	nick = sampGetPlayerNickname(id)
-	wait(3000)
-	if autorizate and cfg.AT_FastSpawn.parolalogin and cfg.AT_FastSpawn.autoalogin and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
-		while not access_alogin do
-			while sampIsDialogActive() do wait(100) sampCloseCurrentDialogWithButton(0) end
-			sampSendChat('/alogin ' .. cfg.AT_FastSpawn.parolalogin)
-			wait(6000)
+	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+	local nick = sampGetPlayerNickname(id)
+	wait(5000)
+	while sampIsDialogActive() do wait(200) end
+	if cfg.settings.parolalogin and cfg.settings.autoalogin and cfg.settings.server == sampGetCurrentServerAddress() and cfg.settings.nickname == nick then
+		while not sampTextdrawIsExists(452) do
+			sampSendChat('/alogin ' .. cfg.settings.parolalogin)
+			wait(3000)
 		end
-		access_alogin = nil
 	end
-	if autorizate and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() and cfg.AT_FastSpawn.nickname == nick then
+	if access and cfg.settings.server == sampGetCurrentServerAddress() and cfg.settings.nickname == nick then
 		for i = 0, #cfg.command do
 			if cfg.command[i] and #(cfg.command[i]) >= 2 then
 				if cfg.wait_command[i] == 0 then press_wait = 500
@@ -105,7 +114,7 @@ function main()
 				elseif cfg.wait_command[i] == 4 then press_wait = 3000 end
 				if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
 					wait(press_wait)
-					while sampIsDialogActive() or sampIsChatInputActive() do wait(0) end
+					while sampIsDialogActive() do wait(100) end
 					sampProcessChatInput(cfg.command[i])
 				end
 			end
@@ -126,7 +135,7 @@ function imgui.OnDrawFrame()
         imgui.SameLine()
         if imgui.Button(u8'Сохранить') then
 			printStyledString('save', 1000, 7)
-            cfg.AT_FastSpawn.parolalogin = text_buffer.v .. '%'
+            cfg.settings.parolalogin = text_buffer.v .. '%'
 			save()
         end
         imgui.Text(u8'Пароль от аккаунта:')
@@ -134,20 +143,20 @@ function imgui.OnDrawFrame()
         imgui.SameLine()
         if imgui.Button(u8'Сoхранить') then
 			printStyledString('save', 1000, 7)
-            cfg.AT_FastSpawn.parolaccount = text_buffer2.v ..'%'
+            cfg.settings.parolaccount = text_buffer2.v ..'%'
             save()
         end
         imgui.Separator()
         if imgui.Checkbox(u8"Автоввод пароля", checked_test) then
-            cfg.AT_FastSpawn.autorizate = not cfg.AT_FastSpawn.autorizate
+            cfg.settings.autorizate = not cfg.settings.autorizate
 			save()
         end
         if imgui.Checkbox(u8'Автоввод А пароля', checked_test2) then
-            cfg.AT_FastSpawn.autoalogin = not cfg.AT_FastSpawn.autoalogin
+            cfg.settings.autoalogin = not cfg.settings.autoalogin
 			save()
         end
         if imgui.Checkbox(u8'АвтоSpawn', checked_test3) then
-            cfg.AT_FastSpawn.spawn = not cfg.AT_FastSpawn.spawn
+            cfg.settings.spawn = not cfg.settings.spawn
 			save()
         end
         if imgui.Button(u8"Добавить команды") then
@@ -197,27 +206,12 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 end
+
 function save()
-	_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	cfg.AT_FastSpawn.server = sampGetCurrentServerAddress()
-	cfg.AT_FastSpawn.nickname = sampGetPlayerNickname(id)
-	inicfg.save(cfg, directIni)
-end
-function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-    if (dialogId == 658 or dialogId == 657) and cfg.AT_FastSpawn.spawn then
-		sampSendDialogResponse(dialogId, 1, 0, _)
-		sampCloseCurrentDialogWithButton(0)
-		autorizate = true
-		return false
-    end
-    if dialogId == 1 and cfg.AT_FastSpawn.autorizate and cfg.AT_FastSpawn.parolaccount and not inputpassword then
-		local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-		if cfg.AT_FastSpawn.nickname == sampGetPlayerNickname(id) and cfg.AT_FastSpawn.server == sampGetCurrentServerAddress() then
-			printStyledString('authorization ...', 1000, 7)
-			sampSendDialogResponse(dialogId, 1, _, cfg.AT_FastSpawn.parolaccount)
-			inputpassword = true
-		end
-    end
+	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+	cfg.settings.server = sampGetCurrentServerAddress()
+	cfg.settings.nickname = sampGetPlayerNickname(id)
+	inicfg.save(cfg, 'AT//AT_FS.ini')
 end
 
 sampRegisterChatCommand('fs', function()
@@ -225,6 +219,14 @@ sampRegisterChatCommand('fs', function()
     imgui.Process = main_window_state.v
 end)
 
+if not file_exists('moonloader\\control_work_AT.lua') then
+	local dlstatus = require('moonloader').download_status
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader\\control_work_AT.lua', function(id, status)
+		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+			reloadScripts()
+		end
+	end)
+end
 
 
 
