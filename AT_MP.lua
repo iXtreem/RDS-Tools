@@ -3,7 +3,7 @@ script_name 'AT_MP'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 local imgui = require 'imgui'
-local version = 1.9
+local version = 2
 local imadd = require 'imgui_addons'
 local sampev = require 'lib.samp.events'
 local my_lib = require 'my_lib'
@@ -16,7 +16,7 @@ local vkeys = require 'vkeys'
 local inicfg = require 'inicfg'
 local font = require ("moonloader").font_flag
 local sw, sh = getScreenResolution()
-local tag = '{FF0000}MP{F0E68C}: '
+local tag = '{B73CBF}AdminTools - Мероприятия{F0E68C}: '
 local cfg2 = inicfg.load({
     settings = {
         versionMP = version,
@@ -68,13 +68,14 @@ local checkbox = {
     check_11 = imgui.ImBool(false),
 }
 local windows = {
-    menu_window_state = imgui.ImBool(false),
-    secondary_window_state = imgui.ImBool(false),
-    stata_window_state = imgui.ImBool(false),
-    static_window_state = imgui.ImBool(false)
+    menu_window_state       = imgui.ImBool(false),
+    secondary_window_state  = imgui.ImBool(false),
+    stata_window_state      = imgui.ImBool(false),
+    static_window_state     = imgui.ImBool(false)
 }
 local new_flood = imgui.ImBuffer(cfg.AT_MP.text, 8192)
-
+local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+local mynick = sampGetPlayerNickname(myid)
 function main()
     while not isSampAvailable() do wait(0) end
     while not sampIsLocalPlayerSpawned() do wait(1000) end
@@ -112,10 +113,11 @@ function check_player()
     end
 end
 local cursor = true
+local start_mp = false -- защита от удваивания функции
 local menu = 'open mp'
 local option_komnata = imgui.ImInt(0)
 local option_inter = imgui.ImInt(0)
-local option_color = imgui.ImInt(3) -- цвет по умолчанию
+local option_color = imgui.ImInt(10) -- цвет по умолчанию
 local text_buffer = imgui.ImBuffer(256)
 local text_myprize = imgui.ImBuffer(256)
 local MyTextMP = imgui.ImBuffer(8192)
@@ -142,27 +144,21 @@ local colors = {
     [17] = u8'Розово-красный',
 }
 function sampev.onServerMessage(color,text)
-    if mynick then
-        if text:match('%[(%d+)%] ответил (.*)%[(%d+)%]: (.*)') and text:match(mynick) then
-            cfg.info[0] = cfg.info[0] + 1
-            save() 
-        end
-        if text:match('Администратор (.+) забанил%(.+%) игрока (.+) на (.+) дней. Причина: .+') and text:match(mynick) then
-            cfg.info[1] = cfg.info[1] + 1
-            save()
-        end
-        if text:match("Администратор (.+) заткнул%(.+%) игрока (.+) на (.+) секунд. Причина: .+") and text:match(mynick) then
-            cfg.info[2] = cfg.info[2] + 1
-            save()
-        end
-        if text:find("Администратор (.+) посадил%(.+%) игрока (.+) в тюрьму на (.+) секунд. Причина: .+") and text:match(mynick) then
-            cfg.info[3] = cfg.info[3] + 1
-            save()
-        end
-        if text:find("Администратор (.+) кикнул игрока (.+) Причина: .+") and text:match(mynick) then
-            cfg.info[4] = cfg.info[4] + 1
-            save()
-        end
+    if text:match('%[A%] '..mynick..'%[(%d+)%] ответил (.+)%[(%d+)%]:') then
+        cfg.info[0] = cfg.info[0] + 1
+        save() 
+    elseif text:match('Администратор '.. mynick ..' забанил%(.+%) игрока (.+) на (.+) дней. Причина:') then
+        cfg.info[1] = cfg.info[1] + 1
+        save()
+    elseif text:match('Администратор '.. mynick ..' заткнул%(.+%) игрока (.+) на (.+) секунд. Причина:') then
+        cfg.info[2] = cfg.info[2] + 1
+        save()
+    elseif text:match('Администратор '.. mynick ..' посадил%(.+%) игрока (.+) в тюрьму на (.+) секунд. Причина:') then
+        cfg.info[3] = cfg.info[3] + 1
+        save()
+    elseif text:find('Администратор ' .. mynick ..' кикнул игрока (.+) Причина:') then
+        cfg.info[4] = cfg.info[4] + 1
+        save()
     end
 end
 function imgui.OnDrawFrame()
@@ -625,7 +621,6 @@ function check_my_auto()
         wait(1000)
     end
 end
-local start_mp = false -- защита от удваивания функции
 function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт (рр, корабль и т.д), цвет месс, интерьер
     if start_mp then
         return false
@@ -635,7 +630,7 @@ function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт
             if not sampIsDialogActive(5343) then 
                 sampCloseCurrentDialogWithButton(0) 
                 sampSendChat('/mp')
-                while not sampIsDialogActive(5343) do wait(1) end
+                while not sampIsDialogActive(5343) do wait(100) end
             end -- если диалог закрыт открываем снова
             if komnata then
                 sampSendDialogResponse(5343, 1, komnata) -- тп в комнату
@@ -650,13 +645,13 @@ function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт
             sampSendDialogResponse(16066, 1, 0) -- установить координаты
             sampSendDialogResponse(16066, 0, 0) -- закрываем окно
             while not sampIsDialogActive(5343) do wait(200) end -- подстраховка от медленного интернета, ждем когда появится диалог
-            while sampIsDialogActive(5343) do sampCloseCurrentDialogWithButton(0) wait(200) end
+            while sampIsDialogActive() do sampCloseCurrentDialogWithButton(0) wait(200) end
             sampSendChat('/mess '..color.. ' Начинается мероприятие '..name..' успей принять участие')
             sampSendChat('/mp')
             sampSendDialogResponse(5343, 1, 0) -- Открываем ввод названия мп
             sampSendDialogResponse(5344, 1, 1, name) -- название мп
             while not sampIsDialogActive(5343) do wait(200) end
-            while sampIsDialogActive(5343) do sampCloseCurrentDialogWithButton(0) wait(200) end
+            while sampIsDialogActive() do sampCloseCurrentDialogWithButton(0) wait(200) end
             if #MyTextMP.v == 0 then 
                 for k,v in pairs(textSplit(string.gsub(cfg.AT_MP.text, '_', color),'@')) do
                     if v:find('*') then 
@@ -684,18 +679,16 @@ function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт
 end
 function find_weapon()
     local _, myid = sampGetPlayerIdByCharHandle(playerPed)
-    while menu ~= 'настройки' and menu ~= 'закрыть мп' do wait(3000) end
+    while (menu ~= 'настройки' and menu ~= 'закрыть мп') do wait(3000) end
     while true do
         wait(2000)
-        local playerzone = playersToStreamZone()
-        for _,v in pairs(playerzone) do
+        for _,v in pairs(playersToStreamZone()) do
             local _, handle = sampGetCharHandleBySampPlayerId(v) 
             if v ~= myid then
                 if getCurrentCharWeapon(handle) ~= 0 then
-                    if not (sampTextdrawIsExists(168) or sampTextdrawIsExists(144)) then
-                        sampAddChatMessage(tag .. 'Обнаружена попытка слива мп. Игрок: ' .. sampGetPlayerNickname(v) .. '[' .. v .. ']. Оружие: ' .. (require 'game.weapons').get_name(getCurrentCharWeapon(handle)) , -1)
-                        sampSendChat('/jail ' .. v .. ' 300 Оружие на мероприятии')
-                    end
+                    while sampIsDialogActive() do wait(50) sampCloseCurrentDialogWithButton(0) end
+                    sampAddChatMessage(tag .. 'Обнаружена попытка слива мп. Игрок: ' .. sampGetPlayerNickname(v) .. '[' .. v .. ']. Оружие: ' .. (require 'game.weapons').get_name(getCurrentCharWeapon(handle)) , -1)
+                    sampSendChat('/jail ' .. v .. ' 300 Оружие на мероприятии')
                 end
             end
         end
@@ -738,7 +731,7 @@ end
 function radius()
     local font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
     while true do
-        wait(1)
+        wait(3)
         renderFontDrawText(font_watermark, 'Игроков в радиусе: ' .. #(playersToStreamZone()) -1 , sh*0.5, sw*0.5, 0xCCFFFFFF)
     end
 end
