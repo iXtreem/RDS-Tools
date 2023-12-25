@@ -3,7 +3,7 @@ require 'my_lib'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 1.4
+local version = 1.5
 local imgui = require 'imgui' 
 local ffi = require "ffi"
 local fa = require 'faicons'
@@ -56,6 +56,7 @@ function main()
 	while not isSampAvailable() do wait(1000) end
 	for k,v in pairs(cfg.command) do if (v and #(v)>1) and k~=0 then inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(tostring(v)), 256) else table.remove(cfg.command, k) inicfg.save(cfg, 'AT//AT_FS.ini') end end
 	for k,v in pairs(cfg.wait_command) do inputWait[#inputWait+1] = imgui.ImInt(v) end
+	if sampIsLocalPlayerSpawned() then return false end
 	while true do
 		if sampTextdrawIsExists(0) then
 			if sampIsDialogActive(657) then
