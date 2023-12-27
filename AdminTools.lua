@@ -7,7 +7,7 @@ script_properties("work-in-pause") 							-- Возможность обрабатывать информацию
 import("\\resource\\AT_MP.lua") 							-- подгрузка плагина для мероприятий
 import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
 import("\\resource\\AT_Trassera.lua") 	  					-- подгрузка трассеров
-local version = 5.7 			 							-- Версия скрипта
+local version = 5.8 			 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -77,7 +77,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		forma_na_kick = false,
 		forma_na_mute = false,
 		add_mynick_in_form = false,
-		size_text_f6 = 12,
+		size_text_f6 = 11,
 		enter_report = true,
 		open_tool = 'F3',
 		weapon_hack = false,
@@ -86,6 +86,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		bloknotik = '',
 		autoupdate = true,
 		chat_log = true,
+		control_afk = false,
 	},
 	customotvet = {},
 	myflood = {},
@@ -239,28 +240,30 @@ local array = {
 		["Щ"] = "O", ["З"] = "P", ["Х"] = "{", ["Ъ"] = "}", ["Ф"] = "A", ["Ы"] = "S", ["В"] = "D", ["А"] = "F", ["П"] = "G", ["Р"] = "H", ["О"] = "J", ["Л"] = "K", ["Д"] = "L",
 		["Ж"] = ":", ["Э"] = "\"", ["Я"] = "Z", ["Ч"] = "X", ["С"] = "C", ["М"] = "V", ["И"] = "B", ["Т"] = "N", ["Ь"] = "M", ["Б"] = "<", ["Ю"] = ">"
 	},
+	keys = {
+		["onfoot"] = {},
+		["vehicle"] = {}
+	}
 }
 local menu 				= 'Главное меню' 								-- Разные вкладки в F3
 local menu_in_recon 	= 'Главное меню'								-- Разные вкладки в рекон
 local tag 				= '{2B6CC4}Admin Tools: {F0E68C}' 				-- Задаем название скрипта в самой игре
 local AFK 				= false											-- основной триггер скрипта, афк мы или нет
 local atr 				= false											-- альтернатива /tr
-local find_ip_player 	= false
-local regip				= nil
-local lastip			= nil
-
----================= Задаем шрифт админ-чата =====================------------
-local font_adminchat = renderCreateFont("Calibri", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW)
----================= Задаем шрифт ears-чата =====================------------
-local font_earschat = renderCreateFont("Calibri", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)
+local find_ip_player 	= false											-- поиск IP в /offstats
+local regip				= nil											-- Узнаем изначальный ип в /offstats
+local lastip			= nil											-- Узнаем последний ип в /offstats
+local autoprefix_access = false											-- Узнаем нужна ли вообще авто выдача префикса
+local target = -1														-- Игрок в виртуальных клавишах
+local font_adminchat = renderCreateFont("Arial", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW) -- шрифт админ чата
+local font_earschat  = renderCreateFont("Arial", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)	   -- шрифт ears чата
 
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
-function main() 
-	while not isSampAvailable() do wait(2000) end
+function main()
 	while not sampIsLocalPlayerSpawned() do wait(2000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
-	local AdminTools = inicfg.load(nil, 'moonloader\\' .. '//config//AT//AdminTools.ini')
+	local AdminTools = inicfg.load(nil, 'moonloader\\config\\AT\\AdminTools.ini')
 	if AdminTools then
 		if AdminTools.script.info then update_info = AdminTools.script.info end
 		if AdminTools.script.version > version then
@@ -286,17 +289,17 @@ function main()
 	end
 	local AdminTools = nil
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
-	local rules = file_exists('moonloader\\' .. "\\config\\AT\\rules.txt") if not rules then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader\\' .. "\\config\\AT\\rules.txt", function(id, status) end) end
-	local AutoMute_mat = file_exists('moonloader\\' .. "\\config\\AT\\mat.txt") if not AutoMute_mat then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/mat.txt", 'moonloader\\' .. "\\config\\AT\\mat.txt", function(id, status) end) end
-	local AutoMute_osk = file_exists('moonloader\\' .. "\\config\\AT\\osk.txt") if not AutoMute_osk then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", 'moonloader\\' .. "\\config\\AT\\osk.txt", function(id, status) end) end	
-	local rules = io.open('moonloader\\' .. "\\config\\AT\\rules.txt","r")
+	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader\\' .. "\\config\\AT\\rules.txt", function(id, status) end) end
+	local AutoMute_mat = file_exists('moonloader\\config\\AT\\mat.txt') if not AutoMute_mat then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/mat.txt", 'moonloader\\' .. "\\config\\AT\\mat.txt", function(id, status) end) end
+	local AutoMute_osk = file_exists('moonloader\\config\\AT\\osk.txt') if not AutoMute_osk then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", 'moonloader\\' .. "\\config\\AT\\osk.txt", function(id, status) end) end	
+	local rules = io.open('moonloader\\config\\AT\\rules.txt',"r")
 	if rules then for line in rules:lines() do array.pravila[ #(array.pravila) + 1] = line;end rules:close() end
 	
 	--------------------============ АВТОМУТ =====================---------------------------------
-	local AutoMute_mat = io.open('moonloader\\' .. "\\config\\AT\\mat.txt", "r")
+	local AutoMute_mat = io.open('moonloader\\config\\AT\\mat.txt', "r")
 	if AutoMute_mat then for line in AutoMute_mat:lines() do line = u8:decode(line) if line and #(line) > 2 then array.mat[#array.mat + 1] = line end;end AutoMute_mat:close() end
 	
-	local AutoMute_osk = io.open('moonloader\\' .. "\\config\\AT\\osk.txt", "r")
+	local AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', "r")
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
 	--------------------============ АВТОМУТ =====================---------------------------------
 	local data_today = os.date("*t") -- узнаем дату сегодня
@@ -306,25 +309,25 @@ function main()
 		save()
 	end
 	--=========== ЧАТ ЛОГГ =======-----
-	local log = ('moonloader\\'..'\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
-	if not directory_exists('moonloader\\'..'\\config\\chatlog\\') then os.execute("mkdir moonloader\\config\\chatlog") print('Папка отсутствовала, создал новую.') end
+	local log = ('moonloader\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
+	if not directory_exists('moonloader\\config\\chatlog\\') then os.execute("mkdir moonloader\\config\\chatlog") print('Папка отсутствовала, создал новую.') end
 	if not file_exists(log) then
 		local file = io.open(log,"w")
 		file:close()
 		print('Создан новый chatlog.txt')
 	end
-	for k, v in ipairs(scanDirectory('moonloader\\'..'\\config\\chatlog\\')) do
+	for k, v in ipairs(scanDirectory('moonloader\\config\\chatlog\\')) do
 		local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
 		if data3 and data2 and data3 then
 			if tonumber(daysPassed(data3,data2,data1)) < 3 then
-				file = io.open('moonloader\\'..'\\config\\chatlog\\'..v,'r')
+				file = io.open('moonloader\\config\\chatlog\\'..v,'r')
 				for line in file:lines() do
 					if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','')
 					elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','')
 					elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','') end
 				end
 				file:close()
-			else os.remove('moonloader\\'..'\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
+			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
 		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 	end
 	--========== ЧАТ ЛОГГ ========----
@@ -333,20 +336,33 @@ function main()
 	func1 = lua_thread.create_suspended(wallhack)
 	func4 = lua_thread.create_suspended(binder_key)
 	func4:run() 									--binder_key
-	if cfg.settings.render_admins then funcadm:run() end
+	if cfg.settings.render_admins then
+		lua_thread.create(function()
+			while #(array.admins) == 0 do wait(1000) end
+			array.windows.render_admins.v = true
+			imgui.Process = true
+		end)
+		funcadm:run() 
+	end
 	if cfg.settings.wallhack then on_wallhack() func1:run() end
 	if cfg.settings.autoonline then func:run() end
 
-	local font_watermark = renderCreateFont("Javanese Text", 8, font.BOLD + font.BORDER + font.SHADOW)
+	local font_watermark = renderCreateFont("Arial", 8, font.BOLD + font.BORDER + font.SHADOW) -- шрифт текста о АТ снизуу
+	local font 			 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW) -- шрифт открытого чата
 
-	local font = renderCreateFont("Calibri", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW)
 	local _, pID = sampGetPlayerIdByCharHandle(playerPed) -- myid
 	local name = sampGetPlayerNickname(pID) -- mynick
+
+	local translite = function(text) -- транслейт текста для замены . /
+		for k, v in pairs(array.chars) do text = string.gsub(text, k, v) end return text
+	end
+
 
 	while true do
 
 		if not AFK then
 			
+			-- рендер чатов
 			for i = 1, #array.adminchat do
 				renderFontDrawText(font_adminchat, array.adminchat[i], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*14), 0xCCFFFFFF)
 			end
@@ -375,6 +391,8 @@ function main()
 						oldText = nText
 					end
 				end
+
+				-- подсказки под чатом
 				local in1 = sampGetInputInfoPtr()
 				local in1 = getStructElement(in1, 0x8, 4)
 				local in2 = getStructElement(in1, 0x8, 4)
@@ -389,13 +407,10 @@ function main()
 				if getCurrentLanguageName() == '00000419' then raskl = 'RU'
 				else raskl = 'EN' end
 	
-				local text = string.format("Ваш ник: {0088ff}%s[%s]{ffffff}, Ваш пинг: {0088ff}%s{ffffff}, Раскладка: {0088ff}%s{ffffff}, Capslock: {0088ff}%s{ffffff}", name, pID, ping, raskl, caps)
+				local text = ("Ваш ник: {0088ff}"..name.."["..pID.."]{ffffff}, Ваш пинг: {0088ff}"..ping.."{ffffff}, Раскладка: {0088ff}"..raskl.."{ffffff}, Capslock: {0088ff}"..caps)
 				renderFontDrawText(font, text, in2 + 5, in3 + 40, -1)
 			end
 		end
-
-		-- название програмки в углу
-		
 
 		wait(3) -- задержка
 	end
@@ -408,9 +423,9 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		fs 		=		'Открыть меню FastSpawn',
 		sl 		=		'Отправиться в слежку за игроком',
 		trassera= 		'Открыть настройку трассеров пуль',
-		ears 	=		'Включить рендер личных сообщений игроков',
+		ears 	=		'Включить/выключить рендер личных сообщений игроков',
 		ahelp 	= 		'Все команды скрипта/сервера и правила',
-		wh 		= 		'Включить WallHack',
+		wh 		= 		'Включить/выключить WallHack',
 		c 		=		'Быстрый ответ игроку в формате репорта',
 		tool 	= 		'Активировать меню АТ',
 		sbanip 	= 		'Выдать блокировку аккаунта с IP адресом (ФД!)',
@@ -425,6 +440,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		prfga 	= 		'Выдать префикс ГА',
 		color_report   ='Назначить цвет ответа на репорт',
 		autoaccept_form='Автопринятие админ-форм',
+		control_afk    ='Автоматически закрывать игру, если стоишь в AFK более указанного кол-ва минут',
 		size_chat	   ='Изменить размер рендера информации открытого чата',
 		add_autoprefix ='Добавить администратора в исключение автопрефикса',
 		del_autoprefix ='Удалить администратора из исключений автопрефикса',
@@ -500,20 +516,19 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	},
 	ban = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
 		bh 		= 		'/ban _ 3 Нарушение правил /helper',
-		nmb 	= 		'/iban _ 3 Неадекватное поведение',
+		nmb 	= 		'/ban _ 3 Неадекватное поведение',
 		ch 		= 		'/iban _ 7 читерский скрипт/ПО',
 		obh 	= 		'/iban _ 7 Обход прошлого бана',
 		bosk 	= 		'/siban _ 999 Оскорбление проекта',
 		rk 		= 		'/siban _ 999 Реклама',
 		obm 	= 		'/siban _ 30 Обман/Развод',
-		pl 		= 		'/ban _ 7 Плагиат ника администратора',
 	},
 	kick = {
 		kk3 	= 		'/ban _ 7 Смените ник 3/3',
 		kk2 	= 		'/kick _ Смените ник 2/3',
 		kk1 	= 		'/kick _ Смените ник 1/3',
 		cafk 	= 		'/kick _ AFK in /arena',
-		jk 		= 		'/kick _ DM in jail',
+		dj 		= 		'/kick _ DM in jail',
 	},
 }
 --------============= Инициализируем команды, указанные выше ===========================---------------------------
@@ -673,6 +688,20 @@ sampRegisterChatCommand('sbanip', function(param)
 		find_ip_player, regip, lastip = false, nil, nil
 	end)
 end)
+sampRegisterChatCommand('control_afk', function(param)
+	if not tonumber(param) then sampAddChatMessage(tag .. 'Значение указано неверно. Введите кол-во минут. 0 = выкл.', -1) return false end
+	local param = tonumber(param)
+	if param >= 0 then
+		if param == 0 then 
+			cfg.settings.control_afk = false
+			sampAddChatMessage(tag .. 'Автоматический выход из игры деактивирован.', -1)
+		else 
+			cfg.settings.control_afk = param
+			sampAddChatMessage(tag .. 'АТ автоматически закроет игру, если вы будете находиться в AFK ' .. param .. '+ минут.', -1)
+		end
+		save()
+	else sampAddChatMessage(tag .. 'Значение указано неверно. Введите кол-во минут. 0 = выкл.', -1) end
+end)
 sampRegisterChatCommand('autoprefix', function()
 	cfg.settings.autoprefix = not cfg.settings.autoprefix
 	save()
@@ -788,7 +817,7 @@ function imgui.OnDrawFrame()
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
 		imgui.SameLine()
-		imgui.SetCursorPosX(140)
+		imgui.SetCursorPosX(110)
 		imgui.BeginGroup()
 			if imgui.Button(fa.ICON_ADDRESS_BOOK, imgui.ImVec2(30, 30)) then 		menu = 'Главное меню' end imgui.SameLine()
 			if imgui.Button(fa.ICON_COGS, imgui.ImVec2(30, 30)) then 				menu = 'Дополнительные функции' end imgui.SameLine()
@@ -796,7 +825,8 @@ function imgui.OnDrawFrame()
 			if imgui.Button(fa.ICON_PENCIL_SQUARE, imgui.ImVec2(30, 30)) then 		menu = 'Блокнот' end imgui.SameLine()
 			if imgui.Button(fa.ICON_RSS, imgui.ImVec2(30, 30)) then 				menu = 'Флуды' end imgui.SameLine()
 			if imgui.Button(fa.ICON_BOOKMARK, imgui.ImVec2(30, 30)) then 			menu = 'Быстрые ответы' end imgui.SameLine()
-			if imgui.Button(fa.ICON_CLOUD, imgui.ImVec2(30, 30)) then 				menu = 'Автомут' end
+			if imgui.Button(fa.ICON_CLOUD, imgui.ImVec2(30, 30)) then 				menu = 'Автомут' end imgui.SameLine()
+			if imgui.Button(fa.ICON_INFO_CIRCLE, imgui.ImVec2(30, 30)) then array.windows.menu_tools.v = false sampProcessChatInput('/ahelp') end
 		imgui.EndGroup()
 		imgui.SetCursorPosY(65)
         imgui.Separator()
@@ -1198,7 +1228,7 @@ function imgui.OnDrawFrame()
 					imgui.EndPopup()
 				end
 				imgui.SetCursorPosY(470)
-				if imgui.Button(u8'Перезагрузить скрипт '..fa.ICON_RECYCLE, imgui.ImVec2(250,24)) then reloadScripts() end
+				if imgui.Button(u8'Перезагрузить скрипты '..fa.ICON_RECYCLE, imgui.ImVec2(250,24)) then reloadScripts() end
 				imgui.SameLine()
 				if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(228, 24)) then ScriptExport() end
 			elseif menu == 'Быстрые клавиши' then -- быстрые клавиши
@@ -1800,6 +1830,10 @@ function imgui.OnDrawFrame()
 			sampAddChatMessage(tag .. 'Ник скопирован в буфер обмена.', -1)
 		end
 		imgui.TextWrapped(u8('Жалоба: ' .. textreport))
+		if reportid and sampIsPlayerConnected(reportid) then
+			imgui.SameLine()
+			imgui.TextColoredRGB(u8('{D3D3D3}>> '..sampGetPlayerNickname(reportid)))
+		end
 		if wasKeyPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end 
 		imgui.NewInputText('##SearchBar', array.buffer.text_ans, 375, u8'Введите ваш ответ.', 2)
 		imgui.SameLine()
@@ -2873,7 +2907,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				array.admins[i] = string.gsub(array.admins[i], '{%w%w%w%w%w%w}', "")
 				local afk = string.match(array.admins[i], 'AFK: (.+)')
 				local name, id, _, lvl, _, _ = string.match(array.admins[i], '(.+)%((%d+)%) %((.+)%) | Уровень: (%d+) | Выговоры: (%d+) из 3 | Репутация: (.+)')
-				local name, id, lvl = tostring(name), tostring(id), tostring(lvl)
 				array.admins[i] = string.gsub(array.admins[i], 'Репутация: (.+)', "")
 				if #rang > 2 then
 					if afk then array.admins[i] = name .. '(' .. id .. ') ' .. rang .. ' ' .. lvl .. ' AFK: ' .. afk
@@ -2884,43 +2917,32 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end
 				if cfg.settings.autoprefix then
 					local lvl, rang, id = tonumber(lvl), string.gsub(rang, '{%w%w%w%w%w%w}', ''), tonumber(id)
-					if not management_team then if id == myid and lvl == 18 and rang ~= 'Ст.Администратор' then print('Вы - руководящий состав') management_team = true end
-					elseif id ~= myid then
-						for i = 1, #(cfg.render_admins_exception) do if cfg.render_admins_exception[i] == sampGetPlayerNickname(id) then  exception_admin = true end end
-						if not exception_admin then
-							if lvl <= 9 and lvl > 0 and rang ~= 'Мл.Администратор' then
-								while sampIsDialogActive() do wait(0) end
-								sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
-								sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixma .. '}Мл.Администратор', -1)
-								wait(800) -- серверная задержка на команды
-								sampSendChat('/prefix ' .. id .. ' Мл.Администратор ' .. cfg.settings.prefixma)
-								wait(800) -- серверная задержка на команды
-								sampSendChat('/admins')
-								notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.')
-							elseif lvl < 15 and lvl >= 10 and rang ~= 'Администратор' then
-								while sampIsDialogActive() do wait(0) end
-								sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
-								sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' ..cfg.settings.prefixa..'}Администратор', -1)
-								wait(800) -- серверная задержка на команды
-								sampSendChat('/prefix ' .. id .. ' Администратор ' .. cfg.settings.prefixa)
-								wait(800) -- серверная задержка на команды
-								notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.')
-								sampSendChat('/admins')
-							elseif lvl < 18 and lvl >= 15 and rang ~= 'Ст.Администратор' then
-								while sampIsDialogActive() do wait(0) end
-								sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
-								sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixsa..'}Ст.Администратор', -1)
-								wait(800) -- серверная задержка на команды
-								sampSendChat('/prefix ' .. id .. ' Ст.Администратор ' .. cfg.settings.prefixsa)
-								wait(800) -- серверная задержка на команды
-								sampSendChat('/admins')
-								notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.')
-							end
+					if id ~= myid then
+						if (lvl > 0 and lvl < 10) and rang ~= 'Мл.Администратор' then
+							wait(1000)
+							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
+							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixma .. '}Мл.Администратор', -1)
+							sampSendChat('/prefix ' .. id .. ' Мл.Администратор ' .. cfg.settings.prefixma)
+							sampSendChat('/admins')
+							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.')
+						elseif (lvl > 11 and lvl < 15) and rang ~= 'Администратор' then
+							wait(1000)
+							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
+							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' ..cfg.settings.prefixa..'}Администратор', -1)
+							sampSendChat('/prefix ' .. id .. ' Администратор ' .. cfg.settings.prefixa)
+							sampSendChat('/admins')
+							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.')
+						elseif (lvl > 16 and lvl < 18) and rang ~= 'Ст.Администратор' then
+							wait(1000)
+							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
+							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixsa..'}Ст.Администратор', -1)
+							sampSendChat('/prefix ' .. id .. ' Ст.Администратор ' .. cfg.settings.prefixsa)
+							sampSendChat('/admins')
+							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.')
 						end
 					end
 				end
 			end
-			imgui.Process, array.windows.render_admins.v = true, true
 		end)
 		return false
 	elseif dialogId == 1098 then -- автоонлайн
@@ -2965,7 +2987,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			end
 			sampAddChatMessage(tag .. 'Проверяемый пользователь - ' .. player, -1)
 			if isTrigger then sampAddChatMessage(tag .. 'Устройство данного юзера - мобильное устройство.', -1)
-			else sampAddChatMessage(tag .. 'Устройство данного юзера - мобильный телефон.', -1) end
+			else sampAddChatMessage(tag .. 'Устройство данного юзера - персональный компьютер', -1) end
 			wait(0)
 			sampCloseCurrentDialogWithButton(0)
 		end)
@@ -2979,7 +3001,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		return false
 	elseif dialogId == 2348 and array.windows.fast_report.v then array.windows.fast_report.v = false
 	elseif dialogId == 2349 then -- окно с самим репортом.
-		array.answer, array.windows.answer_player_report.v, peremrep, myid = {}, false, nil, nil
+		array.answer, array.windows.answer_player_report.v, peremrep, myid, reportid = {}, false, nil, nil, nil
 		local text = textSplit(text, '\n')
 		text[1] = string.gsub(string.gsub(text[1], '{.+}', ''), 'Игрок: ', '')
 		text[4] = string.gsub(string.gsub(text[4], '{.+}', ''), 'Жалоба: ', '')
@@ -3131,7 +3153,7 @@ function render_admins()
 	wait(5000)
 	while true do
 		while sampIsDialogActive() do wait(500) end
-		wait(500)
+		wait(300)
 		if not AFK then sampSendChat('/admins') end
 		wait(30000)
 	end
@@ -3179,11 +3201,6 @@ function update(param)
 		reloadScripts()
 	end)
 end
-------------- Input Helper -------------
-function translite(text)
-	for k, v in pairs(array.chars) do text = string.gsub(text, k, v) end return text
-end
-------------- Input Helper -------------
 
 function onWindowMessage(msg, wparam, lparam) -- блокировка ALT + Enter
 	if msg == 261 and wparam == 13 then consumeWindowMessage(true, true) end
@@ -3262,8 +3279,35 @@ function binder_key()
 			end
 		end
 		wait(30)
-		if isGamePaused() then AFK = true --запихнул в этот цикл поскольку здесь задержка больше и фпс будет больше
-		elseif AFK and not isGamePaused() then AFK = false end
+		if isGamePaused() then 
+			if not AFK and cfg.settings.control_afk then
+				lua_thread.create(function()
+
+					mem.write(0x747FB6, 0x1, 1, true)
+					mem.write(0x74805A, 0x1, 1, true)
+					mem.fill(0x74542B, 0x90, 8, true)
+					mem.fill(0x53EA88, 0x90, 6, true)
+
+					local memset = function(addr, arr)
+						for i = 1, #arr do
+							mem.write(addr + i - 1, arr[i], 1, true)
+						end
+					end
+
+					for i = 0, (cfg.settings.control_afk*10) do
+						wait(6000)
+						if not AFK then
+							mem.write(0x747FB6, 0x0, 1, true)
+							mem.write(0x74805A, 0x0, 1, true)
+							memset(0x74542B, { 0x50, 0x51, 0xFF, 0x15, 0x00, 0x83, 0x85, 0x00 })
+							memset(0x53EA88, { 0x0F, 0x84, 0x7B, 0x01, 0x00, 0x00 })
+							break
+						elseif i == (cfg.settings.control_afk*10) then ffi.C.ExitProcess(0)--[[game over]] end
+					end
+				end)
+			end
+			AFK = true
+		else AFK = false end
 	end
 end
 --============= Wallhack ==============--
@@ -3370,56 +3414,51 @@ end
 
 
 ---========================== /KEYSYNC =============================----
-local keys = {
-	["onfoot"] = {},
-	["vehicle"] = {}
-}
-local target = -1
 function sampev.onPlayerSync(playerId, data)
 	local result, id = sampGetPlayerIdByCharHandle(target)
 	if result and id == playerId then
-		keys["onfoot"] = {}
-		keys["onfoot"]["W"] = (data.upDownKeys == 65408) or nil
-		keys["onfoot"]["A"] = (data.leftRightKeys == 65408) or nil
-		keys["onfoot"]["S"] = (data.upDownKeys == 00128) or nil
-		keys["onfoot"]["D"] = (data.leftRightKeys == 00128) or nil
+		array.keys["onfoot"] = {}
+		array.keys["onfoot"]["W"] = (data.upDownKeys == 65408) or nil
+		array.keys["onfoot"]["A"] = (data.leftRightKeys == 65408) or nil
+		array.keys["onfoot"]["S"] = (data.upDownKeys == 00128) or nil
+		array.keys["onfoot"]["D"] = (data.leftRightKeys == 00128) or nil
 
-		keys["onfoot"]["R"] = (bit.band(data.keysData, 82) == 82) or nil
+		array.keys["onfoot"]["R"] = (bit.band(data.keysData, 82) == 82) or nil
 
-		keys["onfoot"]["Alt"] = (bit.band(data.keysData, 1024) == 1024) or nil
-		keys["onfoot"]["Shift"] = (bit.band(data.keysData, 8) == 8) or nil
-		keys["onfoot"]["TAB"] = (data.otherKeys == 9) or nil
-		keys["onfoot"]["Space"] = (bit.band(data.keysData, 32) == 32) or nil
-		keys["onfoot"]["Ctrl"] = (data.otherKeys == 65507) or nil
+		array.keys["onfoot"]["Alt"] = (bit.band(data.keysData, 1024) == 1024) or nil
+		array.keys["onfoot"]["Shift"] = (bit.band(data.keysData, 8) == 8) or nil
+		array.keys["onfoot"]["TAB"] = (data.otherKeys == 9) or nil
+		array.keys["onfoot"]["Space"] = (bit.band(data.keysData, 32) == 32) or nil
+		array.keys["onfoot"]["Ctrl"] = (data.otherKeys == 65507) or nil
 
-		keys["onfoot"]["C"] = (bit.band(data.keysData, 2) == 2) or nil
+		array.keys["onfoot"]["C"] = (bit.band(data.keysData, 2) == 2) or nil
 
-		keys["onfoot"]["RKM"] = (bit.band(data.keysData, 4) == 4) or nil
-		keys["onfoot"]["LKM"] = (bit.band(data.keysData, 128) == 128) or nil
-		keys["onfoot"]["Enter"] = (bit.band(data.keysData, 16) == 16) or nil
+		array.keys["onfoot"]["RKM"] = (bit.band(data.keysData, 4) == 4) or nil
+		array.keys["onfoot"]["LKM"] = (bit.band(data.keysData, 128) == 128) or nil
+		array.keys["onfoot"]["Enter"] = (bit.band(data.keysData, 16) == 16) or nil
 	end
 end
 function sampev.onVehicleSync(playerId, vehicleId, data)
 	local result, id = sampGetPlayerIdByCharHandle(target)
 	if result and id == playerId then
-		keys["vehicle"] = {}
+		array.keys["vehicle"] = {}
 
-		keys["vehicle"]["W"] = (bit.band(data.keysData, 8) == 8) or nil
-		keys["vehicle"]["A"] = (data.leftRightKeys == 65408) or nil
-		keys["vehicle"]["S"] = (bit.band(data.keysData, 32) == 32) or nil
-		keys["vehicle"]["D"] = (data.leftRightKeys == 00128) or nil
+		array.keys["vehicle"]["W"] = (bit.band(data.keysData, 8) == 8) or nil
+		array.keys["vehicle"]["A"] = (data.leftRightKeys == 65408) or nil
+		array.keys["vehicle"]["S"] = (bit.band(data.keysData, 32) == 32) or nil
+		array.keys["vehicle"]["D"] = (data.leftRightKeys == 00128) or nil
 
-		keys["vehicle"]["Q"] = (bit.band(data.keysData, 256) == 256) or nil
-		keys["vehicle"]["E"] = (bit.band(data.keysData, 64) == 64) or nil
+		array.keys["vehicle"]["Q"] = (bit.band(data.keysData, 256) == 256) or nil
+		array.keys["vehicle"]["E"] = (bit.band(data.keysData, 64) == 64) or nil
 
-        keys["onfoot"]["Shift"] = (bit.band(data.keysData, 8) == 8) or nil
-		keys["vehicle"]["Space"] = (bit.band(data.keysData, 128) == 128) or nil
+        array.keys["onfoot"]["Shift"] = (bit.band(data.keysData, 8) == 8) or nil
+		array.keys["vehicle"]["Space"] = (bit.band(data.keysData, 128) == 128) or nil
 
-		keys["vehicle"]["Alt"] = (bit.band(data.keysData, 4) == 4) or nil
-		keys["vehicle"]["Enter"] = (bit.band(data.keysData, 16) == 16) or nil
+		array.keys["vehicle"]["Alt"] = (bit.band(data.keysData, 4) == 4) or nil
+		array.keys["vehicle"]["Enter"] = (bit.band(data.keysData, 16) == 16) or nil
 
-		keys["vehicle"]["Up"] = (data.upDownKeys == 65408) or nil
-		keys["vehicle"]["Down"] = (data.upDownKeys == 00128) or nil
+		array.keys["vehicle"]["Up"] = (data.upDownKeys == 65408) or nil
+		array.keys["vehicle"]["Down"] = (data.upDownKeys == 00128) or nil
 	end
 end
 
@@ -3443,28 +3482,28 @@ mimgui.OnFrame(
 				mimgui.BeginGroup()
 					mimgui.SetCursorPosX(10 - 5 + 5)  						
 					
-					KeyCap("TAB", (keys[plState]["TAB"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
-					KeyCap("Q", (keys[plState]["Q"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("W", (keys[plState]["W"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("E", (keys[plState]["E"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("R", (keys[plState]["R"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("TAB", (array.keys[plState]["TAB"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
+					KeyCap("Q", (array.keys[plState]["Q"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("W", (array.keys[plState]["W"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("E", (array.keys[plState]["E"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("R", (array.keys[plState]["R"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
 
 
-					KeyCap("RM", (keys[plState]["RKM"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("LM", (keys[plState]["LKM"] ~= nil), mimgui.ImVec2(30, 30))					
+					KeyCap("RM", (array.keys[plState]["RKM"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("LM", (array.keys[plState]["LKM"] ~= nil), mimgui.ImVec2(30, 30))					
 
 
-					KeyCap("Shift", (keys[plState]["Shift"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
-					KeyCap("A", (keys[plState]["A"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("S", (keys[plState]["S"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("D", (keys[plState]["D"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("C", (keys[plState]["C"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("Shift", (array.keys[plState]["Shift"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
+					KeyCap("A", (array.keys[plState]["A"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("S", (array.keys[plState]["S"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("D", (array.keys[plState]["D"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("C", (array.keys[plState]["C"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
 					
-					KeyCap("Enter", (keys[plState]["Enter"] ~= nil), mimgui.ImVec2(65, 30))
+					KeyCap("Enter", (array.keys[plState]["Enter"] ~= nil), mimgui.ImVec2(65, 30))
 
-					KeyCap("Ctrl", (keys[plState]["Ctrl"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
-					KeyCap("Alt", (keys[plState]["Alt"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("Space", (keys[plState]["Space"] ~= nil), mimgui.ImVec2(170, 30))
+					KeyCap("Ctrl", (array.keys[plState]["Ctrl"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
+					KeyCap("Alt", (array.keys[plState]["Alt"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
+					KeyCap("Space", (array.keys[plState]["Space"] ~= nil), mimgui.ImVec2(170, 30))
 
 				mimgui.EndGroup()
 
@@ -3579,6 +3618,7 @@ ffi.cdef[[
 	bool GetKeyboardLayoutNameA(char* pwszKLID);
 	int GetLocaleInfoA(int Locale, int LCType, char* lpLCData, int cchData);
 	int GetKeyboardLayoutNameA(char* pwszKLID);
+	void ExitProcess(unsigned int uExitCode); //  -- /q
 
 	// kill chat
 	struct stKillEntry
