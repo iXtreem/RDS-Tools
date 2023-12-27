@@ -2874,15 +2874,15 @@ function sampev.onShowTextDraw(id, data) -- —читываем серверные текстдравы
 			elseif v:match('(.+)%((%d+)%)') then
 				array.textdraw.name_report = id
 				control_player_recon = tonumber(string.match(v, '%((%d+)%)')) -- ник игрока в реконе
+				array.windows.recon_menu.v = true
+				array.windows.menu_in_recon.v = true
+				imgui.Process = true
 				return false
 			elseif v == 'STATS' then 
 				array.textdraw.stats = id
 				lua_thread.create(function()
 					wait(1) -- ждем пока пройдет весь цикл проверки текстдравов данной функцией
 					sampTextdrawSetStyle(array.textdraw.stats, -1)
-					array.windows.recon_menu.v = true
-					array.windows.menu_in_recon.v = true
-					imgui.Process = true
 					if cfg.settings.keysync then keysync(control_player_recon) end
 				end)
 			elseif v == 'CLOSE' then return false
