@@ -3,7 +3,7 @@ require 'my_lib'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 1.5
+local version = 1.6
 local imgui = require 'imgui' 
 local ffi = require "ffi"
 local fa = require 'faicons'
@@ -97,7 +97,6 @@ function main()
 	end
 	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	local nick = sampGetPlayerNickname(id)
-	wait(5000)
 	while sampIsDialogActive() do wait(200) end
 	if cfg.settings.parolalogin and cfg.settings.autoalogin and cfg.settings.server == sampGetCurrentServerAddress() and cfg.settings.nickname == nick then
 		while not sampTextdrawIsExists(452) do
@@ -108,6 +107,7 @@ function main()
 	if access and cfg.settings.server == sampGetCurrentServerAddress() and cfg.settings.nickname == nick then
 		for i = 0, #cfg.command do
 			if cfg.command[i] and #(cfg.command[i]) >= 2 then
+				local press_wait = 0
 				if cfg.wait_command[i] == 0 then press_wait = 500
 				elseif cfg.wait_command[i] == 1 then press_wait = 1000
 				elseif cfg.wait_command[i] == 2 then press_wait = 1500
@@ -115,7 +115,7 @@ function main()
 				elseif cfg.wait_command[i] == 4 then press_wait = 3000 end
 				if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
 					wait(press_wait)
-					while sampIsDialogActive() do wait(100) end
+					while sampIsDialogActive() or sampIsChatInputActive() do wait(100) end
 					sampProcessChatInput(cfg.command[i])
 				end
 			end
