@@ -7,7 +7,7 @@ script_properties("work-in-pause") 							-- Возможность обрабатывать информацию
 import("\\resource\\AT_MP.lua") 							-- подгрузка плагина для мероприятий
 import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
 import("\\resource\\AT_Trassera.lua") 	  					-- подгрузка трассеров
-local version = 5.8 			 							-- Версия скрипта
+local version = 5.9 			 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -152,6 +152,7 @@ local array = {
 		check_on_chatlog		= imgui.ImBool(cfg.settings.chat_log),
 		check_answer_player_report = imgui.ImBool(cfg.settings.answer_player_report),
 		check_on_custom_recon_menu = imgui.ImBool(cfg.settings.on_custom_recon_menu),
+		autoprefix				   = imgui.ImBool(cfg.settings.autoprefix),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -419,9 +420,7 @@ end
 local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	prochee = {
 		update  = 		'Обновить скрипт',
-		areport =		'Отправить сообщение разработчику',
 		fs 		=		'Открыть меню FastSpawn',
-		sl 		=		'Отправиться в слежку за игроком',
 		trassera= 		'Открыть настройку трассеров пуль',
 		ears 	=		'Включить/выключить рендер личных сообщений игроков',
 		ahelp 	= 		'Все команды скрипта/сервера и правила',
@@ -684,7 +683,9 @@ sampRegisterChatCommand('sbanip', function(param)
 		wait(1000)
 		sampSendChat('/banip ' .. regip .. ' ' .. text[2] .. ' ' .. reason)
 		wait(1000)
-		sampSendChat('/banip ' .. lastip .. ' ' .. text[2] .. ' ' .. reason)
+		if lastip then -- на случай если аккаунт зареган впервые
+			sampSendChat('/banip ' .. lastip .. ' ' .. text[2] .. ' ' .. reason)
+		end
 		find_ip_player, regip, lastip = false, nil, nil
 	end)
 end)
@@ -701,12 +702,6 @@ sampRegisterChatCommand('control_afk', function(param)
 		end
 		save()
 	else sampAddChatMessage(tag .. 'Значение указано неверно. Введите кол-во минут. 0 = выкл.', -1) end
-end)
-sampRegisterChatCommand('autoprefix', function()
-	cfg.settings.autoprefix = not cfg.settings.autoprefix
-	save()
-	if cfg.settings.autoprefix then sampAddChatMessage(tag .. 'Автоматическая выдача префикса успешно включена.', -1)
-	else sampAddChatMessage(tag .. 'Автоматическая выдача префикса успешно выключена.', -1) end
 end)
 sampRegisterChatCommand('wh' , function()
 	if not cfg.settings.wallhack then
@@ -800,6 +795,7 @@ sampRegisterChatCommand('ears', function()
 		notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано')
 	end
 end)
+
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
 	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
@@ -1118,7 +1114,7 @@ function imgui.OnDrawFrame()
 					imgui.SameLine()
 					if imgui.Button(u8'Сбросить чат',imgui.ImVec2(125, 24)) then array.ears = {} end
 					imgui.EndPopup()
-				end 
+				end
 				imgui.SetCursorPosY(420)
 				imgui.Separator()
 				imgui.Text(u8'Разработчик скрипта - N.E.O.N')
@@ -1197,6 +1193,14 @@ function imgui.OnDrawFrame()
 				if imgui.Button(u8'Чат-логгер', imgui.ImVec2(228, 24)) then array.windows.menu_chatlogger.v = true array.windows.menu_tools.v = false end
 				if imgui.Button(u8'Провести серверное мероприятие', imgui.ImVec2(485, 24)) then sampSendChat('/mp') array.windows.menu_tools.v = false end
 				if imgui.Button(u8'Авто-отправка форм для младших администраторов', imgui.ImVec2(485, 24)) then imgui.OpenPopup('autoform') end
+				if imgui.Button(u8'Автозакрытие игры в AFK', imgui.ImVec2(485, 24)) then
+					if not cfg.settings.control_afk then
+						sampAddChatMessage(tag .. 'Укажите кол-во минут в AFK, после которого игра автоматически закроется.', -1)
+						sampSetChatInputText('/control_afk ') 
+						sampSetChatInputEnabled(true)
+					else cfg.settings.control_afk = false sampAddChatMessage(tag .. 'Выключено.', -1) end
+				end
+				if imgui.Button(u8'Автовыдача префикса (для руководящего состава)', imgui.ImVec2(485, 24)) then imgui.OpenPopup('autoprefix') end
 				if imgui.BeginPopup('autoform') then
 					imgui.CenterText(u8'Каких доступов у вас нет?')
 					if imgui.Checkbox('/ban', array.checkbox.check_form_ban) then
@@ -1224,6 +1228,26 @@ function imgui.OnDrawFrame()
 					if imgui.Checkbox(u8'Добавлять // мой ник', array.checkbox.check_add_mynick_form) then
 						cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
 						save()
+					end
+					imgui.EndPopup()
+				end
+				if imgui.BeginPopup('autoprefix') then
+					if array.checkbox.autoprefix.v then imgui.Text(u8'Статус: Активно')
+					else imgui.Text(u8'Статус: Деактивировано') end
+					imgui.SameLine()
+					imgui.SetCursorPosX(200)
+					if imadd.ToggleButton('##autoprefix', array.checkbox.autoprefix) then
+						cfg.settings.autoprefix = not cfg.settings.autoprefix
+						save()
+					end
+					if imgui.Button(u8'Добавить исключение') then
+						sampSetChatInputText('/add_autoprefix ')  
+						sampSetChatInputEnabled(true)
+					end
+					imgui.SameLine()
+					if imgui.Button(u8'Убрать исключение') then
+						sampSetChatInputText('/del_autoprefix ')  
+						sampSetChatInputEnabled(true)
 					end
 					imgui.EndPopup()
 				end
@@ -2844,7 +2868,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			local v = tostring(v)
 			if v == 'REFRESH' then 
 				lua_thread.create(function()
-					wait(0)
+					wait(0) -- даем время появится текстдраву
 					array.textdraw.refresh = id  -- записываем ид кнопки обновить в реконе
 					sampTextdrawSetStyle(array.textdraw.refresh, -1)
 				end)
@@ -2881,7 +2905,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			elseif v == 'STATS' then 
 				array.textdraw.stats = id
 				lua_thread.create(function()
-					wait(1) -- ждем пока пройдет весь цикл проверки текстдравов данной функцией
+					wait(1) -- даем время появится текстдраву 
 					sampTextdrawSetStyle(array.textdraw.stats, -1)
 					if cfg.settings.keysync then keysync(control_player_recon) end
 				end)
@@ -2923,6 +2947,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixma .. '}Мл.Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Мл.Администратор ' .. cfg.settings.prefixma)
+							wait(3000)
 							sampSendChat('/admins')
 							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.')
 						elseif (lvl > 11 and lvl < 15) and rang ~= 'Администратор' then
@@ -2930,6 +2955,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' ..cfg.settings.prefixa..'}Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Администратор ' .. cfg.settings.prefixa)
+							wait(3000)
 							sampSendChat('/admins')
 							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.')
 						elseif (lvl > 16 and lvl < 18) and rang ~= 'Ст.Администратор' then
@@ -2937,6 +2963,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixsa..'}Ст.Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Ст.Администратор ' .. cfg.settings.prefixsa)
+							wait(3000)
 							sampSendChat('/admins')
 							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.')
 						end
@@ -2996,7 +3023,13 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		if regip then lua_thread.create(function() wait(0) sampCloseCurrentDialogWithButton(0) end) end
 	elseif button1 == 'Закрыть' and find_ip_player then -- окно /offstats используется для /sbanip
 		sampSendDialogResponse(dialogId,1,0)
-		for k,v in pairs(textSplit(text, '\n')) do if k == 12 then regip = string.sub(v, 17) elseif k == 13 then lastip = string.sub(v, 18) end end
+		for k,v in pairs(textSplit(text, '\n')) do
+			if k == 12 then 
+				regip = string.sub(v, 17) 
+			elseif k == 13 then 
+				lastip = string.sub(v, 18) 
+			end 
+		end
 		find_ip_player = false
 		return false
 	elseif dialogId == 2348 and array.windows.fast_report.v then array.windows.fast_report.v = false
@@ -3283,7 +3316,7 @@ function binder_key()
 			if not AFK and cfg.settings.control_afk then
 				lua_thread.create(function()
 
-					mem.write(0x747FB6, 0x1, 1, true)
+					mem.write(0x747FB6, 0x1, 1, true) -- выходим в афк
 					mem.write(0x74805A, 0x1, 1, true)
 					mem.fill(0x74542B, 0x90, 8, true)
 					mem.fill(0x53EA88, 0x90, 6, true)
@@ -3297,7 +3330,7 @@ function binder_key()
 					for i = 0, (cfg.settings.control_afk*10) do
 						wait(6000)
 						if not AFK then
-							mem.write(0x747FB6, 0x0, 1, true)
+							mem.write(0x747FB6, 0x0, 1, true) -- выходим из афк
 							mem.write(0x74805A, 0x0, 1, true)
 							memset(0x74542B, { 0x50, 0x51, 0xFF, 0x15, 0x00, 0x83, 0x85, 0x00 })
 							memset(0x53EA88, { 0x0F, 0x84, 0x7B, 0x01, 0x00, 0x00 })
