@@ -19,8 +19,13 @@ local font 				= require ('moonloader').font_flag	-- Шрифты визуальных текстов н
 local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
 local fa_glyph_ranges = imgui.ImGlyphRanges( {fa.min_range, fa.max_range} )
 function imgui.BeforeDrawFrame()
-    if not fontsize then  fontsize = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 17.0, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic()) end -- 17 razmer
-	if not fa_font then local font_config = imgui.ImFontConfig() font_config.MergeMode = true fa_font = imgui.GetIO().Fonts:AddFontFromFileTTF('moonloader/resource/fonts/fontawesome-webfont.ttf', 14.0, font_config, fa_glyph_ranges) end 
+    if not fontsize then 
+		fontsize = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 17.0, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic()) 
+	end -- 17 razmer
+	if not fa_font then 
+		local font_config = imgui.ImFontConfig() font_config.MergeMode = true 
+		fa_font = imgui.GetIO().Fonts:AddFontFromFileTTF('moonloader/resource/fonts/fontawesome-webfont.ttf', 14.0, font_config, fa_glyph_ranges) 
+	end 
 end
 
 function color() mcolor = '' math.randomseed( os.time() ) for i = 1, 6 do local b = math.random(1, 16) if b == 1 then mcolor = mcolor .. "A" elseif b == 2 then mcolor = mcolor .. "B" elseif b == 3 then mcolor = mcolor .. "C" elseif b == 4 then mcolor = mcolor .. "D" elseif b == 5 then mcolor = mcolor .. "E" elseif b == 6 then mcolor = mcolor .. "F" elseif b == 7 then mcolor = mcolor .. "0" elseif b == 8 then mcolor = mcolor .. "1" elseif b == 9 then mcolor = mcolor .. "2" elseif b == 10 then mcolor = mcolor .. "3" elseif b == 11 then mcolor = mcolor .. "4" elseif b == 12 then mcolor = mcolor .. "5" elseif b == 13 then mcolor = mcolor .. "6" elseif b == 14 then mcolor = mcolor .. "7" elseif b == 15 then mcolor = mcolor .. "8" elseif b == 16 then mcolor = mcolor .. "9" end end return mcolor end
@@ -66,7 +71,7 @@ function textSplit(str, delim, plain) -- разбиение текста по определенным тригге
     return tokens
 end
 function sampGetPlayerIdByNickname(nick) -- узнать ID по нику
-	nick = tostring(nick)
+	local nick = tostring(nick)
 	local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	if nick == sampGetPlayerNickname(myid) then return myid end
 	for i = 0, 301 do if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == nick then return i end end
@@ -324,11 +329,6 @@ function style(id) -- ТЕМЫ
     local colors = style.Colors
     local clr = imgui.Col
     local ImVec4 = imgui.ImVec4
-    style.IndentSpacing = 25.0
-    style.GrabMinSize = 15.0
-    style.GrabRounding = 7.0
-    style.ChildWindowRounding = 8.0
-    style.FrameRounding = 6.0
     if id == 0 then -- классическая
 		colors[clr.Text]            	= ImVec4(1.00, 1.00, 1.00, 1.00)
 		colors[clr.TextDisabled] 		= ImVec4(0.36, 0.42, 0.47, 1.00)
