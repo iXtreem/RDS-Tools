@@ -7,7 +7,7 @@ script_properties("work-in-pause") 							-- Возможность обрабатывать информацию
 import("\\resource\\AT_MP.lua") 							-- подгрузка плагина для мероприятий
 import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
 import("\\resource\\AT_Trassera.lua") 	  					-- подгрузка трассеров
-local version = 5.9 			 							-- Версия скрипта
+local version = 6				 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -71,7 +71,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		prefixma = '',
 		prefixa = '',
 		prefixsa = '',
-		autoprefix = true,
+		autoprefix = false,
 		forma_na_ban = false,
 		forma_na_jail = false,
 		forma_na_kick = false,
@@ -2941,7 +2941,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end
 				if cfg.settings.autoprefix then
 					local lvl, rang, id = tonumber(lvl), string.gsub(rang, '{%w%w%w%w%w%w}', ''), tonumber(id)
-					if id ~= myid then
+					if id ~= myid and autoprefix_access then
 						if (lvl > 0 and lvl < 10) and rang ~= 'Мл.Администратор' then
 							wait(1000)
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
@@ -2967,6 +2967,9 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampSendChat('/admins')
 							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.')
 						end
+					elseif lvl == 18 and rang ~= 'Ст.Администратор' then
+						autoprefix_access = true
+						print('Вы из руководящего состава!')
 					end
 				end
 			end
