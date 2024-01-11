@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1.3
+local version = 1.4
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -77,23 +77,24 @@ sampRegisterChatCommand('update_atp', function()
 		end
 	end)
 end)
-
 function main()
-	while not isSampAvailable() do wait(0) end
+	while not isSampAvailable() do wait(1000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.ini", "moonloader//config//AT//AdminToolsPlus.ini", function(id, status)
 		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 			local AdminToolsPlus = inicfg.load(nil, 'moonloader//config//AT//AdminToolsPlus.ini')
 			if tonumber(AdminToolsPlus.script.version) > version then
 				update = true
+				sampAddChatMessage(		  '========================================================',-1)
 				sampAddChatMessage(tag .. 'Обнаружено обновление! Чтобы обновиться вводи /update_atp', -1)
+				sampAddChatMessage(		  '========================================================',-1)
 			end
 		end
 	end)
 
 	sampAddChatMessage(tag .. 'Скрипт инициализирован. Активация: /atp', -1)
 	while true do
-		wait(2000)
+		wait(5000)
 		if isGamePaused() then AFK = true
 		else AFK = false end
 	end
@@ -168,14 +169,14 @@ function imgui.OnDrawFrame()
 		end
 		imgui.SameLine()
 		imgui.Text(u8'Удалять точки в центре ников')
-		imgui.InputTextMultiline("##", buffer.text_buffer, imgui.ImVec2(250, 300))
+		imgui.InputTextMultiline("##", buffer.text_buffer, imgui.ImVec2(270, 300))
 		if #topadm == 0 or #offadmins == 0 then
 			imgui.Text(u8'Пробито администраторов - ' .. #offadmins)
 			imgui.Text(u8('Пробито баллов у ' .. #topadm .. ' администраторов'))
-			if imgui.Button(u8'Пробить информацию о администраторах', imgui.ImVec2(250,24)) then
+			if imgui.Button(u8'Пробить информацию о администраторах', imgui.ImVec2(270,24)) then
 				if not sampIsDialogActive() then
 					lua_thread.create(function()
-						buffer.text_buffer.v = u8'Не пытайтесь закрыть диалоги досрочно\nВаш интернет может не успевать\nпрогружать диалоги, скрипт сам все\nзакроет!\nДанный текст пропадет сам, сразу после того\nКак сверит всю информацию\nВ ином случае перезайдите в игру..\nи повторите процедуру.'
+						buffer.text_buffer.v = u8'Не пытайтесь закрыть диалоги досрочно\nВаш интернет может не успевать\nпрогружать диалоги, скрипт сам все\nзакроет!\nДанный текст пропадет сам\nСразу после того\nКак сверит всю информацию\nВ ином случае перезайдите в игру..\nи повторите процедуру.'
 						sampSendChat('/topadm')
 						while not sampIsDialogActive(2232) do wait(100) end
 						while sampIsDialogActive(2232) do sampCloseCurrentDialogWithButton(0) wait(100) end
@@ -187,14 +188,14 @@ function imgui.OnDrawFrame()
 			end
 		end
 		if #offadmins ~= 0 and #topadm ~= 0 then
-			if imgui.Button(u8'Выбрать диапазон баллов', imgui.ImVec2(250, 25)) then
+			if imgui.Button(u8'Выбрать диапазон баллов', imgui.ImVec2(270, 25)) then
 				if #offadmins ~= 0 and #topadm ~= 0 then
 					secondary_window_state.v = not secondary_window_state.v
 				else sampAddChatMessage(tag .. 'Вы ещё не прошлись по спискам администраторов.', -1)
 				end
 			end
 		end
-		if imgui.Button(u8'Пробить срок выдачи админ-прав', imgui.ImVec2(250, 25)) then
+		if imgui.Button(u8'Пробить срок выдачи админ-прав', imgui.ImVec2(270, 25)) then
 			if #kick_admin2 ~= 0 and not sampIsDialogActive() then
 				lua_thread.create(function()
 					sampAddChatMessage(tag .. 'Запускаю проверку на новеньких администраторов', -1)
@@ -203,12 +204,13 @@ function imgui.OnDrawFrame()
 					for _,text in pairs(textSplit(u8:decode(buffer.text_buffer.v), '\n')) do
 						if text:find('(.+) %[(%d+)%] (%d+) баллов') then
 							local name_admin,_,_ = text:match('(.+) %[(%d+)%] (%d+)') --.CnopT_oT_Kauqpa.	 [18] 969
+							local name_admin = string.gsub(name_admin, '%s', '')
 							if name_admin:find('(.+) (.+)') then name_admin = text:match('(.+) 0 баллов') end
 							while sampIsDialogActive() do wait(0) sampCloseCurrentDialogWithButton(0) end
 							sampSendChat('/ap')
 							sampSendDialogResponse(1034, 1, 1)
-							sampAddChatMessage(name_admin,-1)
-							sampSendDialogResponse(6020, 1, 1, string.gsub(name_admin, '%s', ''))
+							sampAddChatMessage(tag .. 'Проверяю: '..name_admin,-1)
+							sampSendDialogResponse(6020, 1, 1, name_admin)
 							while not sampIsDialogActive(0) do wait(0) end
 							while sampIsDialogActive(0) do wait(0) end
 						end
@@ -239,14 +241,14 @@ function imgui.OnDrawFrame()
 		end
 		imgui.Separator()
 		imgui.Text(u8'После выставления всех параметров.')
-		if imgui.Button(u8'Взаимодействие с Каем.', imgui.ImVec2(250, 25)) then
+		if imgui.Button(u8'Взаимодействие с Каем.', imgui.ImVec2(270, 25)) then
 			buffer.text_buffer.v = ''
 			for k, v in pairs(kai) do
 				buffer.text_buffer.v = buffer.text_buffer.v .. u8(v) .. '\n'
 			end
 			kai = {} -- обнуляем настройки
 		end
-		if imgui.Button(u8'Отобразить новые уровни', imgui.ImVec2(250, 25)) then
+		if imgui.Button(u8'Отобразить новые уровни', imgui.ImVec2(270, 25)) then
 			buffer.text_buffer.v = ''
 			for k, v in pairs(makeadmin) do
 				v = string.gsub(v, '  ', ' ') -- удаляем лишние пробелы если они имеются.
@@ -254,14 +256,14 @@ function imgui.OnDrawFrame()
 			end
 		end
 		if buffer.text_buffer.v:find('/makeadmin') then
-			if imgui.Button(u8'Выдать уровни.', imgui.ImVec2(250, 25)) and not sampIsDialogActive() then
-				sampAddChatMessage('Начинаю выдавать уровни...', -1)
+			if imgui.Button(u8'Выдать уровни.', imgui.ImVec2(270, 25)) and not sampIsDialogActive() then
+				sampAddChatMessage(tag .. 'Начинаю выдавать уровни...', -1)
 				printStyledString('process ...', #(textSplit(buffer.text_buffer.v, '\n')) * 3000, 7)
 				lua_thread.create(function()
 					for k, v in pairs(textSplit(buffer.text_buffer.v, '\n')) do
-						local v = string.gsub(v, '  ', ' ') -- удаляем лишние пробелы если они имеются.
+						local v = string.gsub(v, '%s', ' ') -- удаляем лишние пробелы если они имеются.
 						while sampIsDialogActive() do wait(0) end
-						sampAddChatMessage(v,-1)
+						sampAddChatMessage(tag .. 'Выдаю уровень администратору: {7CFC00}' .. v,-1)
 						sampSendChat(v)
 						wait(3000)
 					end
@@ -290,19 +292,20 @@ function imgui.OnDrawFrame()
 				sampAddChatMessage(tag .. 'Вы не можете исключить игрока из конференции, не сняв его с поста, и аналогично.', -1)
 			elseif #(buffer.text_buffer2.v)~=0 then -- проверка введен ли промежуток баллов
 				if #(buffer.text_buffer.v) == 0 then -- если в основном меню ничего нет - вывести доп инфу
-					buffer.text_buffer.v = u8'@all Итоги недели\nПодвёл итоги: AdminTools by N.E.O.N\nВ соответствии с еженедельной нормой\nПроводим реформацию состава.\n\n' 
+					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					buffer.text_buffer.v = u8('@all Итоги недели\nПодвёл итоги многоуважаемый ' .. sampGetPlayerNickname(myid) .. '\nПри поддержке: AdminTools by N.E.O.N\nВ соответствии с еженедельной нормой\nПроводим реформацию состава.\n\n') 
 				end
 				if #(buffer.text_buffer3.v)==0 then buffer.text_buffer3.v = '3000' end
 				if tonumber(buffer.text_buffer2.v) < tonumber(buffer.text_buffer3.v)  then
-					buffer.text_buffer.v = buffer.text_buffer.v .. '---------------------------------------------\n'
+					buffer.text_buffer.v = buffer.text_buffer.v .. '===================================\n'
 					if newlvl == 0 then
 						buffer.text_buffer.v = (buffer.text_buffer.v .. '[' .. buffer.text_buffer2.v  .. ' - '.. buffer.text_buffer3.v .. u8' баллов] = Сняты с поста\n')
 					elseif newlvl == 'Skip' then
-						buffer.text_buffer.v = (buffer.text_buffer.v .. '[' .. buffer.text_buffer2.v  .. ' - '.. buffer.text_buffer3.v .. u8' баллов] = ' .. SendKai .. u8' пред(а)' .. '\n')
+						buffer.text_buffer.v = (buffer.text_buffer.v .. '[' .. buffer.text_buffer2.v  .. ' - '.. buffer.text_buffer3.v .. u8' баллов] = ' .. SendKai .. word_ball(nil, SendKai) .. '\n')
 					else
-						buffer.text_buffer.v = (buffer.text_buffer.v .. '[' .. buffer.text_buffer2.v  .. ' - '.. buffer.text_buffer3.v .. u8' баллов] = +' .. newlvl .. u8' LVL и ' .. SendKai .. u8' пред(а)' .. '\n')
+						buffer.text_buffer.v = (buffer.text_buffer.v .. '[' .. buffer.text_buffer2.v  .. ' - '.. buffer.text_buffer3.v .. u8' баллов] = +' .. newlvl .. u8' LVL и ' .. SendKai .. word_ball(nil, SendKai) .. '\n')
 					end
-					buffer.text_buffer.v = buffer.text_buffer.v .. '---------------------------------------------\n'
+					buffer.text_buffer.v = buffer.text_buffer.v .. '===================================\n'
 					for _,k in pairs(topadm) do
 						local nick, peremball = string.match(k, '(.+) = (.+)') -- находим ник и баллы
 						local peremball = tonumber(string.sub(peremball, 1, -4))   -- удаляем числа после точки 1235.11
@@ -333,11 +336,11 @@ function imgui.OnDrawFrame()
 												makeadmin[d], makeadmin[s] = nil, nil
 											end
 										end
-										nick = string.gsub(nick, ' ', '') -- удаляем лишние точки
+										local nick = string.gsub(nick, '%s', '') -- удаляем лишние точки
 										local nick_kai = nick -- даем значение нику для Кая
 										if cfg.settings.delete_point then
-											nick_1 = string.sub(nick, 1,1) -- узнаем первый символ ника
-											nick_2 = string.sub(nick,-1) -- узнаем последний символ ника
+											local nick_1 = string.sub(nick, 1,1) -- узнаем первый символ ника
+											local nick_2 = string.sub(nick,-1) -- узнаем последний символ ника
 											nick_kai = string.gsub(string.sub(string.sub(nick, 2), 1, -2), '%.', '') -- удаляем точки в центре ника.
 											nick_kai = (nick_1 .. nick_kai .. nick_2) -- присваиваем новое значение
 										end
@@ -361,19 +364,19 @@ function imgui.OnDrawFrame()
 													if tonumber(newnewlvl) + tonumber(peremlvl) > 18 then
 														newnewlvl = tonumber(newnewlvl) - 1
 														makeadmin[#makeadmin + 1] = '/makeadmin ' .. nick .. ' ' .. (tonumber(peremlvl) + tonumber(newnewlvl))
-														buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. '] ' .. peremball .. u8' баллов\n'
+														buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. ' -> ' .. peremlvl+newnewlvl.. ' LVL' .. '] ' .. peremball .. word_ball(peremball)
 													end
 													makeadmin[#makeadmin + 1] = '/makeadmin ' .. nick .. ' ' .. (tonumber(peremlvl) + tonumber(newnewlvl))
-													buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. '] ' .. peremball .. u8' баллов\n'
+													buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. ' -> ' .. peremlvl+newnewlvl.. ' LVL' .. '] ' .. peremball .. word_ball(peremball)
 												else
 													makeadmin[#makeadmin + 1] = '/makeadmin ' .. nick .. ' ' .. (tonumber(peremlvl) + tonumber(newlvl))
-													buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. '] ' .. peremball .. u8' баллов\n'
+													buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. ' -> ' .. peremlvl+newlvl.. ' LVL' .. '] ' .. peremball .. word_ball(peremball)
 												end
 											else
-												buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. '] ' .. peremball .. u8' баллов\n'
+												buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. ' LVL' .. '] ' .. peremball ..word_ball(peremball)
 											end
 										else
-											buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl .. '] ' .. peremball .. u8' баллов\n'
+											buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl ..' LVL'.. '] ' .. peremball .. word_ball(peremball)
 										end
 									end
 								end
@@ -382,22 +385,22 @@ function imgui.OnDrawFrame()
 					end
 					if tonumber(buffer.text_buffer2.v) == 0 then -- если 0 баллов (т.е администратора вообще нет в /topadm) то делаем те же действия
 						for k,v in pairs(offadmins) do
-							local v = string.gsub(string.gsub(v,'=(.+)', ''), '%s', '')
+							local nick = string.gsub(string.gsub(v,'=(.+)', ''), '%s', '')
 							for d,s in pairs(topadm) do
 								local s = string.gsub(string.gsub(s, '= (.+)', ''), '%s', '')
-								if v == s then 
+								if nick == s then 
 									a = true 
 								end 
 							end 
 							for s,m in pairs(cfg.listNoResult) do 
-								if v == m then 
+								if nick == m then 
 									a = true  
 								end
 							end
 							if a then 
 								a = nil 
 							else
-								local nick_kai = v
+								local nick_kai = nick
 								if cfg.settings.delete_point then 
 									nick_1 = string.sub(v, 1, 1) 
 									nick_2 = string.sub(v,-1) 
@@ -409,17 +412,14 @@ function imgui.OnDrawFrame()
 									makeadmin[#makeadmin + 1] = ('/makeadmin ' .. v .. ' 0') 
 									kick_admin2[#kick_admin2 + 1] = v
 								end
-								buffer.text_buffer.v = buffer.text_buffer.v .. v .. u8' 0 баллов' .. '\n'
+								local lvl = string.match(v, '=(.+)') -- number
+								local lvl = string.gsub(lvl, '%s', '') -- delete point
+								buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. lvl ..' LVL]' .. u8' 0 баллов' .. '\n'
 							end
 						end 
 					end
-					buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, '  ', ' ') -- удаляем лишние пробелы между никами если они имеются
-				else
-					sampAddChatMessage(tag .. 'Вы не указали количество баллов', -1)
-				end
-			else
-				sampAddChatMessage(tag .. 'Данные введены некорректно.', -1)
-			end
+				else sampAddChatMessage(tag .. 'Вы не указали количество баллов', -1) end
+			else sampAddChatMessage(tag .. 'Данные введены некорректно.', -1) end
 		end
 		imgui.Text(u8'Уровень.')
 		imgui.PushItemWidth(115)
@@ -474,6 +474,8 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 end
+
+
 function sampev.onServerMessage(color,text)
 	if cfg.settings.auto_hello and text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") and not AFK then
 		local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
@@ -594,6 +596,17 @@ function textSplit(str, delim, plain)
     until not pos
     return tokens
 end
+function word_ball(number, kai) -- определяем как правильно писать баллов или балла
+	if not kai then
+		if number % 10 == 1 and number % 100 ~= 11 then return u8" балл\n"
+		elseif 2 <= number and number % 10 <= 4 and (number % 100 < 10 or number % 100 >= 20) then return u8" балла\n"
+		else return u8" баллов\n" end
+	else
+		if kai ~= -1 and kai ~= 1 then return u8' преда'
+		else return u8' пред' end
+	end
+end
+
 function save()
 	inicfg.save(cfg, 'AT//ATPlus.ini')	
 end
