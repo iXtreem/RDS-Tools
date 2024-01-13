@@ -7,7 +7,7 @@ script_properties("work-in-pause") 							-- Возможность обрабатывать информацию
 import("\\resource\\AT_MP.lua") 							-- подгрузка плагина для мероприятий
 import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
 import("\\resource\\AT_Trassera.lua") 	  					-- подгрузка трассеров
-local version = 6.1				 							-- Версия скрипта
+local version = 6.11				 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -98,11 +98,21 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 	binder_key = {},
 	render_admins_exception = {},
 	mute_players = {data = os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year},
-	spisokoskrod = {},
-	spisokproject = {},
-	spisokor = {},
-	spisokrz = {},
-	spisokoskadm = {},
+	spisokoskrod = {
+		'mq',
+	},
+	spisokproject = {
+		'аризона',
+	},
+	spisokor = {
+		'мать',
+	},
+	spisokrz = {
+		'слава укр'
+	},
+	spisokoskadm = {
+		'админ',
+	},
 }, 'AT//AT_main.ini')
 inicfg.save(cfg, 'AT//AT_main.ini')
 style(cfg.settings.style)
