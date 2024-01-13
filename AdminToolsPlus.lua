@@ -246,6 +246,7 @@ function imgui.OnDrawFrame()
 					end
 					secondary_window_state.v = false
 					main_window_state.v = true
+					kick_admin2 = {}
 				end)
 			else sampAddChatMessage('Вы никого не снимали с поста', -1) end
 		end
