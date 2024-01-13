@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1.4
+local version = 1.5
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -26,7 +26,8 @@ local cfg = inicfg.load({
 		warning_report = false,
 		count_warning = 3,
 		mytext_warning_report = 'Уважаемые администраторы, срочно возьмите репорт!!!',
-		number_report = 3
+		number_report = 3,
+		time_alogin = 2,
     },
 	listNoResult = {
 		'N.E.O.N',
@@ -55,6 +56,7 @@ local style_selected2 = imgui.ImInt(cfg.settings.count_warning-1)
 local style_selected = imgui.ImInt(cfg.settings.number_report-2)
 local selected_item = imgui.ImInt(2)
 local selected_item2 = imgui.ImInt(0)
+local style_selected3 = imgui.ImInt(cfg.settings.time_alogin-1)
 local check_admin = imgui.ImInt(6) -- 7 дней
 local makeadmin = {}
 local kai = {}
@@ -81,11 +83,13 @@ function main()
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.ini", "moonloader//config//AT//AdminToolsPlus.ini", function(id, status)
 		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 			local AdminToolsPlus = inicfg.load(nil, 'moonloader//config//AT//AdminToolsPlus.ini')
-			if tonumber(AdminToolsPlus.script.version) > version then
-				update = true
-				sampAddChatMessage(		  '========================================================',-1)
-				sampAddChatMessage(tag .. 'Обнаружено обновление! Чтобы обновиться вводи /update_atp', -1)
-				sampAddChatMessage(		  '========================================================',-1)
+			if AdminToolsPlus then
+				if tonumber(AdminToolsPlus.script.version) > version then
+					update = true
+					sampAddChatMessage(		  '========================================================',-1)
+					sampAddChatMessage(tag .. 'Обнаружено обновление! Чтобы обновиться вводи /update_atp', -1)
+					sampAddChatMessage(		  '========================================================',-1)
+				end
 			end
 		end
 	end)
@@ -111,6 +115,15 @@ function imgui.OnDrawFrame()
 			cfg.settings.auto_al = not cfg.settings.auto_al
 			save()
 		end
+		if cfg.settings.auto_al then
+			imgui.Text(u8'Кол-во минут без /alogin')
+			imgui.SameLine()
+			imgui.PushItemWidth(50)
+			if imgui.Combo("##time", style_selected3, {'1','2', '3', '4', '5', '6'}, 7) then
+				cfg.settings.time_alogin = style_selected3.v + 1
+			end
+			imgui.PopItemWidth()
+		end
 		if imgui.Checkbox(u8'Приветствие администраторов', checkbox.auto_hello) then
 			cfg.settings.auto_hello = not cfg.settings.auto_hello
 			save()
@@ -130,7 +143,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Кол-во повторов сообщения: ')
 			imgui.SameLine()
 			imgui.PushItemWidth(50)
-			if imgui.Combo("##selected2", style_selected2, {'1', '2', '3', '4', '5'}, style_selected2) then
+			if imgui.Combo("##selected2", style_selected2, {'1', '2', '3', '4', '5'}, 6) then
 				cfg.settings.count_warning = style_selected2.v + 1
 				save()
 			end
@@ -138,7 +151,7 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Триггер (кол-во репортов): ')
 			imgui.SameLine()
 			imgui.PushItemWidth(50)
-			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, style_selected) then
+			if imgui.Combo("##selected", style_selected, {'2' ,'3', '4', '5', '6'}, 6) then
 				cfg.settings.number_report = style_selected.v + 2
 				save()
 			end
@@ -198,37 +211,36 @@ function imgui.OnDrawFrame()
 				lua_thread.create(function()
 					sampAddChatMessage(tag .. 'Запускаю проверку на новеньких администраторов', -1)
 					sampAddChatMessage(tag .. 'Не закрывайте диалоги!', -1)
-					kick_admin = {}
-					for _,text in pairs(textSplit(u8:decode(buffer.text_buffer.v), '\n')) do
-						if text:find('(.+) %[(%d+)%] (%d+) баллов') then
-							local name_admin,_,_ = text:match('(.+) %[(%d+)%] (%d+)') --.CnopT_oT_Kauqpa.	 [18] 969
-							local name_admin = string.gsub(name_admin, '%s', '')
-							if name_admin:find('(.+) (.+)') then name_admin = text:match('(.+) 0 баллов') end
-							while sampIsDialogActive() do wait(0) sampCloseCurrentDialogWithButton(0) end
-							sampSendChat('/ap')
-							sampSendDialogResponse(1034, 1, 1)
-							sampAddChatMessage(tag .. 'Проверяю: '..name_admin,-1)
-							sampSendDialogResponse(6020, 1, 1, name_admin)
-							while not sampIsDialogActive(0) do wait(0) end
-							while sampIsDialogActive(0) do wait(0) end
-						end
+					kick_admin = {} -- массив снятых адм
+					for k,v in pairs(kick_admin2) do
+						local name_admin = string.gsub(v, '=(.+)', '')
+						local name_admin = string.gsub(name_admin, '%s', '')
+						while sampIsDialogActive() do wait(0) sampCloseCurrentDialogWithButton(0) end
+						sampSendChat('/ap')
+						sampSendDialogResponse(1034, 1, 1)
+						sampAddChatMessage(tag .. 'Проверяю: '..name_admin,-1)
+						sampSendDialogResponse(6020, 1, 1, name_admin)
+						while not sampIsDialogActive(0) do wait(0) end
+						while sampIsDialogActive(0) do wait(0) end
 					end
-					for i = 1, #kick_admin do
-						for b = 1, #kick_admin2 do
-							if kick_admin[i] == kick_admin2[b] then
-								buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' %[(%d+)%] (%d+) баллов'), u8'')
-								buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' 0 баллов'), u8'')
-								for k,v in pairs(makeadmin) do
-									if v:find(kick_admin[i]) then
-										table.remove(makeadmin, k)
-										sampAddChatMessage('Администратор ' .. kick_admin2[b] .. ', вставший на пост раньше, чем ' .. check_admin.v+1 .. ' дней назад, был удален из списков', -1)
-									end
-								end
-								for k,v in pairs(kai) do
-									if v:find(kick_admin[i]) then
-										table.remove(kai, k)
-									end
-								end
+					wait(1000)
+					for i = 1, #kick_admin do --genetica [15 -> 16 LVL] 93 балла
+						-- да колхоз, но я просидел больше 2 часов но так и не додумался как сделать чтобы он удалял слово "баллов", стандартный (.+) просто все удалял
+						buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' %[(%d+) %-%> (%d+) LVL%] (%d+) баллов'), u8'')
+						buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' %[(%d+) %-%> (%d+) LVL%] (%d+) балла'), u8'')
+						buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' %[(%d+) %-%> (%d+) LVL%] (%d+) балл'), u8'')
+						buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' %[(%d+) LVL%] (%d+) баллов'), u8'')
+						buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' %[(%d+) LVL%] (%d+) балла'), u8'')
+						buffer.text_buffer.v = string.gsub(buffer.text_buffer.v, u8('\n'..kick_admin[i] .. ' %[(%d+) LVL%] (%d+) балл'), u8'')
+						for k,v in pairs(makeadmin) do
+							if v:find(kick_admin[i]) then
+								table.remove(makeadmin, k)
+								sampAddChatMessage(tag .. 'Администратор {A9A9A9}' .. kick_admin[i] ..' {FFFFFF}встал на пост менее ' .. check_admin.v + 1 .. ' дней назад - удален из списка снятий/предов', -1)
+							end
+						end
+						for k,v in pairs(kai) do
+							if v:find(kick_admin[i]) then
+								table.remove(kai, k)
 							end
 						end
 					end
@@ -236,6 +248,20 @@ function imgui.OnDrawFrame()
 					main_window_state.v = true
 				end)
 			else sampAddChatMessage('Вы никого не снимали с поста', -1) end
+		end
+		if imgui.Button(u8'Сбросить', imgui.ImVec2(135,25)) then
+			offadmins = {}
+			kick_admin = {}
+			kick_admin2 = {}
+			buffer.text_buffer.v = u8''
+			topadm = {}
+			kai = {}
+			makeadmin = {}
+			sampAddChatMessage(tag .. 'Сброшено.', -1)
+		end
+		imgui.SameLine()
+		if imgui.Button(u8'Перезагрузить', imgui.ImVec2(125,25)) then
+			thisScript():reload()
 		end
 		imgui.Separator()
 		imgui.Text(u8'После выставления всех параметров.')
@@ -310,12 +336,12 @@ function imgui.OnDrawFrame()
 						if (tonumber(buffer.text_buffer2.v) <= peremball) and (peremball <= tonumber(buffer.text_buffer3.v)) then
 							for k,v in pairs(offadmins) do
 								peremlvl = tonumber(string.match(string.sub(v,-3), '%d[%d.,]*'))
-								v = string.gsub(v, '=(%d+)', '')
+								local v = string.gsub(v, '=(%d+)', '')
 								nick = string.gsub(nick, '=(%d+)', '')
 								if string.sub(nick,1,-2) == ' ' then
 									nick = string.sub(nick,1,-2)
 								end
-								v = string.gsub(v, '= (%d+)', '')
+								local v = string.gsub(v, '= (%d+)', '')
 								nickv = string.gsub(v,'=(.+)', '')
 								for h,m in pairs(cfg.listNoResult) do -- если администратор есть в списке исключений - удаляем его
 									if nickv:match(m) then
@@ -342,13 +368,17 @@ function imgui.OnDrawFrame()
 											nick_kai = string.gsub(string.sub(string.sub(nick, 2), 1, -2), '%.', '') -- удаляем точки в центре ника.
 											nick_kai = (nick_1 .. nick_kai .. nick_2) -- присваиваем новое значение
 										end
+										local nick_kai = string.gsub(nick_kai, '%s','')
+										local nick_kai = string.gsub(nick_kai, '=(.+)','')
 										if SendKai == 0 then
 											kai[#kai + 1] = 'Кай кик ' .. nick_kai
 											kick_admin2[#kick_admin2 + 1] = nick
 										elseif SendKai == 1 then
 											kai[#kai + 1] = 'Кай пред ' .. nick_kai
+											kick_admin2[#kick_admin2 + 1] = nick
 										elseif SendKai == 2 then
 											kai[#kai + 1] = 'Кай пред 2 ' .. nick_kai
+											kick_admin2[#kick_admin2 + 1] = nick
 										elseif SendKai == -1 then
 											kai[#kai + 1] = 'Кай снять пред ' .. nick_kai
 										elseif SendKai == -2 then
@@ -357,8 +387,11 @@ function imgui.OnDrawFrame()
 										if tonumber(peremlvl) ~= 18 then -- Записываем информацию о /makeadmin и выводим инфу
 											
 											if newlvl ~= 'Skip' then
-												if tonumber(newlvl) + tonumber(peremlvl) > 18 then
-													newnewlvl = tonumber(newlvl) - 1
+												if selected_item.v == 0 then
+													makeadmin[#makeadmin + 1] = '/makeadmin ' .. nick .. ' 0'
+													buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. peremlvl ..' LVL' .. '] ' .. peremball .. word_ball(peremball)
+												elseif tonumber(newlvl) + tonumber(peremlvl) > 18 then
+													local newnewlvl = tonumber(newlvl) - 1
 													if tonumber(newnewlvl) + tonumber(peremlvl) > 18 then
 														newnewlvl = tonumber(newnewlvl) - 1
 														makeadmin[#makeadmin + 1] = '/makeadmin ' .. nick .. ' ' .. (tonumber(peremlvl) + tonumber(newnewlvl))
@@ -424,6 +457,8 @@ function imgui.OnDrawFrame()
 		if imgui.Combo('##newlvl', selected_item, {u8'Снять', u8'Оставить', u8'+1 уровень', u8'+2 уровня', u8'+3 уровня'}, 5) then
 			if selected_item.v == 0 then
 				newlvl = 0
+				selected_item2.v = 2
+				SendKai = 0
 			elseif selected_item.v == 1 then
 				newlvl = 'Skip'
 			elseif selected_item.v == 2 then
@@ -475,38 +510,41 @@ end
 
 
 function sampev.onServerMessage(color,text)
-	if cfg.settings.auto_hello and text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") and not AFK then
-		local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-		local autorizate_admin = text:match('%[(%d+)%]')
-		sampAddChatMessage(text, -1) 
-		if autorizate_admin ~= myid then
-			lua_thread.create(function()
-				while sampIsDialogActive() do wait(100) end
-				sampSendChat('/a ' .. string.gsub(cfg.settings.hello_text, '_', sampGetPlayerNickname(autorizate_admin)))
-			end)
+	if not AFK then
+		if cfg.settings.auto_hello and text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") then
+			local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+			local _, autorizate_admin = text:match('%[A%] Администратор (.+)%[(%d+)%]')
+			if tonumber(autorizate_admin) ~= myid then
+				lua_thread.create(function()
+					while sampIsDialogActive() do wait(100) end
+					sampSendChat('/a ' .. string.gsub(cfg.settings.hello_text, '_', sampGetPlayerNickname(autorizate_admin)))
+				end)
+			end
+			sampAddChatMessage(text, 0xafafaf)
 		end
-		return true
-	end --[A] Andy.(85) не авторизовался как администратор уже 1 минут(ы)
-	if cfg.settings.auto_al and not AFK and text:match('%[A%] (.+)%((%d+)%) не авторизовался как администратор уже') then --[A] Dirty_DeSanta(76) не авторизовался как администратор уже 1 минут(ы)
-		local _, autorizate_admin = text:match('(.+)%((%d+)%)')
-		sampAddChatMessage(text,-1)
-		lua_thread.create(function()
-			while sampIsDialogActive() do wait(100) end
-			sampSendChat('/ans ' .. autorizate_admin .. ' Здравствуйте! Вы забыли ввести /alogin!')
-			sampSendChat('/ans ' .. autorizate_admin .. ' Введите команду /alogin и свой пароль, пожалуйста.')
-		end)
-	end
-	if cfg.settings.warning_report and not AFK and text:match('Жалоба #(%d) | ') then
-		local number_report = tonumber(text:match('Жалоба #(%d) | '))
-		if number_report >= cfg.settings.number_report then
-			sampAddChatMessage('{FF0000}[AT]{FFFFFF} ' .. text, -1)
-			lua_thread.create(function()
-				while sampIsDialogActive() do wait(100) end
-				for i = 0, cfg.settings.count_warning do
-					sampSendChat('/a ' .. cfg.settings.mytext_warning_report)
-					wait(2500)
-				end
-			end)
+		if cfg.settings.auto_al and text:match('%[A%] (.+)%((%d+)%) не авторизовался как администратор уже (.+) минут%(ы%)') then --[A] Dirty_DeSanta(76) не авторизовался как администратор уже 1 минут(ы)
+			local _, autorizate_admin, time = text:match('%[A%] (.+)%((%d+)%) не авторизовался как администратор уже (.+) минут%(ы%)')
+			if tonumber(time) >= cfg.settings.time_alogin then
+				lua_thread.create(function()
+					while sampIsDialogActive() do wait(100) end
+					sampSendChat('/ans ' .. autorizate_admin .. ' Здравствуйте! Вы забыли ввести /alogin!')
+					sampSendChat('/ans ' .. autorizate_admin .. ' Введите команду /alogin и свой пароль, пожалуйста.')
+				end)
+				sampAddChatMessage(text, 0xafafaf)
+			end
+		end 
+		if cfg.settings.warning_report and text:match('Жалоба #(%d) | ') then
+			local number_report = tonumber(text:match('Жалоба #(%d) | '))
+			if number_report >= cfg.settings.number_report then
+				lua_thread.create(function()
+					while sampIsDialogActive() do wait(100) end
+					for i = 0, cfg.settings.count_warning-1 do
+						sampSendChat('/a ' .. cfg.settings.mytext_warning_report)
+						wait(2500)
+					end
+				end)
+				sampAddChatMessage(text,-1)
+			end
 		end
 	end
 end
@@ -596,7 +634,8 @@ function textSplit(str, delim, plain)
 end
 function word_ball(number, kai) -- определяем как правильно писать баллов или балла
 	if not kai then
-		if number % 10 == 1 and number % 100 ~= 11 then return u8" балл\n"
+		if number % 10 == 0 then return u8' баллов\n'
+		elseif number % 10 == 1 and number % 100 ~= 11 then return u8" балл\n"
 		elseif 2 <= number and number % 10 <= 4 and (number % 100 < 10 or number % 100 >= 20) then return u8" балла\n"
 		else return u8" баллов\n" end
 	else
