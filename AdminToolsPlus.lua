@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1.5
+local version = 1.6
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -433,6 +433,8 @@ function imgui.OnDrawFrame()
 								a = nil 
 							else
 								local nick_kai = nick
+								local nick_kai = string.gsub(nick_kai, '%s', '')
+								local nick_kai = string.gsub(nick_kai, '=(.+)', '')
 								if cfg.settings.delete_point then 
 									nick_1 = string.sub(v, 1, 1) 
 									nick_2 = string.sub(v,-1) 
@@ -444,8 +446,8 @@ function imgui.OnDrawFrame()
 									makeadmin[#makeadmin + 1] = ('/makeadmin ' .. v .. ' 0') 
 									kick_admin2[#kick_admin2 + 1] = v
 								end
-								local lvl = string.match(v, '=(.+)') -- number
-								local lvl = string.gsub(lvl, '%s', '') -- delete point
+								local lvl = string.gsub(v, '%s', '') -- delete point
+								local lvl = string.match(lvl, '=(.+)') -- number
 								buffer.text_buffer.v = buffer.text_buffer.v .. nick .. ' [' .. lvl ..' LVL]' .. u8' 0 баллов' .. '\n'
 							end
 						end 
