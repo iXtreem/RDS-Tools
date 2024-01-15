@@ -7,7 +7,7 @@ script_properties("work-in-pause") 							-- Возможность обрабатывать информацию
 import("\\resource\\AT_MP.lua") 							-- подгрузка плагина для мероприятий
 import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
 import("\\resource\\AT_Trassera.lua") 	  					-- подгрузка трассеров
-local version = 6.11				 							-- Версия скрипта
+local version = 6.2				 							-- Версия скрипта
 
 ------=================== Загрузка модулей ===================----------------------
 local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
@@ -2332,8 +2332,6 @@ function imgui.OnDrawFrame()
 				if not string.sub(v, -3):find('x(%d+)')  then
 					if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
 						sampSendChat(string.gsub(v, '_', control_player_recon))
-						array.windows.recon_mute_menu.v = false
-						showCursor(false,false)
 					end
 				end
 			end
@@ -2345,7 +2343,6 @@ function imgui.OnDrawFrame()
 					local name = string.gsub(v, '/jail _ (%d+) ', '')
 					if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
 						sampSendChat(string.gsub(v, '_', control_player_recon))
-						array.windows.recon_jail_menu.v = false
 					end
 				end
 			end
@@ -2356,7 +2353,6 @@ function imgui.OnDrawFrame()
 				local name = string.gsub(string.gsub(string.gsub(v, '/ban _ (%d+) ', ''), '/siban _ (%d+) ', ''), '/iban _ (%d+) ', '')
 				if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
 					sampSendChat(string.gsub(v, '_', control_player_recon))
-					array.windows.recon_ban_menu.v = false
 				end
 			end
 			imgui.EndPopup()
@@ -2366,7 +2362,6 @@ function imgui.OnDrawFrame()
 				local name = string.gsub(v, '/kick _ ', '')
 				if imgui.Button(u8(name), imgui.ImVec2(250, 25)) then
 					sampSendChat(string.gsub(v, '_', control_player_recon))
-					array.windows.recon_kick_menu.v = false
 				end
 			end
 			imgui.EndPopup()
@@ -3325,7 +3320,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			elseif array.answer.slejy then sampSendChat('/re ' .. reportid)
 			elseif array.answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
 			elseif array.answer.nakajy then
-				if not autorid then autorid = autor command = '/rmuteoff '
+				if not tonumber(autorid) then autorid = autor command = '/rmuteoff '
 				else command = '/rmute ' end
 				if array.nakazatreport.oftop then       sampSendChat(command  .. autorid .. ' 120 Оффтоп в /report')
 				elseif array.nakazatreport.oskadm then  sampSendChat(command  .. autorid .. ' 2500 Оскорбление администрации')
