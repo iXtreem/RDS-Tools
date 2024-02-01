@@ -4,30 +4,8 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-import("\\resource\\AT_MP.lua") 							-- подгрузка плагина для мероприятий
-import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
-import("\\resource\\AT_Trassera.lua") 	  					-- подгрузка трассеров
-local version = 6.2				 							-- Версия скрипта
-
-------=================== Загрузка модулей ===================----------------------
-local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
-local sampev		 	= require 'lib.samp.events'			-- Считывание текста из чата
-local imadd 			= require 'imgui_addons' 			-- Замена имгуи CheckBox'a
-local mimgui 			= require 'mimgui'					-- Мимгуи для работы keysyns
-local inicfg 			= require 'inicfg'					-- Сохранение/загрузка конфигов
-local encoding 			= require 'encoding'				-- Дешифровка на русский язык
-local vkeys 			= require 'vkeys' 					-- Работа с нажатием клавиш
-local ffi 				= require "ffi"						-- Работа с открытым чатом
-local fa 				= require 'faicons'					-- Иконки в imgui
-local mem 				= require 'memory'					-- Работа с памятью игры
-local font 				= require ('moonloader').font_flag	-- Шрифты визуальных текстов на экране
-encoding.default 		= 'CP1251' 
-local u8 				= encoding.UTF8
-
-
-local plagin_notify		= import('\\lib\\lib_imgui_notf.lua')
-local sw, sh 			= getScreenResolution()           	-- Узнаем разрешение экрана пользователя
-
+local version = 6.3				 							-- Версия скрипта
+local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
 	settings = {
@@ -81,7 +59,6 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		enter_report = true,
 		open_tool = 'F3',
 		weapon_hack = false,
-		color_report = '*',
 		autoaccept_form = false,
 		bloknotik = '',
 		autoupdate = true,
@@ -118,7 +95,6 @@ inicfg.save(cfg, 'AT//AT_main.ini')
 style(cfg.settings.style)
 
 ------=================== ImGui окна ===================----------------------
-
 
 local array = {
 	windows = {
@@ -167,6 +143,7 @@ local array = {
 		button_enter_in_report 	= imgui.ImBool(cfg.settings.enter_report),
 		check_render_ears 		= imgui.ImBool(false),
 		add_full_words 			= imgui.ImBool(true),
+		autoaccept_form 		= imgui.ImBool(cfg.settings.autoaccept_form),
 		inputhelper			  	= imgui.ImBool(cfg.settings.inputhelper),
 		check_on_chatlog		= imgui.ImBool(cfg.settings.chat_log),
 		check_answer_player_report = imgui.ImBool(cfg.settings.answer_player_report),
@@ -239,13 +216,20 @@ local array = {
 	keys = {
 		["onfoot"] = {},
 		["vehicle"] = {}
+	},
+	hint = {
+		'Нет доступа к /tr /ban? Не проблема... Есть альтернатива во вкладке для Мл.Администраторов',
+		'Забыл правила? /ahelp напомнит!',
+		'Здесь будут всякие подсказочки :3333',
 	}
 }
 local menu 				= 'Главное меню' 								-- Разные вкладки в F3
 local menu_in_recon 	= 'Главное меню'								-- Разные вкладки в рекон
 local tag 				= '{2B6CC4}Admin Tools: {F0E68C}' 				-- Задаем название скрипта в самой игре
 local AFK 				= false											-- основной триггер скрипта, афк мы или нет
-local atr 				= false											-- альтернатива /tr
+local atr 				= false											-- проверка включена ли альтернатива /tr
+local tr 				= false 										-- сама альтернатива /tr
+local save_mute 		= false											-- запоминаем последнее выданное наказание
 local find_ip_player 	= false											-- поиск IP в /offstats
 local regip				= nil											-- Узнаем изначальный ип в /offstats
 local lastip			= nil											-- Узнаем последний ип в /offstats
@@ -258,6 +242,46 @@ local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BO
 
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
+	local scanDirectory = function(path) -- Проверяем все файлы в папке
+		array.files_chatlogs = {}
+		local lfs = require("lfs")
+		for file in lfs.dir(path) do
+			if file ~= "." and file ~= ".." then
+				local fullPath = path .. "/" .. file
+				local attributes = lfs.attributes(fullPath)
+				if attributes.mode == "directory" then
+					local nestedFiles = scanDirectory(fullPath)
+					for _, nestedFile in ipairs(nestedFiles) do table.insert(array.files_chatlogs, nestedFile) end
+				else table.insert(array.files_chatlogs, file) end
+			end
+		end
+		return array.files_chatlogs
+	end
+
+	local data_today = os.date("*t") -- узнаем дату сегодня
+	local log = ('moonloader\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
+
+	if not directory_exists('moonloader\\config\\chatlog\\') then os.execute("mkdir moonloader\\config\\chatlog") print('Папка отсутствовала, создал новую.') end
+	if not file_exists(log) then
+		local file = io.open(log,"w")
+		file:close()
+		print('Создан новый chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
+	end
+	for k, v in ipairs(scanDirectory('moonloader\\config\\chatlog\\')) do
+		local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
+		if data3 and data2 and data3 then
+			if tonumber(daysPassed(data3,data2,data1)) < 3 then
+				file = io.open('moonloader\\config\\chatlog\\'..v,'r')
+				for line in file:lines() do
+					if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = string.gsub(encrypt(line, -3), '{(.+)}','')
+					elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = string.gsub(encrypt(line, -3), '{(.+)}','')
+					elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = string.gsub(encrypt(line, -3), '{(.+)}','') end
+				end
+				file:close()
+			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
+		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
+	end
+
 	while not sampIsLocalPlayerSpawned() do wait(2000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
@@ -272,26 +296,26 @@ function main()
 			update_main = true
 		end
 		if cfg.settings.versionFS and cfg.settings.versionMP then
-			if AdminTools.script.versionMP > cfg.settings.versionMP then update_mp = true end
-			if AdminTools.script.versionFS > cfg.settings.versionFS then update_fs = true end
+			if AdminTools.script.versionMP > cfg.settings.versionMP then update = true end
+			if AdminTools.script.versionFS > cfg.settings.versionFS then update = true end
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
 		if sampGetCurrentServerAddress() ~= '46.174.52.246' and sampGetCurrentServerAddress() ~= '46.174.49.170' then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
 			ScriptExport()
-		end
-		if update_main or update_fs or update_mp then
+		elseif update then
 			sampAddChatMessage       ('==================================================================================', '0x'..(color()))
 			sampAddChatMessage(tag .. 'Обнаружено новое {FF0000}обновление {F0E68C}, вводи /update, чтобы обновить скрипт', '0x'..(color()))
 			sampAddChatMessage       ('==================================================================================', '0x'..(color()))
-		else sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация F3(/tool)', -1) end
+	 	else sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) end
 	end
 	local AdminTools = nil
+
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
-	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader\\' .. "\\config\\AT\\rules.txt", function(id, status) end) end
-	local AutoMute_mat = file_exists('moonloader\\config\\AT\\mat.txt') if not AutoMute_mat then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/mat.txt", 'moonloader\\' .. "\\config\\AT\\mat.txt", function(id, status) end) end
-	local AutoMute_osk = file_exists('moonloader\\config\\AT\\osk.txt') if not AutoMute_osk then downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", 'moonloader\\' .. "\\config\\AT\\osk.txt", function(id, status) end) end	
+	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then rules = io.open('moonloader\\config\\AT\\rules.txt', 'w') thisScript():reload() end
+	local AutoMute_mat = file_exists('moonloader\\config\\AT\\mat.txt') if not AutoMute_mat then AutoMute_mat = io.open('moonloader\\config\\AT\\mat.txt', 'w') thisScript():reload() end
+	local AutoMute_osk = file_exists('moonloader\\config\\AT\\osk.txt') if not AutoMute_osk then AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', 'w') thisScript():reload() end	
 	local rules = io.open('moonloader\\config\\AT\\rules.txt',"r")
-	if rules then for line in rules:lines() do array.pravila[ #(array.pravila) + 1] = line;end rules:close() end
+	if rules then for line in rules:lines() do array.pravila[ #(array.pravila) + 1] = line;end rules:close() else rules = io.open('moonloader\\config\\AT\\rules.txt',"w") thisScript():reload() end
 	
 	--------------------============ АВТОМУТ =====================---------------------------------
 	local AutoMute_mat = io.open('moonloader\\config\\AT\\mat.txt', "r")
@@ -299,44 +323,21 @@ function main()
 	
 	local AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', "r")
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
-	--------------------============ АВТОМУТ =====================---------------------------------
-	local data_today = os.date("*t") -- узнаем дату сегодня
-	if cfg.mute_players.data ~= data_today.day..'.'.. data_today.month..'.'..data_today.year then
-		cfg.mute_players = {} -- сброс значений умного автомута если наступил следующий день
-		cfg.mute_players.data = data_today.day..'.'.. data_today.month..'.'..data_today.year
-		save()
-	end
-	--=========== ЧАТ ЛОГГ =======-----
-	local log = ('moonloader\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
-	if not directory_exists('moonloader\\config\\chatlog\\') then os.execute("mkdir moonloader\\config\\chatlog") print('Папка отсутствовала, создал новую.') end
-	if not file_exists(log) then
-		local file = io.open(log,"w")
-		file:close()
-		print('Создан новый chatlog.txt')
-	end
-	for k, v in ipairs(scanDirectory('moonloader\\config\\chatlog\\')) do
-		local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
-		if data3 and data2 and data3 then
-			if tonumber(daysPassed(data3,data2,data1)) < 3 then
-				file = io.open('moonloader\\config\\chatlog\\'..v,'r')
-				for line in file:lines() do
-					if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','')
-					elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','')
-					elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = string.gsub(encrypt(line, -3), '{%w%w%w%w%w%w}','') end
-				end
-				file:close()
-			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
-		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
-	end
-	--========== ЧАТ ЛОГГ ========----
+
+	while not sampTextdrawIsExists(452) --[[ admin panel ]] do if wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then sampAddChatMessage(tag .. 'Авторизируйтесь в админ-панель!', -1) end wait(30) end
+
+	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
+	import("\\resource\\AT_FastSpawn.lua")  			-- подгрузка быстрого спавна
+	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
 	func = lua_thread.create_suspended(autoonline)
 	funcadm = lua_thread.create_suspended(render_admins)
 	func1 = lua_thread.create_suspended(wallhack)
-	func4 = lua_thread.create_suspended(binder_key)
-	func4:run() 									--binder_key
+	local func4 = lua_thread.create_suspended(binder_key)
+	func4:run() 										--binder_key
 	if cfg.settings.render_admins then
 		lua_thread.create(function()
-			while #(array.admins) == 0 do wait(1000) end
+			while not array.admins do wait(0) end
+			while #(array.admins) == 0 do wait(3000) end
 			array.windows.render_admins.v = true
 			imgui.Process = true
 		end)
@@ -406,7 +407,7 @@ function main()
 			end
 		end
 
-		wait(3) -- задержка
+		wait(1) -- задержка
 	end
 end
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
@@ -431,7 +432,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		prfzga 	= 		'Выдать префикс ЗГА',
 		prfga 	= 		'Выдать префикс ГА',
 		color_report   ='Назначить цвет ответа на репорт',
-		autoaccept_form='Автопринятие админ-форм',
 		control_afk    ='Автоматически закрывать игру, если стоишь в AFK более указанного кол-ва минут',
 		size_chat	   ='Изменить размер рендера информации открытого чата',
 		add_autoprefix ='Добавить администратора в исключение автопрефикса',
@@ -453,15 +453,15 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		vig 	=		"/vvig _ 1 Злоупотребление VIP'ом",
 	},
 	ans = { 														-- с вариативностью есть доп/текст или нет
-		nv      =  		'/ot _ Игрок не в сети',
-		cl      =  		'/ot _ Данный игрок чист.',
-		pmv     =  		'/ot _ Помогли вам. Обращайтесь ещё',
-		dpr     =  		'/ot _ У игрока куплены функции за /donate',
-		afk     =  		'/ot _ Игрок бездействует или находится в AFK',
-		nak     =  		'/ot _ Игрок был наказан! Благодарим за обращение.',
-		n       =  		'/ot _ Нарушений со стороны игрока не наблюдается.',
-		fo      =  		'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru',
-		rep     =  		'/ot _ Нашли нарушителя? Появился вопрос? Напишите /report!',
+		nv      =  		'/ans _ Игрок не в сети',
+		cl      =  		'/ans _ Данный игрок чист.',
+		pmv     =  		'/ans _ Помогли вам. Обращайтесь ещё',
+		dpr     =  		'/ans _ У игрока куплены функции за /donate',
+		afk     =  		'/ans _ Игрок бездействует или находится в AFK',
+		nak     =  		'/ans _ Игрок был наказан! Благодарим за обращение.',
+		n       =  		'/ans _ Нарушений со стороны игрока не наблюдается.',
+		fo      =  		'/ans _ Обратитесь с данной проблемой на форум https://forumrds.ru',
+		rep     =  		'/ans _ Нашли нарушителя? Появился вопрос? Напишите /report!',
 		al 		=		'/ans _ Здравствуйте! Вы забыли ввести /alogin !\n'..
 						'/ans _ Введите /alogin и свой пароль, пожалуйста.',
 	},
@@ -674,7 +674,7 @@ end)
 sampRegisterChatCommand('control_afk', function(param)
 	if not tonumber(param) then sampAddChatMessage(tag .. 'Значение указано неверно. Введите кол-во минут. 0 = выкл.', -1) return false end
 	local param = tonumber(param)
-	if param >= 0 then
+	if param and param >= 0 then
 		if param == 0 then 
 			cfg.settings.control_afk = false
 			sampAddChatMessage(tag .. 'Автоматический выход из игры деактивирован.', -1)
@@ -716,6 +716,7 @@ sampRegisterChatCommand('wh' , function()
 	end
 end)
 sampRegisterChatCommand('tool', function()
+	if not sampTextdrawIsExists(452) then sampAddChatMessage(tag .. 'Вы не авторизовались.', -1) return false end
 	array.windows.menu_tools.v = not array.windows.menu_tools.v
 	imgui.Process = true
 end)
@@ -767,18 +768,12 @@ sampRegisterChatCommand('update', function()
 		end
 	end)
 end)
-sampRegisterChatCommand('atr', function()
-	if not atr then sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы{32CD32} включили режим TakeReport.', 0x32CD32)
-	else sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32) end
-	atr = not atr
-end)
-sampRegisterChatCommand('autoaccept_form', function()
-	cfg.settings.autoaccept_form = not cfg.settings.autoaccept_form
-	save()
-	if cfg.settings.autoaccept_form then
-		sampAddChatMessage(tag .. "Авто-принятие форм успешно инициализировано.", -1)
-		sampAddChatMessage(tag .. "Помните, что вы несете ответственность за каждое выданное наказание, даже если это форма!", -1)
-	else sampAddChatMessage(tag .. "Теперь выбор стоит за вами.", -1) end
+sampRegisterChatCommand('tr', function()
+	if atr then
+		if not tr then sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы{32CD32} включили режим TakeReport by AT.', 0x32CD32)
+		else sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32) end
+		tr = not tr
+	else sampSendChat('/tr') end
 end)
 sampRegisterChatCommand('ears', function()
 	if sampIsDialogActive() then return false end
@@ -792,13 +787,12 @@ sampRegisterChatCommand('ears', function()
 		notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано')
 	end
 end)
-
-
+sampRegisterChatCommand('mp', function() sampSendChat('/mp') end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
 	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
 		showCursor(false,false)
-		if cfg.settings.render_admins then array.windows.render_admins.v = true
+		if cfg.settings.render_admins then if #array.admins~=0 then array.windows.render_admins.v = true end
 		else imgui.Process = false end
 	end
 	if array.windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
@@ -864,6 +858,12 @@ function imgui.OnDrawFrame()
 				end
 				imgui.SameLine()
 				imgui.Text(u8'Слежка за формами')
+				imgui.SameLine()
+				if imgui.Checkbox('##autoaccept', array.checkbox.autoaccept_form) then
+					cfg.settings.autoaccept_form = not cfg.settings.autoaccept_form
+					save()
+				end
+				imgui.Tooltip(u8'Автоматическое принятие форм\nПредупреждение: ответственность несете Вы')
 				if imadd.ToggleButton('##automute', array.checkbox.check_automute) then
 					if cfg.settings.automute and cfg.settings.smart_automute then
 						cfg.settings.smart_automute = false
@@ -922,6 +922,46 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.Text(u8'Кастом ответ на репорт')
 				imgui.SameLine()
+				imgui.Text(fa.ICON_COG)
+				if imgui.IsItemClicked(0) then imgui.OpenPopup('option_ans') end
+				if imgui.BeginPopup('option_ans') then
+					if imgui.Button(u8'Назначить цвет репорта') then
+						if not html_color then
+							html_color = {}
+							local file_color = io.open('moonloader\\' .. "\\resource\\skin\\color.txt","r")
+							if file_color then for line in file_color:lines() do html_color[#html_color + 1] = u8:decode(line);end file_color:close() end
+						end
+						imgui.OpenPopup('color')
+						sampAddChatMessage(tag .. 'Подсказка, /color_report *', -1)
+						sampAddChatMessage(tag .. 'Делает цвет ответа разноцветным.', -1)
+					end
+					if imgui.Button(u8'Редактирование кнопок') then imgui.OpenPopup('button') end
+					if imgui.BeginPopup('button') then
+						if imgui.Button(u8'Данная функция будет доступна в следующем обновлении') then
+						end
+						imgui.EndPopup()
+					end
+					if imgui.BeginPopup('color') then
+						imgui.CenterText(u8'Выбранный цвет будет дополнен к вашему ответу.')
+						for i = 1, 256 do 
+							imgui.TextColoredRGB(u8(html_color[i]))
+							if imgui.IsItemClicked(0) then
+								local color = '{'..string.sub(string.sub(html_color[i], 1, 7), 2)..'}'
+								cfg.settings.color_report = color
+								save()
+								sampAddChatMessage(tag .. color ..'Новый цвет', -1)
+							end
+							if i%8~=0 then imgui.SameLine() end 
+						end
+						imgui.EndPopup()
+					end
+					if cfg.settings.color_report and imgui.Button(u8'Удалить цвет репорта') then
+						cfg.settings.color_report = nil
+						save()
+					end
+					imgui.EndPopup()
+				end
+				imgui.SameLine()
 				imgui.SetCursorPosX(250)
 				if imadd.ToggleButton("##weaponhack", array.checkbox.check_weapon_hack) then
 					cfg.settings.weapon_hack = not cfg.settings.weapon_hack
@@ -931,11 +971,8 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.Text(u8'Реакция на чит-оружие')
 				if imadd.ToggleButton("##autoupdate", array.checkbox.active_chat) then
-					if array.checkbox.active_chat.v then
-						cfg.settings.size_text_f6 = 8
-					else
-						cfg.settings.size_text_f6 = 1
-					end
+					if array.checkbox.active_chat.v then cfg.settings.size_text_f6 = 8
+					else cfg.settings.size_text_f6 = 1 end
 					font_chat = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW)
 					save()
 				end
@@ -1190,12 +1227,50 @@ function imgui.OnDrawFrame()
 							cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
 							save()
 						end
+						imgui.Text('')
+						if imgui.Checkbox(u8'У меня нет доступ к /tr', imgui.ImBool(atr)) then
+							if tr then
+								tr = false
+								sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32)
+							end
+							atr = not atr
+						end
+						if atr then
+							imgui.Text(u8'Активация TakeReport - /tr')
+						end
 						imgui.Text(u8'Скрипт сам будет\nотправлять формы старшим,\nне важно отправите вы\nэто полноценной командой,\nили быстрой.')
 						imgui.EndPopup()
 					end
 				end
-				imgui.SetCursorPosY(420)
+				imgui.SetCursorPosY(410)
 				imgui.Separator()
+				if update and imgui.Button(u8'Обновить АТ', imgui.ImVec2(480,24)) then
+					local dlstatus = require('moonloader').download_status
+					sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
+					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/my_lib.lua", 'moonloader//lib//my_lib.lua', function(id, status) end)
+					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader//config//AT//rules.txt', function(id, status)  end)
+					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", 'moonloader//resource//AT_Trassera.lua', function(id, status) end)
+					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader//control_work_AT.lua', function(id, status) end)
+					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", 'moonloader//resource//AT_MP.lua', function(id, status)
+						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+							sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
+						end 
+					end)
+					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", 'moonloader//resource//AT_FastSpawn.lua', function(id, status)
+						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+							sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
+						end  
+					end)
+					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
+						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+							sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
+						end 
+					end)
+					lua_thread.create(function()
+						wait(15000)
+						reloadScripts()
+					end)
+				end
 				imgui.Text(u8'Разработчик скрипта - N.E.O.N')
 				imgui.Text(u8'Обратная связь:')
 				imgui.SameLine()
@@ -1270,7 +1345,6 @@ function imgui.OnDrawFrame()
 				end
 				imgui.SameLine()
 				if imgui.Button(u8'Чат-логгер', imgui.ImVec2(228, 24)) then array.windows.menu_chatlogger.v = true array.windows.menu_tools.v = false end
-				if imgui.Button(u8'Провести серверное мероприятие', imgui.ImVec2(485, 24)) then sampSendChat('/mp') array.windows.menu_tools.v = false end
 				if not array.checkbox.vision_form.v then
 					if imgui.Button(u8'Авто-отправка форм для младших администраторов', imgui.ImVec2(485, 24)) then imgui.OpenPopup('autoform') end
 					if imgui.BeginPopup('autoform') then
@@ -1300,6 +1374,15 @@ function imgui.OnDrawFrame()
 						if imgui.Checkbox(u8'Добавлять // мой ник', array.checkbox.check_add_mynick_form) then
 							cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
 							save()
+						end
+						if atr then imgui.Text(u8'Активация TakeReport - /tr')
+						else imgui.Text('') end
+						if imgui.Checkbox(u8'У меня нет доступ к /tr', imgui.ImBool(atr)) then
+							if tr then
+								tr = false
+								sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32)
+							end
+							atr = not atr
 						end
 						imgui.EndPopup()
 					end
@@ -1335,7 +1418,10 @@ function imgui.OnDrawFrame()
 				imgui.SetCursorPosY(470)
 				if imgui.Button(u8'Перезагрузить скрипты '..fa.ICON_RECYCLE, imgui.ImVec2(250,24)) then reloadScripts() end
 				imgui.SameLine()
-				if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(228, 24)) then ScriptExport() end
+				if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(228, 24)) then
+					sampAddChatMessage(tag .. 'Скрипты АТ выгружены. Если желаете загрузить их вновь, введите команду /rst',-1)
+					ScriptExport() 
+				end
 			elseif menu == 'Быстрые клавиши' then -- быстрые клавиши
 				imgui.SetCursorPosX(8)
 				imgui.NewInputText('##SearchBar7', array.buffer.new_binder_key, 485, u8'Текст биндера', 2)
@@ -1996,6 +2082,27 @@ function imgui.OnDrawFrame()
 					else sampAddChatMessage(tag..'Данного слова в выбранном словаре нет.', -1) end
 					array.buffer.add_smart_automute.v = u8('')
 				end
+				imgui.SetCursorPosY(470)
+				if imgui.Button(u8'Сбросить настройки АТ') then
+					imgui.OpenPopup('reset')
+				end
+				if imgui.BeginPopup('reset') then
+					imgui.Text(u8'Вы уверены, что хотите сбросить настройки?')
+					if imgui.Button(u8'Да', imgui.ImVec2(150,25)) then
+						local dlstatus = require('moonloader').download_status
+						downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader\\' .. "\\config\\AT\\rules.txt", function(id, status) end)
+						downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_main.ini", 'moonloader//config//AT//AT_main.ini', function(id, status) end)
+						downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/mat.txt", 'moonloader\\' .. "\\config\\AT\\mat.txt", function(id, status) end)
+						downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", 'moonloader\\' .. "\\config\\AT\\osk.txt", function(id, status) end)
+						sampAddChatMessage(tag .. 'Загружаю базовые настройки, АТ будет автоматически перезагружен через пару секунд.', -1)
+						lua_thread.create(function()
+							wait(15000)
+							reloadScripts()
+						end)
+					end
+					imgui.Text(u8'Сброс настроек скачает рекомендуемые настройки АТ и автомута')
+					imgui.EndPopup()
+				end
 			end
 		imgui.EndGroup()
 		imgui.PopFont()
@@ -2171,7 +2278,7 @@ function imgui.OnDrawFrame()
 		imgui.PopFont()
 		imgui.End()
 	end
-	if array.windows.recon_menu.v then
+	if array.windows.recon_menu.v then -- recon menu
 		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y))
 		imgui.Begin("##recon", array.windows.recon_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
@@ -2191,20 +2298,24 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				if sampIsPlayerConnected(control_player_recon) then
 					imgui.Text(sampGetPlayerNickname(control_player_recon) .. '[' .. control_player_recon .. ']')
-				end
+				else imgui.Text(u8'Игрок не в сети.') end
 				imgui.Separator()
 				if array.inforeport[14] then
-					imgui.Text(u8'Здоровье авто: ' .. array.inforeport[3])
+					if array.inforeport[3] then
+						imgui.Text(u8'Здоровье авто: ' .. array.inforeport[3])
+					end
 					imgui.Text(u8'Скорость: ' .. array.inforeport[4])
 					imgui.Text(u8'Оружие: ' .. array.inforeport[6])
 					imgui.Text(u8'Точность: ' .. array.inforeport[7])
-					imgui.Text('Ping: ' .. array.inforeport[5])
+					imgui.Text('PING: ' .. array.inforeport[5])
 					imgui.Text('AFK: ' .. array.inforeport[9])
-					imgui.Text('VIP: ' .. array.inforeport[11])
-					imgui.Text('Passive mode: ' .. array.inforeport[12])
-					imgui.Text(u8'Турбо пакет: ' .. array.inforeport[13])
+					imgui.TextColoredRGB('VIP: ' .. array.inforeport[11])
+					imgui.Text('Turbo: ' .. array.inforeport[13]) 
+					imgui.Text('Passive: ' .. array.inforeport[12])
 					imgui.Text(u8'Коллизия: ' .. array.inforeport[14])
-				else imgui.Text(u8'Информация о игроке недоступна.') end
+				else
+					imgui.Text(u8'Информация о игроке недоступна.')
+				end
 				if imgui.Button(u8'Посмотреть первую статистику', imgui.ImVec2(250, 25)) then
 					sampSendChat('/statpl ' .. sampGetPlayerNickname(control_player_recon))
 				end
@@ -2230,7 +2341,7 @@ function imgui.OnDrawFrame()
 		imgui.PopFont()
 		imgui.End()
 	end
-	if array.windows.menu_in_recon.v then
+	if array.windows.menu_in_recon.v then -- кнопки снизу рекон меню
 		imgui.ShowCursor = false
 		imgui.SetNextWindowPos(imgui.ImVec2((sw*0.5)-300, sh-60))
 		imgui.Begin("##recon+", array.windows.menu_in_recon, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -2481,17 +2592,17 @@ function imgui.OnDrawFrame()
 		imgui.CenterText(u8'Нажми нужную клавишу, либо курсором')
 		imgui.CenterText(u8'Активация курсора: ПКМ или F')
 		imgui.CenterText(u8'Меню активно 5 секунд.')
-		if isGamePaused() then array.windows.answer_player_report.v = false end
+		if isPauseMenuActive() then array.windows.answer_player_report.v = false end
 		imgui.End()
 	end
-	if array.windows.render_admins.v then
+	if array.windows.render_admins.v then -- рендер админов
 		imgui.ShowCursor = false
 		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.render_admins_positionX, cfg.settings.render_admins_positionY))
-		imgui.Begin('##render_admins', array.windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar)
-		for i = 1, #array.admins - 1 do imgui.TextColoredRGB(array.admins[i]) end
+		imgui.Begin('##render_admins', array.windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
+		for i = 1, #array.admins do imgui.TextColoredRGB(array.admins[i]) end
         imgui.End()
 	end
-	if array.windows.new_flood_mess.v then
+	if array.windows.new_flood_mess.v then -- создание нового флуда в месс
 		imgui.SetNextWindowPos(imgui.ImVec2(sw * 0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(265,340), imgui.Cond.FirstUseEver)
 		imgui.Begin(u8'Новый флуд', array.windows.new_flood_mess, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -2544,7 +2655,7 @@ function imgui.OnDrawFrame()
 		end
 		imgui.End()
 	end
-	if array.windows.pravila.v then
+	if array.windows.pravila.v then -- ahelp
 		imgui.ShowCursor = true
 		imgui.SetNextWindowPos(imgui.ImVec2(sw * 0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5,0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(sw*0.5,sh*0.5), imgui.Cond.FirstUseEver)
@@ -2608,7 +2719,7 @@ function imgui.OnDrawFrame()
 		imgui.PopFont()
 		imgui.End()
 	end
-	if array.windows.menu_chatlogger.v then
+	if array.windows.menu_chatlogger.v then -- chatlogger
 		imgui.ShowCursor = true
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(sw*0.7, sh*0.8), imgui.Cond.FirstUseEver)
@@ -2804,14 +2915,20 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				else SendChat('/a ' .. command) end
 				return false
 			end
-		elseif command:match('ban (%d+) (%d+) .+') and cfg.settings.forma_na_ban then
+		elseif command:match('ban (%d+) (%d+) .+') then
 			if sampIsPlayerConnected(command:match('(%d+)')) then
-				printStyledString('send forms ...', 1000, 4)
-				if cfg.settings.add_mynick_in_form then
-					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
-				else SendChat('/a ' .. command) end
-				return false
+				if command:match('off') or command:match('akk') then
+					sampAddChatMessage(tag .. '====== Подсказка ======')
+					sampAddChatMessage(tag .. '/sbanip блокирует аккаунт игрока в оффлайне вместе с IP адресом. Но работает только у зга +', -1)
+				end
+				if cfg.settings.forma_na_ban then
+					printStyledString('send forms ...', 1000, 4)
+					if cfg.settings.add_mynick_in_form then
+						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					else SendChat('/a ' .. command) end
+					return false
+				end
 			end
 		elseif command:match('/jail (%d+) (%d+) .+') and cfg.settings.forma_na_jail then
 			if sampIsPlayerConnected(command:match('(%d+)')) then
@@ -2835,9 +2952,10 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 	end
 end
 function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
+	log(text) -- logging chat in chat-logger
 	if cfg.settings.render_admins and (text:match('Время администратирования за сегодня:') or text:match('Ваша репутация:') or text:match('Всего администрации в сети:')) then
 		return false
-	elseif text:match("(.+)%((%d+)%) пытался написать в чат: ") then
+	elseif text:match("(.+)%((%d+)%) пытался написать в чат: .+") then
 		sampAddChatMessage('',-1)
 		sampAddChatMessage(text, 0xff6347) -- чтобы не пропускали такие сообщения
 		sampAddChatMessage('',-1)
@@ -2913,16 +3031,13 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			return false
 		end
 	elseif not AFK then
-		log(text)
 		if cfg.settings.automute and (text:match("%((%d+)%): (.+)") or text:match("%[(%d+)%]: (.+)")) 			and not (text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") or text:match('написал %[(%d+)%]:') or text:match('ответил (.+)%[(%d+)%]: ')) then
-			local command = '/mute '
-			if text:match('Жалоба') then
-				command = '/rmute '
-			end
 			local text = text:rlower() .. ' '
+			if text:match('жалоба') then command = '/rmute '
+			else command = '/mute ' end
 			if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
 			else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
-			local text = string.gsub(text, '{%w%w%w%w%w%w}', '')
+			local text = string.gsub(text, '{(.+)}', '')
 			if cfg.settings.smart_automute then
 				for i = 1, #cfg.spisokoskrod do
 					if text:match(' '.. cfg.spisokoskrod[i]) then
@@ -3045,12 +3160,16 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			end
 		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack then
 			if not sampIsDialogActive() then 
-				sampSendChat('/iwep '.. string.match(text, "%[(%d+)%]"))
+				lua_thread.create(function()
+					while sampIsChatInputActive() do wait(1) end
+					sampSendChat('/iwep '.. string.match(text, "%[(%d+)%]"))
+				end)
 			end
 			return false
 		end
 	end
 end
+
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 	if cfg.settings.on_custom_recon_menu then
 		for k,v in pairs(data) do
@@ -3070,15 +3189,18 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 						while not array.windows.recon_menu.v do wait(100) end
 						while array.windows.recon_menu.v do
 							array.inforeport = textSplit(sampTextdrawGetString(array.textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
-							if array.inforeport[3] ==   '-1'   then array.inforeport[3] = '-' end  --========= ХП АВТО
-							if array.inforeport[6] == '0 : 0 ' then array.inforeport[6] = '-' end  --====== Оружие
+							if array.inforeport[3] ==   '-1'   then array.inforeport[3] = false end  --========= ХП АВТО
+							if cfg.settings.weapon_hack and array.inforeport[6]:find('-') then 
+								sampAddChatMessage(tag .. 'У игрока в реконе обнаружен чит.', -1)
+								while sampIsDialogActive() do wait(1) end
+								sampSendChat('/iwep ' .. control_player_recon)
+							end
 							--=========== Название ВИП =======--------
-							if     array.inforeport[11] == '0' then array.inforeport[11] = '-'
-							elseif array.inforeport[11] == '1' then array.inforeport[11] = 'Standart'
+							if array.inforeport[11] == '1' then array.inforeport[11] = 'Standart'
 							elseif array.inforeport[11] == '2' then array.inforeport[11] = 'Premium'
-							elseif array.inforeport[11] == '3' then array.inforeport[11] = 'Diamond'
-							elseif array.inforeport[11] == '4' then array.inforeport[11] = 'Platinum'
-							elseif array.inforeport[11] == '5' then array.inforeport[11] = 'Personal' end
+							elseif array.inforeport[11] == '3' then array.inforeport[11] = '{87CEEB}Diamond'
+							elseif array.inforeport[11] == '4' then array.inforeport[11] = '{FF00FF}Platinum'
+							elseif array.inforeport[11] == '5' then array.inforeport[11] = '{DAA520}Personal' end
 							--=========== Название ВИП =======--------
 							wait(1000)
 						end
@@ -3109,6 +3231,12 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 		------=========== Удаляем лишние текстдравы, сравнивая их с массивом =======---------------
 		for i = 0, #array.textdraw_delete do if id == array.textdraw_delete[i] then return false end end
 	end
+	if id == 0 then -- удаление синей точки с экрана
+		local _, trigger = sampTextdrawGetOutlineColor(id)
+		if trigger == 900 then
+			return  false
+		end
+	end
 end
 
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- Работа с открытими ДИАЛОГАМИ
@@ -3117,7 +3245,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		lua_thread.create(function()
 			array.admins = textSplit(text, '\n')
 			local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-			for i = 1, #array.admins - 1 do -- {FFFFFF}N.E.O.N(0) ({2E8B57}Мл.Администратор{FFFFFF}) | Уровень: {ff8587}6{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}
+			array.admins[#array.admins] = nil -- последний пункт диалога пустой
+			for i = 1, #array.admins do -- {FFFFFF}N.E.O.N(0) ({2E8B57}Мл.Администратор{FFFFFF}) | Уровень: {ff8587}6{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}
 				local rang = string.sub(string.gsub(string.match(array.admins[i], '(%(.+)%)'), '(%(%d+)%)', ''), 3) --{FFFFFF}N.E.O.N(0) | Уровень: {ff8587}18{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}60
 				array.admins[i] = string.gsub(array.admins[i], '{%w%w%w%w%w%w}', "")
 				local afk = string.match(array.admins[i], 'AFK: (.+)')
@@ -3131,26 +3260,29 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					rang = 'Отсутствует'
 				end
 				if cfg.settings.autoprefix then
-					local lvl, rang, id = tonumber(lvl), string.gsub(rang, '{%w%w%w%w%w%w}', ''), tonumber(id)
+					local color1, name,color2 = string.match(rang, '{(.+)}(.+){(.+)}')
+					if name then
+						rang = '{'..color1..'}' .. name
+					end
+					local lvl, id = tonumber(lvl), tonumber(id)
 					if id ~= myid and autoprefix_access then
-						if (lvl > 0 and lvl < 10) and rang ~= 'Мл.Администратор' then
-							wait(1000)
+						if (lvl > 0 and lvl < 10) and rang ~= '{'..cfg.settings.prefixma..'}Мл.Администратор' then
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixma .. '}Мл.Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Мл.Администратор ' .. cfg.settings.prefixma)
-							wait(3000)
+							wait(10000)
 							sampSendChat('/admins')
 							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.')
-						elseif (lvl > 11 and lvl < 15) and rang ~= 'Администратор' then
-							wait(1000)
+						elseif (lvl > 11 and lvl < 15) and rang ~= '{'..cfg.settings.prefixa..'}Администратор' then
+							wait(5000)
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' ..cfg.settings.prefixa..'}Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Администратор ' .. cfg.settings.prefixa)
 							wait(3000)
 							sampSendChat('/admins')
 							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.')
-						elseif (lvl > 16 and lvl < 18) and rang ~= 'Ст.Администратор' then
-							wait(1000)
+						elseif (lvl > 16 and lvl < 18) and rang ~= '{'..cfg.settings.prefixsa..'}Ст.Администратор' then
+							wait(5000)
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixsa..'}Ст.Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Ст.Администратор ' .. cfg.settings.prefixsa)
@@ -3158,18 +3290,20 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampSendChat('/admins')
 							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.')
 						end
-					elseif lvl == 18 and rang ~= 'Ст.Администратор' then
+					elseif lvl == 18 and rang ~= 'Ст.Администратор' and not autoprefix_access then
 						autoprefix_access = true
 						print('Вы из руководящего состава!')
+						print('Автовыдача префикса была успешно инициализирована.')
 					end
 				end
 			end
 		end)
 		return false
 	elseif dialogId == 1098 then -- автоонлайн
-		sampSendDialogResponse(dialogId, 1, math.floor(sampGetPlayerCount(false) / 10) - 1)
+		sampSendDialogResponse(1098, 1, math.floor(sampGetPlayerCount(false) / 10) - 1)
 		return false
 	elseif cfg.settings.weapon_hack and button1 == 'Готово' and button2 ~= 'Закрыть' then
+		dxutSetDialogVisible(dialogId, true)
 		lua_thread.create(function()
 			local text = textSplit(text, '\n')
 			for i = 1, #text - 1 do
@@ -3230,8 +3364,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 	elseif dialogId == 2349 then -- окно с самим репортом.
 		array.answer, array.windows.answer_player_report.v, peremrep, myid, reportid = {}, false, nil, nil, nil
 		local text = textSplit(text, '\n')
-		text[1] = string.gsub(string.gsub(text[1], '{.+}', ''), 'Игрок: ', '')
-		text[4] = string.gsub(string.gsub(text[4], '{.+}', ''), 'Жалоба: ', '')
+		text[1] = string.gsub(string.gsub(text[1], '{(.+)}', ''), 'Игрок: ', '')
+		text[4] = string.gsub(string.gsub(text[4], '{(.+)}', ''), 'Жалоба: ', '')
 		autor = text[1]																			--1
 		if sampGetPlayerIdByNickname(autor) then autorid = sampGetPlayerIdByNickname(autor)		--1
 		else autorid = 'Не в сети' end 
@@ -3260,7 +3394,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 						if reportid < 300 then
 							peremrep = ('Указанный вами игрок под ' .. reportid .. ' ID находится вне сети.') 
 							array.answer.slejy = nil
-						else peremrep = ('Отправляюсь в слежку') end
+						else peremrep = ('Отправляюсь в слежку...') array.answer.control_player = true array.answer.slejy = false  end
 					else peremrep = ('Отправляюсь в слежку за игроком ' .. sampGetPlayerNickname(reportid) .. '['..reportid..']') end
 				elseif myid then if reportid == myid then peremrep = ('Вы указали мой ID (^_^)') array.answer.slejy = nil end end
 			elseif array.answer.nakazan then peremrep = ('Данный игрок уже был наказан.')
@@ -3360,19 +3494,20 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 		return false
 	elseif text == ('~y~REPORT++') then
 		if not AFK then
-			if atr and not sampIsDialogActive() then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0) end
-			if cfg.settings.notify_report then printStyledString('~n~~p~REPORT ++', 700, 4) end
+			if tr and not sampIsDialogActive() then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0) end
+			if cfg.settings.notify_report then printStyledString('~n~~p~REPORT ++', 1000, 4) end
 		end
 		return false
 	end
 end
 
 function log(text) -- записываем лог
-	if cfg.settings.chat_log then
+	if cfg.settings.chat_log and not AFK then
 		local data_today = os.date("*t") -- узнаем дату сегодня
 		local log = ('moonloader\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 		local file = io.open(log,"a")
-		if file then file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(text, 3)..'\n') file:close() end
+		file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(text, 3)..'\n') 
+		file:close()
 	end
 end
 
@@ -3380,7 +3515,6 @@ function render_admins()
 	wait(5000)
 	while true do
 		while sampIsDialogActive() do wait(500) end
-		wait(300)
 		if not AFK then sampSendChat('/admins') end
 		wait(30000)
 	end
@@ -3394,50 +3528,9 @@ function autoonline()
 	end 
 end
 
-function update(param)
-	local dlstatus = require('moonloader').download_status
-	if param == 'fs' or param == 'all' then
-		sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
-		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", 'moonloader//resource//AT_FastSpawn.lua', function(id, status)
-			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
-			end  
-		end)
-	end 
-	if param == 'mp' or param == 'all' then
-		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", 'moonloader//resource//AT_MP.lua', function(id, status)
-			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
-			end 
-		end)
-	end
-	if param == 'main' or param == 'all' then
-		sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
-		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/my_lib.lua", 'moonloader//lib//my_lib.lua', function(id, status) end)
-		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader//config//AT//rules.txt', function(id, status)  end)
-		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", 'moonloader//resource//AT_Trassera.lua', function(id, status) end)
-		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader//control_work_AT.lua', function(id, status) end)
-		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
-			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-				sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
-			end 
-		end)
-	end
-	lua_thread.create(function()
-		wait(10000)
-		reloadScripts()
-	end)
-end
-
 function onWindowMessage(msg, wparam, lparam) -- блокировка ALT + Enter
 	if msg == 261 and wparam == 13 then consumeWindowMessage(true, true) end
 end
-function ScriptExport()
-	if cfg.settings.wallhack then off_wallhack() end
-	showCursor(false,false)
-	thisScript():unload()
-end
-
 function save()
 	inicfg.save(cfg,'AT//AT_main.ini')
 end
@@ -3507,7 +3600,7 @@ function binder_key()
 		end
 		wait(30)
 		if isGamePaused() then 
-			if not AFK and cfg.settings.control_afk then
+			if not AFK and cfg.settings.control_afk>1 then
 				lua_thread.create(function()
 
 					mem.write(0x747FB6, 0x1, 1, true) -- выходим в афк
@@ -3585,60 +3678,6 @@ function off_wallhack() -- Выключение WallHack (свойства)
 	mem.setint8(pStSet + 47, 0)
 	mem.setint8(pStSet + 56, 1)
 end
-
----============ подзагрузка важных файлов ================-----
-function start_my_answer()
-	if start_download then sampAddChatMessage('Процесс загрузки уже идёт.', -1)
-	else
-		if not file_exists('moonloader\\'..'\\resource\\skin\\skin_311.png') or not file_exists('moonloader\\'..'\\resource\\auto\\vehicle_611.png') then
-			start_download = true
-			sampAddChatMessage(tag .. 'Файлы кастомных ответов ещё не загружены. Сразу как вы ответите на репорт я начну загрузку.', -1)
-			lua_thread.create(function()
-				while array.windows.fast_report.v do wait(1000) end
-				sampAddChatMessage(tag..'Информация о скинах не загружена! Через 5 секунд создам папки, игра будет свернута.', -1)
-				wait(5000)
-				if not directory_exists('moonloader\\' .. "\\resource\\skin") then os.execute("mkdir moonloader\\resource\\skin") end
-				if not directory_exists('moonloader\\'.. "\\resource\\auto") then os.execute("mkdir moonloader\\resource\\auto") end
-				wait(3000)
-				sampAddChatMessage('',-1)
-				sampAddChatMessage('',-1)
-				sampAddChatMessage('',-1)
-				sampAddChatMessage(tag..'Папка была создана, начинаю загрузку файлов. Следить за прогрессом можно нажав Ё (~)', -1)
-				sampAddChatMessage(tag..'Примерное время ожидания ~ 5 минут.', -1)
-				sampAddChatMessage(tag..'В случае, если вы выйдите из игры досрочно - установка будет начата с начала.', -1)
-				sampAddChatMessage('',-1)
-				sampAddChatMessage('',-1)
-				sampAddChatMessage('',-1)
-				local dlstatus 			= require('moonloader').download_status
-				for i = 0, 311 do
-					downloadUrlToFile("https://assets.open.mp/assets/images/skins/"..i..".png", 'moonloader\\' .. '\\resource\\skin\\skin_'..i..'.png', function(id, status)
-						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-							print('Загружаю информацию о скинах: ' .. i .. '/311')
-							if i == 311 then
-								print('Скачаю ещё и информацию о авто, ожидайте.') 
-							end
-						end 
-					end)
-				end
-				for i = 400,611 do
-					downloadUrlToFile("https://gta-serv.ru/images/stories/vehicle/vehicle_".. i ..".jpg", 'moonloader\\' .. '\\resource\\auto\\vehicle_'..i..'.png', function(id, status)
-						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-							print('Загружаю информацию о авто: ' .. i-400 .. '/211')
-						end
-						if i==611 then print('Осталось совсем чуть-чуть...') print('Загружаю HTML-цвета ...') end
-					end)
-				end
-				downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/color.txt", 'moonloader\\' .. '\\resource\\skin\\color.txt', function(id, status)
-					if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-						print('Установка завершена, можете пользоваться быстрыми ответами в прежнем режиме.')
-						start_download = false
-					end
-				end)
-			end)
-		else array.windows.custom_ans.v = not array.windows.custom_ans.v end
-	end
-end
-
 
 ---========================== /KEYSYNC =============================----
 function sampev.onPlayerSync(playerId, data)
@@ -3741,7 +3780,7 @@ mimgui.OnFrame(
 			else
 				mimgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон, R - обновить в ручную.\nНачинаю процесс автоматического обновления рекона...")
 				auto_update_recon()
-				if not array.windows.recon_menu.v then array.windows.menu_in_recon.v = false keysync('off') end
+				if not array.windows.recon_menu.v then keysync('off') end
 			end
 		mimgui.End()
     end
@@ -3824,20 +3863,48 @@ end
 function notify(title, text)
 	if plagin_notify then plagin_notify.addNotify(title, text, 2,1,12) end
 end
-function scanDirectory(path) -- Проверяем все файлы в папке
-    array.files_chatlogs = {}
-	local lfs = require("lfs")
-    for file in lfs.dir(path) do
-        if file ~= "." and file ~= ".." then
-            local fullPath = path .. "/" .. file
-            local attributes = lfs.attributes(fullPath)
-            if attributes.mode == "directory" then
-                local nestedFiles = scanDirectory(fullPath)
-                for _, nestedFile in ipairs(nestedFiles) do table.insert(array.files_chatlogs, nestedFile) end
-            else table.insert(array.files_chatlogs, file) end
-        end
-    end
-    return array.files_chatlogs
+
+function ScriptExport()
+	local get_name_of_path = function(path) return path:match('^.+[\\/](.-)$') end
+	local get_files = function(path, mask)
+		if type(mask) ~= 'table' then mask = { mask } end
+		local t = {}
+		for i = 1, #mask do
+			local handle, name = findFirstFile(path .. '\\' .. mask[i])
+			if handle then
+				while name do
+					t[#t + 1] = name
+					name = findNextFile(handle)
+				end
+				findClose(handle)
+			end
+		end
+		return t
+	end
+	local get_loaded_scripts = function()
+		local all = get_files(getWorkingDirectory(), { '*.lua', '*.luac' })
+		local loaded, unloaded = script.list(), {}
+		for i = 1, #all do
+			local b = false
+			for l = 1, #loaded do
+				if get_name_of_path(loaded[l].path) == all[i] then
+					b = true
+					break
+				end
+			end
+			if not b then unloaded[#unloaded + 1] = all[i] end
+		end
+		return loaded, unloaded
+	end
+	local loaded, _ = get_loaded_scripts()
+	for k,v in pairs(loaded) do
+		if v.name == 'AT_MP' or v.name == 'AT_FastSpawn' or v.name == 'AT_Trassera' or v.name == 'AdminToolsPlus' then
+			v:unload()
+		end
+	end
+	if cfg.settings.wallhack then off_wallhack() end
+	showCursor(false,false)
+	thisScript():unload()
 end
 --------=================== Подпись ID в килл-чате =============------------------------
 ffi.cdef[[
