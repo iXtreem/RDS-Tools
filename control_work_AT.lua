@@ -1,13 +1,3 @@
-if io.open('moonloader\\lib\\VK_API.lua') then vk = require 'VK_API'
-else
-	local dlstatus = require('moonloader').download_status
-	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/VK_API.lua", 'moonloader\\lib\\VK_API.lua', function(id, status)
-		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			reloadScripts()
-		end
-	end)
-end
-local send_report = false
 
 local token = --[[Токен группы VK]]"vk1.a.CeLIzK9OTcpIzmnlvUPNaBk-f8PVBBjBIKYMgOvci7RAq-hi9up1REVQC_T77bW71PpOdeijhTk3k4F1_-9XckYBiAMGiJzlLV3xCR0JI5_sWGi96om1qPLPFRyGFeWVILb1d7Jw8GLIHk_WhfwAydb9070C_vx2fNt0RygHMob7AGRhfHgQanNho6ox7tN-LZuSU7E93WH9scneUzbM1w"
 local ID = "508415544"	-- ID VK кому отправлять
@@ -28,10 +18,10 @@ function onSystemMessage(msg, type, script)
                 while sampIsDialogActive(252) do wait(500) end
                 local _, button, _, _ = sampHasDialogRespond(252)
                 if button == 0 then
-                    sampShowDialog(252, "Желаете отправить отчет об ошибке?", ('Нет\nДа\nДа, со своими комментариями'), "Выбрать", nil, 2)
+                    sampShowDialog(252, "Желаете отправить отчет об ошибке?", ('Нет\nДа\nДа, со своими комментариями\nНе выполнять перезагрузку скриптов'), "Выбрать", nil, 2)
                     while sampIsDialogActive(252) do wait(500) end
                     local _, _, button, _ = sampHasDialogRespond(252)
-                    if button~=0 then 
+                    if button == 1 or button == 2 then 
                         local add_text = 'Отсутствуют.'
                         if button == 2 then
                             sampShowDialog(252, 'Отчет','Расскажите, вследствии чего произошла данная ошибка', 'Отправить', nil, 1)
@@ -49,9 +39,16 @@ function onSystemMessage(msg, type, script)
                         end
                         sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
                     end
+                    if button ~= 3 then
+                        wait(2000)
+                        reloadScripts()
+                    else 
+                        sampAddChatMessage('Автоматическая перезагрузка не была выполнена, но вы можете сделать ее вручную, командой /rst', -1)
+                    end
+                else
+                    wait(2000)
+                    reloadScripts()
                 end
-                wait(2000)
-                reloadScripts()
             end)
         end
 	end
@@ -64,24 +61,4 @@ function textFormatter(msg) -- форматируем текст чтобы нормально отправлялся вк
 	return msg
 end
 
-sampRegisterChatCommand('areport', function()
-    lua_thread.create(function()
-        sampShowDialog(252, 'Отчет','Напишите о баге/недоработке или пожелании в разработке\nУчите, раз в день можно отправить 1 такое сообщение.', 'Отправить', nil, 1)
-        while sampIsDialogActive(252) do wait(500) end
-        local _, _, _, input = sampHasDialogRespond(252)
-        add_text = tostring(input)
-        if #add_text > 5 then
-            local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-            local nick = sampGetPlayerNickname(id)
-            local data = (os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year .. ' '..os.date("*t").hour..':'..os.date("*t").min ..':'..os.date("*t").sec)
-            vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
-            if not send_report then
-                send_report = true
-                vk.sendMessage('Администратор ' .. nick .. '\n\nДата: ' .. data .. '\n\nОтправил сообщение: ' .. textFormatter(add_text), ID)
-                sampAddChatMessage('Ваше сообщение было доставлено.', -1)
-            end
-        else
-            sampAddChatMessage('Вы не ввели текст, ничего отправлено не было.', -1)
-        end
-    end)
-end)
+sampRegisterChatCommand('rst', function() reloadScripts() end)
