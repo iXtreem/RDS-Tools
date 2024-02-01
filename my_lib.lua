@@ -1,23 +1,23 @@
 require 'lib.moonloader'
-local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
+function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
 ------=================== Подгрузка библиотек ===================----------------------
-local imgui 			= require 'imgui' 					-- Визуализация скрипта, окно программы
-local sampev		 	= require 'lib.samp.events'			-- Считывание текста из чата
-local imadd 			= require 'imgui_addons' 			-- Замена имгуи CheckBox'a
-local mimgui 			= require 'mimgui'					-- Мимгуи для работы keysyns
-local inicfg 			= require 'inicfg'					-- Сохранение/загрузка конфигов
-local encoding 			= require 'encoding'				-- Дешифровка на русский язык
+imgui 	= require 'imgui' 					-- Визуализация скрипта, окно программы
+sampev		 	= require 'lib.samp.events'			-- Считывание текста из чата
+imadd 			= require 'imgui_addons' 			-- Замена имгуи CheckBox'a
+mimgui 			= require 'mimgui'					-- Мимгуи для работы keysyns
+inicfg 			= require 'inicfg'					-- Сохранение/загрузка конфигов
+encoding 			= require 'encoding'				-- Дешифровка на русский язык
 encoding.default 		= 'CP1251' 
-local u8 				= encoding.UTF8
-local vkeys 			= require 'vkeys' 					-- Работа с нажатием клавиш
-local ffi 				= require "ffi"						-- Работа с открытым чатом
-local fa 				= require 'faicons'					-- Иконки в imgui
-local mem 				= require 'memory'					-- Работа с памятью игры
-local font 				= require ('moonloader').font_flag	-- Шрифты визуальных текстов на экране
+u8 				= encoding.UTF8
+vkeys 			= require 'vkeys' 					-- Работа с нажатием клавиш
+ffi 				= require "ffi"						-- Работа с открытым чатом
+fa 				= require 'faicons'					-- Иконки в imgui
+mem 				= require 'memory'					-- Работа с памятью игры
+font 				= require ('moonloader').font_flag	-- Шрифты визуальных текстов на экране
+sw, sh 			= getScreenResolution()
 
-
-local getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
-local fa_glyph_ranges = imgui.ImGlyphRanges( {fa.min_range, fa.max_range} )
+getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
+fa_glyph_ranges = imgui.ImGlyphRanges( {fa.min_range, fa.max_range} )
 function imgui.BeforeDrawFrame()
     if not fontsize then 
 		fontsize = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 17.0, nil, imgui.GetIO().Fonts:GetGlyphRangesCyrillic()) 
