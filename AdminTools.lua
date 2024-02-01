@@ -40,8 +40,6 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		strok_admin_chat = 6,
 		keysyncx = sh/2 + 300,
 		keysyncy = sw/2 - 40,
-		on_color_report = false,
-		color_report = '*',
 		fast_key_ans = 'None',
 		fast_key_addText = 'None',
 		fast_key_wallhack = 'None',
@@ -128,7 +126,6 @@ local array = {
 		check_notify_report 	= imgui.ImBool(cfg.settings.notify_report),
 		check_smart_automute 	= imgui.ImBool(cfg.settings.smart_automute),
 		check_on_custom_answer  = imgui.ImBool(cfg.settings.on_custom_answer),
-		check_color_report 		= imgui.ImBool(cfg.settings.on_color_report),
 		check_weapon_hack 		= imgui.ImBool(cfg.settings.weapon_hack),
 		checked_radio_button 	= imgui.ImInt(1),
 		custom_ans 				= imgui.ImInt(4),
@@ -2263,16 +2260,6 @@ function imgui.OnDrawFrame()
 		imgui.Tooltip(u8'Добавляет ваш текст к ответу. Не сработает, если кол-во символов в ответе превысит максимум')
 		imgui.SameLine()
 		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта ' .. fa.ICON_DATABASE)
-		if imadd.ToggleButton('##newcolor', array.checkbox.check_color_report) then
-			if not cfg.settings.on_color_report then
-				sampAddChatMessage(tag .. 'Если вы желаете изменить цвет - введите HTML цвет в данную команду', -1)
-				sampSetChatInputText('/color_report ')
-				sampSetChatInputEnabled(true)
-			end
-			cfg.settings.on_color_report = not cfg.settings.on_color_report
-			save()
-		end
-		imgui.Tooltip(u8'Добавляет окраску к ответу. Не сработает, если кол-во символов в ответе превысит максимум\nПотому рекомендуется использовать без доп.текста')
 		imgui.SameLine()
 		imgui.Text(u8'Перекрасить мой ответ в другой цвет ' .. fa.ICON_TACHOMETER)
 		imgui.PopFont()
@@ -3433,7 +3420,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					sampCloseCurrentDialogWithButton(0)
 				end)
 			else
-				if cfg.settings.on_color_report and (#peremrep + 6) < 80 then
+				if cfg.settings.color_report and (#peremrep + 6) < 80 then
 					if cfg.settings.color_report == '*' then peremrep = ('{'..color()..'}' .. peremrep)
 					else peremrep = (cfg.settings.color_report .. peremrep) end
 				end
