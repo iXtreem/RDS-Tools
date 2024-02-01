@@ -1,5 +1,6 @@
 require 'lib.moonloader'									-- Считываем библиотеки Moonloader
 require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
+import("\\resource\\AT_FastSpawn.lua")  			-- подгрузка быстрого спавна
 require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
@@ -324,7 +325,6 @@ function main()
 	while not sampTextdrawIsExists(452) --[[ admin panel ]] do if wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then sampAddChatMessage(tag .. 'Авторизируйтесь в админ-панель!', -1) end wait(30) end
 
 	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
-	import("\\resource\\AT_FastSpawn.lua")  			-- подгрузка быстрого спавна
 	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
 	func = lua_thread.create_suspended(autoonline)
 	funcadm = lua_thread.create_suspended(render_admins)
@@ -3215,12 +3215,6 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 		end
 		------=========== Удаляем лишние текстдравы, сравнивая их с массивом =======---------------
 		for i = 0, #array.textdraw_delete do if id == array.textdraw_delete[i] then return false end end
-	end
-	if id == 0 then -- удаление синей точки с экрана
-		local _, trigger = sampTextdrawGetOutlineColor(id)
-		if trigger == 900 then
-			return  false
-		end
 	end
 end
 
