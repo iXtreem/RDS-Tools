@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.3				 							-- Версия скрипта
+local version = 6.4				 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -67,6 +67,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		color_chat = '{0088ff}',
 		active_chat = true,
 		auto_cc     = false,
+		color_mute  = '{DA70D6}',
 	},
 	customotvet = {},
 	myflood = {},
@@ -215,11 +216,6 @@ local array = {
 		["onfoot"] = {},
 		["vehicle"] = {}
 	},
-	hint = {
-		'Нет доступа к /tr /ban? Не проблема... Есть альтернатива во вкладке для Мл.Администраторов',
-		'Забыл правила? /ahelp напомнит!',
-		'Здесь будут всякие подсказочки :3333',
-	}
 }
 local menu 				= 'Главное меню' 								-- Разные вкладки в F3
 local menu_in_recon 	= 'Главное меню'								-- Разные вкладки в рекон
@@ -417,6 +413,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		ahelp 	= 		'Все команды скрипта/сервера и правила',
 		wh 		= 		'Включить/выключить WallHack',
 		c 		=		'Быстрый ответ игроку в формате репорта',
+		rst 	= 		'Принудительная перезагрузка всех Lua скриптов',
 		tool 	= 		'Активировать меню АТ',
 		sbanip 	= 		'Выдать блокировку аккаунта с IP адресом (ФД!)',
 		opencl  = 		'Открыть меню чат-логгера',
@@ -433,6 +430,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		size_chat	   ='Изменить размер рендера информации открытого чата',
 		add_autoprefix ='Добавить администратора в исключение автопрефикса',
 		del_autoprefix ='Удалить администратора из исключений автопрефикса',
+		color_mute 	   ='Назначить цвет мута',
 	},
 	help = {
 		uu      =  		'/unmute _',
@@ -682,20 +680,27 @@ sampRegisterChatCommand('control_afk', function(param)
 		save()
 	else sampAddChatMessage(tag .. 'Значение указано неверно. Введите кол-во минут. 0 = выкл.', -1) end
 end)
+sampRegisterChatCommand('color_mute',function(param)
+	if #param ~= 6 then sampAddChatMessage(tag .. 'HTML цвет содержит 6 английских букв и цифр', -1) return false end
+	cfg.settings.color_mute = '{'..param..'}'
+	save()
+	sampAddChatMessage(tag .. param..'Новый цвет', -1)
+end)
 sampRegisterChatCommand('up', function(param)
 	if sampIsDialogActive() then return false end
 	if #param == 0 then sampAddChatMessage(tag .. '/up [id] [0/1 без очистки/с очисткой]', -1) return false end
-	local arg1, arg2 = param:match('(.+) (.+)')
-	if not tonumber(arg2) then arg2 = 0 end
-	if arg2 == 0 then
-		sampSendChat('/mute ' .. arg1 .. ' 1000 Упом. сторонних проектов')
-	elseif arg == 2 then
+	local param = textSplit(param,' ')
+	if not tonumber(param[2]) then param[2] = 0 end
+	if not cfg.settings.auto_cc then
+		sampSendChat('/mute ' .. param[1] .. ' 1000 Упом. сторонних проектов')
+	else
 		lua_thread.create(function()
-			sampSendChat('/mute ' .. arg1 .. ' 1000 Упом. сторонних проектов')
+			sampSendChat('/mute ' .. param[1] .. ' 1000 Упом. сторонних проектов')
+			wait(3000)
 			sampSendChat('/cc')
 			sampAddChatMessage(tag .. 'Чат очищен.',-1)
 		end)
-	else sampAddChatMessage(tag .. '/up [id] [0/1 без очистки/с очисткой]',-1) end
+	end
 end)
 sampRegisterChatCommand('wh' , function()
 	if not cfg.settings.wallhack then
@@ -855,12 +860,14 @@ function imgui.OnDrawFrame()
 				end
 				imgui.SameLine()
 				imgui.Text(u8'Слежка за формами')
-				imgui.SameLine()
-				if imgui.Checkbox('##autoaccept', array.checkbox.autoaccept_form) then
-					cfg.settings.autoaccept_form = not cfg.settings.autoaccept_form
-					save()
+				if array.checkbox.check_find_form.v then
+					imgui.SameLine()
+					if imgui.Checkbox('##autoaccept', array.checkbox.autoaccept_form) then
+						cfg.settings.autoaccept_form = not cfg.settings.autoaccept_form
+						save()
+					end
+					imgui.Tooltip(u8'Автоматическое принятие форм\nПредупреждение: ответственность несете Вы')
 				end
-				imgui.Tooltip(u8'Автоматическое принятие форм\nПредупреждение: ответственность несете Вы')
 				if imadd.ToggleButton('##automute', array.checkbox.check_automute) then
 					if cfg.settings.automute and cfg.settings.smart_automute then
 						cfg.settings.smart_automute = false
@@ -869,7 +876,10 @@ function imgui.OnDrawFrame()
 					if cfg.settings.forma_na_mute then
 						cfg.settings.automute = false
 						array.checkbox.check_automute = imgui.ImBool(cfg.settings.automute)
-					else cfg.settings.automute  = not cfg.settings.automute end
+					else 
+						if not cfg.settings.automute then sampAddChatMessage(tag .. 'Команда /color_mute позволяет назначить HTML цвет выдачи наказания, ' ..cfg.settings.color_mute.. 'цвет по умолчанию', -1) end
+						cfg.settings.automute  = not cfg.settings.automute 
+					end
 					save()
 				end
 				imgui.SameLine()
@@ -922,7 +932,7 @@ function imgui.OnDrawFrame()
 				imgui.Text(fa.ICON_COG)
 				if imgui.IsItemClicked(0) then imgui.OpenPopup('option_ans') end
 				if imgui.BeginPopup('option_ans') then
-					if imgui.Button(u8'Назначить цвет репорта') then
+					if imgui.Button(u8'Назначить цвет репорта', imgui.ImVec2(300,24)) then
 						if not html_color then
 							html_color = {}
 							local file_color = io.open('moonloader\\' .. "\\resource\\skin\\color.txt","r")
@@ -932,14 +942,13 @@ function imgui.OnDrawFrame()
 						sampAddChatMessage(tag .. 'Подсказка, /color_report *', -1)
 						sampAddChatMessage(tag .. 'Делает цвет ответа разноцветным.', -1)
 					end
-					if imgui.Button(u8'Редактирование кнопок') then imgui.OpenPopup('button') end
+					if imgui.Button(u8'Редактирование кнопок', imgui.ImVec2(300,24)) then imgui.OpenPopup('button') end
 					if imgui.BeginPopup('button') then
 						if imgui.Button(u8'Данная функция будет доступна в следующем обновлении') then
 						end
 						imgui.EndPopup()
 					end
 					if imgui.BeginPopup('color') then
-						imgui.CenterText(u8'Выбранный цвет будет дополнен к вашему ответу.')
 						for i = 1, 256 do 
 							imgui.TextColoredRGB(u8(html_color[i]))
 							if imgui.IsItemClicked(0) then
@@ -952,7 +961,7 @@ function imgui.OnDrawFrame()
 						end
 						imgui.EndPopup()
 					end
-					if cfg.settings.color_report and imgui.Button(u8'Удалить цвет репорта') then
+					if cfg.settings.color_report and imgui.Button(u8'Удалить цвет репорта', imgui.ImVec2(300,24)) then
 						cfg.settings.color_report = nil
 						save()
 					end
@@ -995,7 +1004,6 @@ function imgui.OnDrawFrame()
 						imgui.OpenPopup('color')
 					end
 					if imgui.BeginPopup('color') then
-						imgui.CenterText(u8'Выбранный цвет будет дополнен к вашему ответу.')
 						for i = 1, 256 do 
 							imgui.TextColoredRGB(u8(html_color[i]))
 							if imgui.IsItemClicked(0) then
@@ -3018,44 +3026,34 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 	elseif not AFK then
 		if cfg.settings.automute and (text:match("%((%d+)%): (.+)") or text:match("%[(%d+)%]: (.+)")) 			and not (text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") or text:match('написал %[(%d+)%]:') or text:match('ответил (.+)%[(%d+)%]: ')) then
 			local text = text:rlower() .. ' '
-			if text:match('жалоба') then command = '/rmute '
-			else command = '/mute ' end
+			reportTrig = false
+			if text:match('жалоба') then reportTrig = true end
 			if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
 			else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
 			local text = string.gsub(text, '{(.+)}', '')
 			if cfg.settings.smart_automute then
 				for i = 1, #cfg.spisokoskrod do
 					if text:match(' '.. cfg.spisokoskrod[i]) then
-						sampAddChatMessage('==========================================================================', 0x00FF00)
-						sampAddChatMessage('{00FF00}[АT]{DCDCDC} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-						sampAddChatMessage('==========================================================================', 0x00FF00)
-						sampSendChat(command .. oskid .. ' 5000 Оскорбление/Упоминание родных')
-						notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Упоминание родных.')
+						automute(cfg.spisokoskrod[i], oskid, text, '5000 Розжиг Межнац.Розни')
 						return false
 					end
 				end
 				for i = 1, #cfg.spisokrz do
 					if text:match(' '..cfg.spisokrz[i]) then
-						sampAddChatMessage('==========================================================================', 0x00FF00)
-						sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-						sampAddChatMessage('==========================================================================', 0x00FF00)
-						sampSendChat(command .. oskid .. ' 5000 Розжиг межнац.розни')
-						notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Розжиг межнац.розни')
+						automute(cfg.spisokrz[i], oskid, text, '5000 Розжиг Межнац.Розни')
 						return false
 					end
 				end
 				for i = 1, #cfg.spisokproject do
 					if text:match(' ' .. cfg.spisokproject[i]) then
-						sampAddChatMessage('==========================================================================', 0x00FF00)
-						sampAddChatMessage('{00FF00}[АT]{DCDCDC} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: ' .. text .. ' {00FF00}[АТ]', -1)
-						sampAddChatMessage('==========================================================================', 0x00FF00)
+						automute(cfg.spisokproject[i], oskid, text, '1000 Упом.стор.проектов')
 						lua_thread.create(function()
 							if cfg.settings.auto_cc then
-								sampSendChat('/up ' .. oskid .. ' 1')
-								wait(1000)
-								sampAddChatMessage(tag .. 'Чат был очищен, нарушитель наказан, запрет слово: ' .. cfg.spisokproject[i],-1)
-							else sampSendChat('/up ' .. oskid .. ' 0') sampAddChatMessage(tag .. 'Рекомендуется произвести очистку чата /cc', -1) end
-							notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. cfg.spisokproject[i])
+								wait(3000)
+								sampSendChat('/cc')
+								wait(2000)
+								sampAddChatMessage(tag..'Чат очищен. Нарушитель - ' .. sampGetPlayerNickname(oskid)..'('..oskid..'), слово - ' .. cfg.spisokproject[i], -1)
+							else sampAddChatMessage(tag .. 'Рекомендуется произвести очистку чата /cc', -1) end
 						end)
 						return false
 					end
@@ -3065,29 +3063,17 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				if not text:match(' я ') and text:match('%s'.. array.osk[i]) then
 					for a = 1, #cfg.spisokor do
 						if text:match(cfg.spisokor[a]) then
-							sampAddChatMessage('==========================================================================', 0x00FF00)
-							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-							sampAddChatMessage('==========================================================================', 0x00FF00)
-							sampSendChat(command .. oskid .. ' 5000 Оскорбление/Упоминание родни')
-							notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевые слово: ' .. array.osk[i] .. ' - ' .. cfg.spisokor[a])
+							automute(cfg.spisokor[a], oskid, text, '5000 Упоминание родни')
 							return false
 						end
 					end
 					for a = 1, #cfg.spisokoskadm do
 						if text:match(cfg.spisokoskadm[a]) then
-							sampAddChatMessage('==========================================================================', 0x00FF00)
-							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-							sampAddChatMessage('==========================================================================', 0x00FF00)
-							sampSendChat(command .. oskid .. ' 2500 Оскорбление администрации')
-							notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевые слово: ' .. array.osk[i] .. ' - ' .. cfg.spisokoskadm[a])
+							automute(cfg.spisokoskadm[a], oskid, text, '2500 Оскорбление администрации')
 							return false
 						end
 					end
-					sampAddChatMessage('==========================================================================', 0x00FF00)
-					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-					sampAddChatMessage('==========================================================================', 0x00FF00)
-					sampSendChat(command .. oskid .. ' 400 Оскорбление/Унижение')
-					notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. array.osk[i])
+					automute(array.osk[i], oskid, text, '400 Оскорбление/Унижение')
 					return false
 				end
 			end
@@ -3095,29 +3081,17 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				if text:match(' '.. array.mat[i]) then
 					for a = 1, #cfg.spisokor do
 						if text:match(cfg.spisokor[a]) then
-							sampAddChatMessage('==========================================================================', 0x00FF00)
-							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-							sampAddChatMessage('==========================================================================', 0x00FF00)
-							sampSendChat(command .. oskid .. ' 5000 Оскорбление/Упоминание родни')
-							notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевые слово: ' .. array.mat[i] .. ' - ' .. cfg.spisokor[a])
+							automute(cfg.spisokor[a], oskid, text, '2500 Оскорбление родни')
 							return false
 						end
 					end
 					for a = 1, #cfg.spisokoskadm do
 						if text:match(cfg.spisokoskadm[a]) then
-							sampAddChatMessage('==========================================================================', 0x00FF00)
-							sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-							sampAddChatMessage('==========================================================================', 0x00FF00)
-							sampSendChat(command .. oskid .. ' 2500 Оскорбление администрации')
-							notify('{66CDAA}[AT-AutoMute]', 'Выявлен нарушитель:\n' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевые слово: ' .. array.mat[i] .. ' - ' .. cfg.spisokoskadm[a])
+							automute(cfg.spisokoskadm[a], oskid, text, '2500 Оскорбление администрации')
 							return false
 						end
 					end
-					sampAddChatMessage('==========================================================================', 0x00FF00)
-					sampAddChatMessage('{00FF00}[АT]{DCDCDC} ' ..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. ' {00FF00}[АТ]', -1)
-					sampAddChatMessage('==========================================================================', 0x00FF00)
-					sampSendChat(command .. oskid .. ' 300 Нецензурная лексика')
-					notify('{66CDAA}[AT-AutoMute]', '' .. sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. array.mat[i])				
+					automute(array.mat[i], oskid, text, '300 Нецензурная лексика')
 					return false
 				end
 			end
@@ -3153,6 +3127,16 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			return false
 		end
 	end
+end
+function automute(array, oskid, text, nakaz)
+	local colorc = '{00BFFF}'
+	if reportTrig then command = '/rmute ' rcommand = 'REPORT'
+	else command = '/mute ' rcommand = 'CHAT' end
+	sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
+	sampAddChatMessage(colorc..'['..rcommand..']{D3D3D3} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. colorc..' ['..rcommand..']', -1)
+	sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
+	if not sampIsDialogActive() then sampSendChat(command..oskid..' '..nakaz) end
+	notify('{66CDAA}[AT-AutoMute]', sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. array)
 end
 
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
@@ -3587,15 +3571,14 @@ function binder_key()
 					mem.fill(0x74542B, 0x90, 8, true)
 					mem.fill(0x53EA88, 0x90, 6, true)
 
-					local memset = function(addr, arr)
-						for i = 1, #arr do
-							mem.write(addr + i - 1, arr[i], 1, true)
-						end
-					end
-
 					for i = 0, (cfg.settings.control_afk*10) do
 						wait(6000)
 						if not AFK then
+							local memset = function(addr, arr)
+								for i = 1, #arr do
+									mem.write(addr + i - 1, arr[i], 1, true)
+								end
+							end
 							mem.write(0x747FB6, 0x0, 1, true) -- выходим из афк
 							mem.write(0x74805A, 0x0, 1, true)
 							memset(0x74542B, { 0x50, 0x51, 0xFF, 0x15, 0x00, 0x83, 0x85, 0x00 })
