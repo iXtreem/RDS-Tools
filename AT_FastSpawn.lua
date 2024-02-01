@@ -2,16 +2,7 @@ require 'lib.moonloader'
 require 'my_lib'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
-local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local version = 1.6
-local imgui = require 'imgui' 
-local ffi = require "ffi"
-local fa = require 'faicons'
-local sampev = require 'lib.samp.events'
-local encoding = require 'encoding' 
-local inicfg = require 'inicfg'
-encoding.default = 'CP1251'
-local u8 = encoding.UTF8 
+local version = 1.7
 local key = require 'vkeys'
 local cfg2 = inicfg.load({
 	settings = {
@@ -39,7 +30,6 @@ local cfg = inicfg.load({
 inicfg.save(cfg,'AT//AT_FS.ini')
 local tag = '{2B6CC4}Admin Tools: {F0E68C}'
 local buffer = {}
-local sw, sh = getScreenResolution()
 local style_selected = imgui.ImInt(cfg2.settings.style)
 local text_buffer = imgui.ImBuffer(4096)
 local text_buffer2 = imgui.ImBuffer(4096)
@@ -57,15 +47,18 @@ function main()
 	for k,v in pairs(cfg.command) do if (v and #(v)>1) and k~=0 then inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(tostring(v)), 256) else table.remove(cfg.command, k) inicfg.save(cfg, 'AT//AT_FS.ini') end end
 	for k,v in pairs(cfg.wait_command) do inputWait[#inputWait+1] = imgui.ImInt(v) end
 	if sampIsLocalPlayerSpawned() then return false end
+	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+	local nick = sampGetPlayerNickname(id)
+	if cfg.settings.server ~= sampGetCurrentServerAddress() or cfg.settings.nickname ~= nick then print('другой сервер, fast spawn off') return false end
 	while true do
-		if sampTextdrawIsExists(0) then
+		if sampTextdrawIsExists(546) then
 			if sampIsDialogActive(657) then
 				if sampTextdrawIsExists(452) then
 					break
 				end
 				if cfg.settings.spawn then
-					sampSendDialogResponse(657, 1, 0)
-					sampSendDialogResponse(658, 1, 0)
+					sampSendDialogResponse(657, 1, 1)
+					sampSendDialogResponse(658, 1, 1)
 					wait(100)
 					sampCloseCurrentDialogWithButton(1)
 					setVirtualKeyDown(13, true)
@@ -84,7 +77,7 @@ function main()
 					setVirtualKeyDown(16, false)
 				end
 			end
-		elseif sampIsDialogActive(1) and not id then
+		elseif sampIsDialogActive(1) and not access then
 			if cfg.settings.autorizate and cfg.settings.parolaccount then
 				_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 				if cfg.settings.nickname == sampGetPlayerNickname(id) and cfg.settings.server == sampGetCurrentServerAddress() then
@@ -95,29 +88,25 @@ function main()
 		end
 		wait(200)
 	end
-	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	local nick = sampGetPlayerNickname(id)
 	while sampIsDialogActive() do wait(200) end
-	if cfg.settings.parolalogin and cfg.settings.autoalogin and cfg.settings.server == sampGetCurrentServerAddress() and cfg.settings.nickname == nick then
+	if cfg.settings.parolalogin and cfg.settings.autoalogin then
 		while not sampTextdrawIsExists(452) do
 			sampSendChat('/alogin ' .. cfg.settings.parolalogin)
 			wait(3000)
 		end
 	end
-	if access and cfg.settings.server == sampGetCurrentServerAddress() and cfg.settings.nickname == nick then
-		for i = 0, #cfg.command do
-			if cfg.command[i] and #(cfg.command[i]) >= 2 then
-				local press_wait = 0
-				if cfg.wait_command[i] == 0 then press_wait = 500
-				elseif cfg.wait_command[i] == 1 then press_wait = 1000
-				elseif cfg.wait_command[i] == 2 then press_wait = 1500
-				elseif cfg.wait_command[i] == 3 then press_wait = 2000
-				elseif cfg.wait_command[i] == 4 then press_wait = 3000 end
-				if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
-					wait(press_wait)
-					while sampIsDialogActive() or sampIsChatInputActive() do wait(100) end
-					sampProcessChatInput(cfg.command[i])
-				end
+	for i = 0, #cfg.command do
+		if cfg.command[i] and #(cfg.command[i]) >= 2 then
+			local press_wait = 0
+			if cfg.wait_command[i] == 0 then press_wait = 500
+			elseif cfg.wait_command[i] == 1 then press_wait = 1000
+			elseif cfg.wait_command[i] == 2 then press_wait = 1500
+			elseif cfg.wait_command[i] == 3 then press_wait = 2000
+			elseif cfg.wait_command[i] == 4 then press_wait = 3000 end
+			if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
+				wait(press_wait)
+				while sampIsDialogActive() or sampIsChatInputActive() do wait(100) end
+				sampProcessChatInput(cfg.command[i])
 			end
 		end
 	end
@@ -185,7 +174,7 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.PushItemWidth(100)
 				inputWait[i].v = cfg.wait_command[i]
-				if imgui.Combo("##selected" .. i, inputWait[i], {u8'0.5 сек', u8'1 сек', u8'1.5 сек', u8'2 сек', u8'3 сек'}, 5) then
+				if imgui.Combo("##selected" .. tostring(i), inputWait[i], {u8'0.5 сек', u8'1 сек', u8'1.5 сек', u8'2 сек', u8'3 сек'}, 5) then
 					cfg.wait_command[i] = inputWait[i].v
 					save()
 				end
