@@ -1,21 +1,9 @@
 require 'lib.moonloader'
 script_name 'AT_MP' 
 script_author 'Neon4ik'
-local function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автоообновлении
-local imgui = require 'imgui'
-local version = 2
-local imadd = require 'imgui_addons'
-local sampev = require 'lib.samp.events'
-local my_lib = require 'my_lib'
-local encoding = require 'encoding'
-local ffi = require "ffi"
-local fa = require 'faicons'
+local version = 2.1
+require 'my_lib'
 encoding.default = 'CP1251' 
-local u8 = encoding.UTF8 
-local vkeys = require 'vkeys'
-local inicfg = require 'inicfg'
-local font = require ("moonloader").font_flag
-local sw, sh = getScreenResolution()
 local tag = '{B73CBF}AdminTools - Мероприятия{F0E68C}: '
 local cfg2 = inicfg.load({
     settings = {
@@ -36,6 +24,9 @@ local cfg = inicfg.load({
         warningjail = false,
         warningmute = false,
         warningkick = false,
+        warningmp = false,
+        allonline = false,
+        data_online = '2024-01-01',
         staticposX = 20,
         staticposY = sh - 200,
         style = 0,
@@ -49,6 +40,8 @@ local cfg = inicfg.load({
         0, -- myjail
         0, -- mykick
         0, -- myonline
+        0, -- mp
+        0, -- allonline
     },
     MyMP = {},
 }, 'AT//AT_MP.ini')
@@ -66,6 +59,8 @@ local checkbox = {
     check_9 = imgui.ImBool(cfg.AT_MP.warningkick),
     check_10 = imgui.ImBool(false),
     check_11 = imgui.ImBool(false),
+    check_12 = imgui.ImBool(cfg.AT_MP.warningmp),
+    check_13 = imgui.ImBool(cfg.AT_MP.allonline)
 }
 local windows = {
     menu_window_state       = imgui.ImBool(false),
@@ -92,8 +87,24 @@ function main()
         imgui.Process = true
     end
     if cfg.info.data ~= os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year then
-        for i = 0, #(cfg.info) do cfg.info[i] = 0 end
+        for i = 0, 6 do cfg.info[i] = 0 end
         cfg.info.data = os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year
+        save()
+    end
+  -- Функция для обновления даты
+    local updateDateIfNewWeek = function(previousDate)
+        local currentDate = os.date("%Y-%m-%d")
+        local previousWeekday = os.date("*t", os.time{year=tonumber(string.sub(previousDate, 1, 4)), month=tonumber(string.sub(previousDate, 6, 7)), day=tonumber(string.sub(previousDate, 9, 10))}).wday
+        local currentWeekday = os.date("*t").wday
+        if currentWeekday < previousWeekday then
+          -- Наступила новая неделя, обновляем дату
+           return currentDate
+        else
+           return previousDate
+        end
+    end
+    if cfg.AT_MP.data_online ~= updateDateIfNewWeek(tostring(cfg.AT_MP.data_online)) then
+        cfg.info[7] = 0
         save()
     end
     wait(-1) -- бесконечное ожидание
@@ -144,20 +155,26 @@ local colors = {
     [17] = u8'Розово-красный',
 }
 function sampev.onServerMessage(color,text)
-    if text:match('%[A%] '..mynick..'%[(%d+)%] ответил (.+)%[(%d+)%]:') then
+    if text:match('%[A%] '..mynick..' %[(%d+)%] ответил (.+)%[(%d+)%]:') then
         cfg.info[0] = cfg.info[0] + 1
         save() 
-    elseif text:match('Администратор '.. mynick ..' забанил%(.+%) игрока (.+) на (.+) дней. Причина:') then
+    elseif text:match('Администратор '..mynick..' забанил%(.+%) игрока (.+) на (.+) дней%. Причина:') then
         cfg.info[1] = cfg.info[1] + 1
         save()
-    elseif text:match('Администратор '.. mynick ..' заткнул%(.+%) игрока (.+) на (.+) секунд. Причина:') then
+    elseif text:match('Администратор '..mynick..' заткнул%(.+%) игрока (.+) на (.+) секунд%. Причина:') then
         cfg.info[2] = cfg.info[2] + 1
         save()
-    elseif text:match('Администратор '.. mynick ..' посадил%(.+%) игрока (.+) в тюрьму на (.+) секунд. Причина:') then
+    elseif text:match('Администратор '..mynick..' посадил%(.+%) игрока (.+) в тюрьму на (.+) секунд%. Причина:') then
         cfg.info[3] = cfg.info[3] + 1
         save()
-    elseif text:find('Администратор ' .. mynick ..' кикнул игрока (.+) Причина:') then
+    elseif text:find('Администратор '..mynick..' кикнул игрока (.+) Причина:') then
         cfg.info[4] = cfg.info[4] + 1
+        save()
+    elseif text:match('Администратор '..mynick..' закрыл%(.+%) доступ к репорту игроку (.+) на (.+) секунд%. Причина:') then
+        cfg.info[2] = cfg.info[2] + 1
+        save()
+    elseif text:match('%[A%] (.+) '..mynick..'%((%d+)%) выдал%(.+%) приз игроку (.+)%((%d+)%)') then
+        cfg.info[6] = cfg.info[6] + 1
         save()
     end
 end
@@ -235,6 +252,18 @@ function imgui.OnDrawFrame()
         end
         imgui.SameLine()
         imgui.Text(u8'Киков за день')
+        if imadd.ToggleButton('##mp', checkbox.check_12) then
+            cfg.AT_MP.warningmp = not cfg.AT_MP.warningmp
+            save()
+        end
+        imgui.SameLine()
+        imgui.Text(u8'Количество проведенных мероприятий')
+        if imadd.ToggleButton('##allonline', checkbox.check_13) then
+            cfg.AT_MP.allonline = not cfg.AT_MP.allonline
+            save()
+        end
+        imgui.SameLine()
+        imgui.Text(u8'Общий онлайн за неделю')
         if imgui.Button(u8'Сохранить позицию') then
 			cfg.AT_MP.staticposX = imgui.GetWindowPos().x
 			cfg.AT_MP.staticposY = imgui.GetWindowPos().y
@@ -258,7 +287,10 @@ function imgui.OnDrawFrame()
             elseif cfg.AT_MP.warningmute and i == 2 then imgui.Text(u8'Мутов: ' .. cfg.info[2])
             elseif cfg.AT_MP.warningjail and i == 3 then imgui.Text(u8'Джайлов: ' .. cfg.info[3])
             elseif cfg.AT_MP.warningkick and i == 4 then imgui.Text(u8'Киков: ' .. cfg.info[4])
-            elseif cfg.AT_MP.myonline and i == 5 then imgui.Text(u8'Онлайн: ' .. cfg.info[5] .. u8' мин.') end
+            elseif cfg.AT_MP.warningmp and i == 6 then imgui.Text(u8'Мероприятий: '..cfg.info[6])
+            elseif cfg.AT_MP.myonline and i == 5 then imgui.Text(u8'Онлайн: ' .. cfg.info[5] .. u8' мин.')
+            elseif cfg.AT_MP.allonline and i == 7 then imgui.Text(u8'Онлайн(неделя): '..cfg.info[7]..u8' мин.')
+            end
         end
         imgui.End()
     end
@@ -698,6 +730,7 @@ function time()
     while true do
         wait(60000)
         cfg.info[5] = cfg.info[5] + 1
+        cfg.info[7] = cfg.info[7] + 1
         save()
     end
 end
@@ -739,3 +772,4 @@ sampRegisterChatCommand('state', function()
     windows.static_window_state.v = not windows.static_window_state.v
     imgui.Process = windows.static_window_state.v
 end)
+sampRegisterChatCommand('mpoff',function() thisScript():unload()  end)
