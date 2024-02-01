@@ -3600,7 +3600,7 @@ function binder_key()
 		end
 		wait(30)
 		if isGamePaused() then 
-			if not AFK and cfg.settings.control_afk>1 then
+			if not AFK and tonumber(cfg.settings.control_afk) then
 				lua_thread.create(function()
 
 					mem.write(0x747FB6, 0x1, 1, true) -- выходим в афк
