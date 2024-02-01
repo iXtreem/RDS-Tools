@@ -575,5 +575,4 @@ function sampev.onBulletSync(_, data) -- player
         }
     end
 end
-sampRegisterChatCommand('trassoff', function() thisScript():unload() end)
 sampRegisterChatCommand('trassera', function() windowSettings[0] = not windowSettings[0] end) 
