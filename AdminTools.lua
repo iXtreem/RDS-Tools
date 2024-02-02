@@ -3026,27 +3026,27 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 	elseif not AFK then
 		if cfg.settings.automute and (text:match("%((%d+)%): (.+)") or text:match("%[(%d+)%]: (.+)")) 			and not (text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") or text:match('написал %[(%d+)%]:') or text:match('ответил (.+)%[(%d+)%]: ')) then
 			local text = text:rlower() .. ' '
-			reportTrig = false
-			if text:match('жалоба') then reportTrig = true end
+			local report = false
+			if text:match('жалоба') then report = true end
 			if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
 			else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
 			local text = string.gsub(text, '{(.+)}', '')
 			if cfg.settings.smart_automute then
 				for i = 1, #cfg.spisokoskrod do
 					if text:match(' '.. cfg.spisokoskrod[i]) then
-						automute(cfg.spisokoskrod[i], oskid, text, '5000 Розжиг Межнац.Розни')
+						automute(cfg.spisokoskrod[i], oskid, text, '5000 Розжиг Межнац.Розни', report)
 						return false
 					end
 				end
 				for i = 1, #cfg.spisokrz do
 					if text:match(' '..cfg.spisokrz[i]) then
-						automute(cfg.spisokrz[i], oskid, text, '5000 Розжиг Межнац.Розни')
+						automute(cfg.spisokrz[i], oskid, text, '5000 Розжиг Межнац.Розни',report)
 						return false
 					end
 				end
 				for i = 1, #cfg.spisokproject do
 					if text:match(' ' .. cfg.spisokproject[i]) then
-						automute(cfg.spisokproject[i], oskid, text, '1000 Упом.стор.проектов')
+						automute(cfg.spisokproject[i], oskid, text, '1000 Упом.стор.проектов',report)
 						lua_thread.create(function()
 							if cfg.settings.auto_cc then
 								wait(3000)
@@ -3063,17 +3063,17 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				if not text:match(' я ') and text:match('%s'.. array.osk[i]) then
 					for a = 1, #cfg.spisokor do
 						if text:match(cfg.spisokor[a]) then
-							automute(cfg.spisokor[a], oskid, text, '5000 Упоминание родни')
+							automute(cfg.spisokor[a], oskid, text, '5000 Упоминание родни',report)
 							return false
 						end
 					end
 					for a = 1, #cfg.spisokoskadm do
 						if text:match(cfg.spisokoskadm[a]) then
-							automute(cfg.spisokoskadm[a], oskid, text, '2500 Оскорбление администрации')
+							automute(cfg.spisokoskadm[a], oskid, text, '2500 Оскорбление администрации',report)
 							return false
 						end
 					end
-					automute(array.osk[i], oskid, text, '400 Оскорбление/Унижение')
+					automute(array.osk[i], oskid, text, '400 Оскорбление/Унижение',report)
 					return false
 				end
 			end
@@ -3081,17 +3081,17 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				if text:match(' '.. array.mat[i]) then
 					for a = 1, #cfg.spisokor do
 						if text:match(cfg.spisokor[a]) then
-							automute(cfg.spisokor[a], oskid, text, '2500 Оскорбление родни')
+							automute(cfg.spisokor[a], oskid, text, '2500 Оскорбление родни',report)
 							return false
 						end
 					end
 					for a = 1, #cfg.spisokoskadm do
 						if text:match(cfg.spisokoskadm[a]) then
-							automute(cfg.spisokoskadm[a], oskid, text, '2500 Оскорбление администрации')
+							automute(cfg.spisokoskadm[a], oskid, text, '2500 Оскорбление администрации',report)
 							return false
 						end
 					end
-					automute(array.mat[i], oskid, text, '300 Нецензурная лексика')
+					automute(array.mat[i], oskid, text, '300 Нецензурная лексика',report)
 					return false
 				end
 			end
@@ -3128,9 +3128,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 		end
 	end
 end
-function automute(array, oskid, text, nakaz)
+function automute(array, oskid, text, nakaz, report)
 	local colorc = '{00BFFF}'
-	if reportTrig then command = '/rmute ' rcommand = 'REPORT'
+	if report then command = '/rmute ' rcommand = 'REPORT'
 	else command = '/mute ' rcommand = 'CHAT' end
 	sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 	sampAddChatMessage(colorc..'['..rcommand..']{D3D3D3} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. colorc..' ['..rcommand..']', -1)
