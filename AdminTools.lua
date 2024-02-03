@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.4				 							-- Версия скрипта
+local version = 6.3				 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -285,9 +285,9 @@ function main()
 		if AdminTools.script.version > version then
 			if AdminTools.script.main then
 				sampAddChatMessage(tag .. 'Обнаружено новое {808080}обязательное {F0E68C}обновление скрипта! Произвожу самообновление.', -1)
-				update('all')
+				download_update()
 			end
-			update_main = true
+			update = true
 		end
 		if cfg.settings.versionFS and cfg.settings.versionMP then
 			if AdminTools.script.versionMP > cfg.settings.versionMP then update = true end
@@ -298,7 +298,7 @@ function main()
 			ScriptExport()
 		elseif update then
 			sampAddChatMessage       ('==================================================================================', '0x'..(color()))
-			sampAddChatMessage(tag .. 'Обнаружено новое {FF0000}обновление {F0E68C}, вводи /update, чтобы обновить скрипт', '0x'..(color()))
+			sampAddChatMessage(tag .. 'Обнаружено новое {FF0000}обновление {F0E68C}, /tool - обновить скрипт', '0x'..(color()))
 			sampAddChatMessage       ('==================================================================================', '0x'..(color()))
 	 	else sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) end
 	end
@@ -738,38 +738,7 @@ sampRegisterChatCommand('ahelp', function()
 	array.windows.pravila.v = not array.windows.pravila.v
 	imgui.Process = true
 end)
-sampRegisterChatCommand('update', function()
-	if sampIsDialogActive() then return false end
-	lua_thread.create(function()
-		if (update_main or update_fs or update_mp) then
-			sampShowDialog(1111, "Обнаружена новая версия AT!", "Примечания к выпуску:\n"..string.gsub(u8:decode(update_info),'\\n','\n')..'\nЖелаете обновиться?', "Да", "Нет", DIALOG_STYLE_MSGBOX) -- сам диалог
-			while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
-			local _, button, _, _ = sampHasDialogRespond(1111)
-			if button == 1 then
-				local text = {[0] = '-\n', [1] = '-\n', [2] = '-'}
-				if update_main then text[0] = 'AdminTools\n' end
-				if update_fs then text[1] = 'FastSpawn\n' end
-				if update_mp then text[2] = 'Мероприятия' end
-				sampShowDialog(1111, "Выберите, что хотите обновить", (text[0]..text[1]..text[2]), "Выбрать", nil, DIALOG_STYLE_LIST);
-				while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
-				local _, _, button, _ = sampHasDialogRespond(1111)
-				
-				if button == 0 then
-					if text[0] ~= '-\n' then update('main') end
-				elseif button == 1 then update('fs')
-					if text[1] ~= '-\n' then update('fs') end
-				elseif button == 2 then update('mp')
-					if text[2] ~= '-' then update('mp') end
-				end
-			end
-		else 
-			sampShowDialog(1111, "", "Обновлений не обнаружено, у вас актуальная версия.\nЖелаете переустановить пакет AT?", "Да", "Нет", DIALOG_STYLE_MSGBOX) -- сам диалог
-			while sampIsDialogActive(1111) do wait(400) end -- ждёт пока вы ответите на диалог
-			local _, button, _, _ = sampHasDialogRespond(1111)
-			if button == 1 then update('all') end
-		end
-	end)
-end)
+sampRegisterChatCommand('update', function() download_update() end)
 sampRegisterChatCommand('tr', function()
 	if atr then
 		if not tr then sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы{32CD32} включили режим TakeReport by AT.', 0x32CD32)
@@ -1247,34 +1216,10 @@ function imgui.OnDrawFrame()
 						imgui.EndPopup()
 					end
 				end
-				imgui.SetCursorPosY(410)
+				imgui.SetCursorPosY(400)
 				imgui.Separator()
 				if update and imgui.Button(u8'Обновить АТ', imgui.ImVec2(480,24)) then
-					local dlstatus = require('moonloader').download_status
-					sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
-					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/my_lib.lua", 'moonloader//lib//my_lib.lua', function(id, status) end)
-					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader//config//AT//rules.txt', function(id, status)  end)
-					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", 'moonloader//resource//AT_Trassera.lua', function(id, status) end)
-					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader//control_work_AT.lua', function(id, status) end)
-					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", 'moonloader//resource//AT_MP.lua', function(id, status)
-						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-							sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
-						end 
-					end)
-					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", 'moonloader//resource//AT_FastSpawn.lua', function(id, status)
-						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-							sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
-						end  
-					end)
-					downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
-						if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-							sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
-						end 
-					end)
-					lua_thread.create(function()
-						wait(15000)
-						reloadScripts()
-					end)
+					download_update()
 				end
 				imgui.Text(u8'Разработчик скрипта - N.E.O.N')
 				imgui.Text(u8'Обратная связь:')
@@ -3641,6 +3586,33 @@ function off_wallhack() -- Выключение WallHack (свойства)
 	mem.setint8(pStSet + 56, 1)
 end
 
+function download_update()
+	local dlstatus = require('moonloader').download_status
+	sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/my_lib.lua", 'moonloader//lib//my_lib.lua', function(id, status) end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader//config//AT//rules.txt', function(id, status)  end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_Trassera.lua", 'moonloader//resource//AT_Trassera.lua', function(id, status) end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader//control_work_AT.lua', function(id, status) end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_MP.lua", 'moonloader//resource//AT_MP.lua', function(id, status)
+		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+			sampAddChatMessage(tag .. 'Скрипт получил актуальную версию модуля мероприятий',-1)
+		end 
+	end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_FastSpawn.lua", 'moonloader//resource//AT_FastSpawn.lua', function(id, status)
+		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+			sampAddChatMessage(tag .. 'Скрипт получил актуальную версию быстрого спавна',-1)
+		end  
+	end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.lua", thisScript().path, function(id, status)
+		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+			sampAddChatMessage(tag .. 'Скрипт получил актуальную версию АТ',-1)
+		end 
+	end)
+	lua_thread.create(function()
+		wait(8000)
+		reloadScripts()
+	end)
+end
 ---========================== /KEYSYNC =============================----
 function sampev.onPlayerSync(playerId, data)
 	local result, id = sampGetPlayerIdByCharHandle(target)
