@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.3				 							-- Версия скрипта
+local version = 6.5				 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -2979,7 +2979,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			if cfg.settings.smart_automute then
 				for i = 1, #cfg.spisokoskrod do
 					if text:match(' '.. cfg.spisokoskrod[i]) then
-						automute(cfg.spisokoskrod[i], oskid, text, '5000 Розжиг Межнац.Розни', report)
+						automute(cfg.spisokoskrod[i], oskid, text, '5000 Оскорбление родни', report)
 						return false
 					end
 				end
@@ -3008,7 +3008,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				if not text:match(' я ') and text:match('%s'.. array.osk[i]) then
 					for a = 1, #cfg.spisokor do
 						if text:match(cfg.spisokor[a]) then
-							automute(cfg.spisokor[a], oskid, text, '5000 Упоминание родни',report)
+							automute(cfg.spisokor[a], oskid, text, '5000 Оскорбление родни',report)
 							return false
 						end
 					end
@@ -3026,7 +3026,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				if text:match(' '.. array.mat[i]) then
 					for a = 1, #cfg.spisokor do
 						if text:match(cfg.spisokor[a]) then
-							automute(cfg.spisokor[a], oskid, text, '2500 Оскорбление родни',report)
+							automute(cfg.spisokor[a], oskid, text, '5000 Оскорбление родни',report)
 							return false
 						end
 					end
