@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 script_name 'AT_MP' 
 script_author 'Neon4ik'
-local version = 2.1
+local version = 2.2
 require 'my_lib'
 encoding.default = 'CP1251' 
 local tag = '{B73CBF}AdminTools - Мероприятия{F0E68C}: '
@@ -155,7 +155,7 @@ local colors = {
     [17] = u8'Розово-красный',
 }
 function sampev.onServerMessage(color,text)
-    if text:match('%[A%] '..mynick..' %[(%d+)%] ответил (.+)%[(%d+)%]:') then
+    if text:match('%[A%] '..mynick..'%[(%d+)%] ответил (.+)%[(%d+)%]: ') then
         cfg.info[0] = cfg.info[0] + 1
         save() 
     elseif text:match('Администратор '..mynick..' забанил%(.+%) игрока (.+) на (.+) дней%. Причина:') then
