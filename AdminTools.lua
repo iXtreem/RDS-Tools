@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.5				 							-- Версия скрипта
+local version = 6.4				 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -3173,7 +3173,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 						rang = '{'..color1..'}' .. name
 					end
 					local lvl, id = tonumber(lvl), tonumber(id)
-					if id ~= myid and autoprefix_access then
+					if id ~= myid and autoprefix_access and lvl then
 						if (lvl > 0 and lvl < 10) and rang ~= '{'..cfg.settings.prefixma..'}Мл.Администратор' then
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixma .. '}Мл.Администратор', -1)
