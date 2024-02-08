@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 script_name 'AT_MP' 
 script_author 'Neon4ik'
-local version = 2.2
+local version = 2.3
 require 'my_lib'
 encoding.default = 'CP1251' 
 local tag = '{B73CBF}AdminTools - Мероприятия{F0E68C}: '
@@ -14,6 +14,15 @@ local cfg2 = inicfg.load({
 cfg2.settings.versionMP = version
 inicfg.save(cfg2, 'AT//AT_main.ini')
 local cfg = inicfg.load({
+    tick = {
+        report = 20,
+        ban = 10,
+        mute = 20,
+        jail = 10,
+        kick = 1,
+        online = 120,
+        mp = 1,
+    },
     AT_MP = {
         adminstate = false,
         mynick = false,
@@ -41,7 +50,6 @@ local cfg = inicfg.load({
         0, -- mykick
         0, -- myonline
         0, -- mp
-        0, -- allonline
     },
     MyMP = {},
 }, 'AT//AT_MP.ini')
@@ -91,22 +99,6 @@ function main()
         cfg.info.data = os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year
         save()
     end
-  -- Функция для обновления даты
-    local updateDateIfNewWeek = function(previousDate)
-        local currentDate = os.date("%Y-%m-%d")
-        local previousWeekday = os.date("*t", os.time{year=tonumber(string.sub(previousDate, 1, 4)), month=tonumber(string.sub(previousDate, 6, 7)), day=tonumber(string.sub(previousDate, 9, 10))}).wday
-        local currentWeekday = os.date("*t").wday
-        if currentWeekday < previousWeekday then
-          -- Наступила новая неделя, обновляем дату
-           return currentDate
-        else
-           return previousDate
-        end
-    end
-    if cfg.AT_MP.data_online ~= updateDateIfNewWeek(tostring(cfg.AT_MP.data_online)) then
-        cfg.info[7] = 0
-        save()
-    end
     wait(-1) -- бесконечное ожидание
 end
 function check_player()
@@ -123,6 +115,15 @@ function check_player()
         end
     end
 end
+local tick = { -- ну галочка типа
+    [0] = imgui.ImInt(cfg.tick.report),
+    [1] = imgui.ImInt(cfg.tick.ban),
+    [2] = imgui.ImInt(cfg.tick.mute),
+    [3] = imgui.ImInt(cfg.tick.jail),
+    [4] = imgui.ImInt(cfg.tick.kick),
+    [5] = imgui.ImInt(cfg.tick.online),
+    [6] = imgui.ImInt(cfg.tick.mp),
+}
 local cursor = true
 local start_mp = false -- защита от удваивания функции
 local menu = 'open mp'
@@ -180,8 +181,7 @@ function sampev.onServerMessage(color,text)
 end
 function imgui.OnDrawFrame()
     if not windows.static_window_state.v and not windows.secondary_window_state.v and not windows.stata_window_state.v and not windows.menu_window_state.v then
-        if cfg.AT_MP.adminstate then
-            windows.stata_window_state.v = true
+        if cfg.AT_MP.adminstate then windows.stata_window_state.v = true
         else imgui.Process = false end
     end
     if windows.static_window_state.v then
@@ -258,18 +258,51 @@ function imgui.OnDrawFrame()
         end
         imgui.SameLine()
         imgui.Text(u8'Количество проведенных мероприятий')
-        if imadd.ToggleButton('##allonline', checkbox.check_13) then
-            cfg.AT_MP.allonline = not cfg.AT_MP.allonline
-            save()
-        end
-        imgui.SameLine()
-        imgui.Text(u8'Общий онлайн за неделю')
         if imgui.Button(u8'Сохранить позицию') then
 			cfg.AT_MP.staticposX = imgui.GetWindowPos().x
 			cfg.AT_MP.staticposY = imgui.GetWindowPos().y
 			save()
             showCursor(false,false)
-            thisScript():reload() showCursor(false,false)
+            thisScript():reload()
+        end
+        if imgui.Button(u8'Настройка ежедневной нормы') then imgui.OpenPopup('norma') end
+        if imgui.BeginPopup('norma') then
+            imgui.CenterText(u8'Количество репортов')
+            if imgui.SliderInt('##report', tick[0], 10,500) then
+                cfg.tick.report = tick[0].v
+                save()
+            end
+            imgui.CenterText(u8'Количество банов')
+            if imgui.SliderInt('##ban', tick[1], 2,100) then
+                cfg.tick.ban = tick[1].v
+                save()
+            end
+            imgui.CenterText(u8'Количество мутов')
+            if imgui.SliderInt('##mute', tick[2], 10, 200) then
+                cfg.tick.mute = tick[2].v
+                save()
+            end
+            imgui.CenterText(u8'Количество джайлов')
+            if imgui.SliderInt('##jail', tick[3], 2,100) then
+                cfg.tick.jail = tick[3].v
+                save()
+            end
+            imgui.CenterText(u8'Количество киков')
+            if imgui.SliderInt('##kick', tick[4], 1,10) then
+                cfg.tick.kick = tick[4].v
+                save()
+            end
+            imgui.CenterText(u8'Время онлайна')
+            if imgui.SliderInt('##online', tick[5], 20, 1440) then
+                cfg.tick.online = tick[5].v
+                save()
+            end
+            imgui.CenterText(u8'Проведенных мероприятий')
+            if imgui.SliderInt('##mp', tick[6], 1, 10) then
+                cfg.tick.mp = tick[6].v
+                save()
+            end
+            imgui.EndPopup()
         end
         windows.stata_window_state.v = false -- вырубаем статистику чтобы не было бага с мышью
         imgui.End()
@@ -282,14 +315,23 @@ function imgui.OnDrawFrame()
             if i == 0 then
                 if cfg.AT_MP.mynick then imgui.Text(mynick .. ' | ID: '..myid) end
                 if cfg.AT_MP.data then imgui.Text(os.date('%H:%M | ') .. os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year) end
-                if cfg.AT_MP.myreports then imgui.Text(u8'Репортов: ' .. cfg.info[0]) end
-            elseif cfg.AT_MP.warningban and i == 1 then imgui.Text(u8'Банов: ' .. cfg.info[1])
+                if cfg.AT_MP.myreports then 
+                    imgui.Text(u8'Репортов: ' .. cfg.info[0])
+                    if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
+                end
+            elseif cfg.AT_MP.warningban and i == 1 then 
+                imgui.Text(u8'Банов: ' .. cfg.info[1])
+                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
             elseif cfg.AT_MP.warningmute and i == 2 then imgui.Text(u8'Мутов: ' .. cfg.info[2])
+                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
             elseif cfg.AT_MP.warningjail and i == 3 then imgui.Text(u8'Джайлов: ' .. cfg.info[3])
+                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
             elseif cfg.AT_MP.warningkick and i == 4 then imgui.Text(u8'Киков: ' .. cfg.info[4])
+                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
             elseif cfg.AT_MP.warningmp and i == 6 then imgui.Text(u8'Мероприятий: '..cfg.info[6])
+                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
             elseif cfg.AT_MP.myonline and i == 5 then imgui.Text(u8'Онлайн: ' .. cfg.info[5] .. u8' мин.')
-            elseif cfg.AT_MP.allonline and i == 7 then imgui.Text(u8'Онлайн(неделя): '..cfg.info[7]..u8' мин.')
+                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
             end
         end
         imgui.End()
@@ -730,7 +772,6 @@ function time()
     while true do
         wait(60000)
         cfg.info[5] = cfg.info[5] + 1
-        cfg.info[7] = cfg.info[7] + 1
         save()
     end
 end
@@ -772,4 +813,3 @@ sampRegisterChatCommand('state', function()
     windows.static_window_state.v = not windows.static_window_state.v
     imgui.Process = windows.static_window_state.v
 end)
-sampRegisterChatCommand('mpoff',function() thisScript():unload()  end)
