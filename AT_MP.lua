@@ -90,14 +90,16 @@ function main()
     func3 = lua_thread.create_suspended(find_weapon) -- антисрыв мп
     func4 = lua_thread.create_suspended(check_my_auto)
     func5 = lua_thread.create_suspended(check_player)
-    if cfg.AT_MP.adminstate then
-        windows.stata_window_state.v = true
-        imgui.Process = true
-    end
+    func6 = lua_thread.create_suspended(update_info)
+    func6:run()
     if cfg.info.data ~= os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year then
         for i = 0, 6 do cfg.info[i] = 0 end
         cfg.info.data = os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year
         save()
+    end
+    if cfg.AT_MP.adminstate then
+        windows.stata_window_state.v = true
+        imgui.Process = true
     end
     wait(-1) -- бесконечное ожидание
 end
@@ -311,28 +313,8 @@ function imgui.OnDrawFrame()
         imgui.SetNextWindowPos(imgui.ImVec2(cfg.AT_MP.staticposX, cfg.AT_MP.staticposY), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.Begin("##AdminStata", windows.stata_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.ShowCursor = false
-        for i = 0, #cfg.info do
-            if i == 0 then
-                if cfg.AT_MP.mynick then imgui.Text(mynick .. ' | ID: '..myid) end
-                if cfg.AT_MP.data then imgui.Text(os.date('%H:%M | ') .. os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year) end
-                if cfg.AT_MP.myreports then 
-                    imgui.Text(u8'Репортов: ' .. cfg.info[0])
-                    if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
-                end
-            elseif cfg.AT_MP.warningban and i == 1 then 
-                imgui.Text(u8'Банов: ' .. cfg.info[1])
-                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
-            elseif cfg.AT_MP.warningmute and i == 2 then imgui.Text(u8'Мутов: ' .. cfg.info[2])
-                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
-            elseif cfg.AT_MP.warningjail and i == 3 then imgui.Text(u8'Джайлов: ' .. cfg.info[3])
-                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
-            elseif cfg.AT_MP.warningkick and i == 4 then imgui.Text(u8'Киков: ' .. cfg.info[4])
-                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
-            elseif cfg.AT_MP.warningmp and i == 6 then imgui.Text(u8'Мероприятий: '..cfg.info[6])
-                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
-            elseif cfg.AT_MP.myonline and i == 5 then imgui.Text(u8'Онлайн: ' .. cfg.info[5] .. u8' мин.')
-                if tick[i].v <= cfg.info[i] then imgui.SameLine() imgui.Text("+") end
-            end
+        for k,v in pairs(info_array) do
+            imgui.Text(v)
         end
         imgui.End()
     end
@@ -773,6 +755,40 @@ function time()
         wait(60000)
         cfg.info[5] = cfg.info[5] + 1
         save()
+    end
+end
+function update_info()
+    info_array = {}
+    while true do
+        wait(10000)
+        for i = 0, #cfg.info do
+            if i == 0 then
+                if cfg.AT_MP.mynick then info_array[0] = mynick .. ' | ID: '..myid end
+                if cfg.AT_MP.data then info_array[1] = os.date('%H:%M | ') .. os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year end
+                if cfg.AT_MP.myreports then 
+                    info_array[2] = u8'Репортов: ' .. cfg.info[0]
+                    if tick[i].v <= cfg.info[i] then info_array[2] = info_array[2] .. "+" end
+                end
+            elseif cfg.AT_MP.warningban and i == 1 then 
+                info_array[3] = u8'Банов: ' .. cfg.info[1]
+                if tick[i].v <= cfg.info[i] then info_array[3] = info_array[3].."+" end
+            elseif cfg.AT_MP.warningmute and i == 2 then 
+                info_array[4] = u8'Мутов: ' .. cfg.info[2]
+                if tick[i].v <= cfg.info[i] then info_array[4] = info.array[4] .."+" end
+            elseif cfg.AT_MP.warningjail and i == 3 then 
+                info_array[5] =  u8'Джайлов: ' .. cfg.info[3]
+                if tick[i].v <= cfg.info[i] then info_array[5] = info_array[5].. "+" end
+            elseif cfg.AT_MP.warningkick and i == 4 then 
+                info_array[6] = u8'Киков: ' .. cfg.info[4]
+                if tick[i].v <= cfg.info[i] then info_array[6] = info_array[6].."+" end
+            elseif cfg.AT_MP.warningmp and i == 6 then 
+                info_array[7]= u8'Мероприятий: '..cfg.info[6]
+                if tick[i].v <= cfg.info[i] then info_array[7] = info_array[7].."+" end
+            elseif cfg.AT_MP.myonline and i == 5 then 
+                info_array[8]=u8'Онлайн: ' .. cfg.info[5] .. u8' мин.'
+                if tick[i].v <= cfg.info[i] then info_array[8] = info_array[8].."+" end
+            end
+        end
     end
 end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
