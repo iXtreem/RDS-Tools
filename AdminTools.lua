@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.5				 							-- Версия скрипта
+local version = 6.51			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -3231,10 +3231,16 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			wait(0)
 			sampCloseCurrentDialogWithButton(0)
 			if player_cheater then
-				while sampIsDialogActive() do wait(0) end
+				local player = tonumber(sampGetPlayerIdByNickname(title))
 				player_cheater = nil
-				sampSendChat('/iban '..sampGetPlayerIdByNickname(title)..' 7 Чит на оружие')
-				notify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты')
+				while sampIsDialogActive() do wait(0) end
+				if sampIsPlayerConnected(player) then
+					sampSendChat('/iban '..player..' 7 Чит на оружие')
+					notify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты')
+				else 
+					sampSendChat('/banoff '..title..' 7 Чит на оружие')
+					notify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты')
+				end
 			else sampAddChatMessage(tag .. 'Пробил игрока ' .. title .. '[' .. sampGetPlayerIdByNickname(title) .. ']. По результатам проверки читов не обнаружено.', -1) end
 		end)
 	elseif title == 'Mobile' and control_player_recon then -- проверка в сети ли игрок
@@ -3540,30 +3546,33 @@ end
 --============= Wallhack ==============--
 
 function wallhack()
-	for i = 0, sampGetMaxPlayerId() do
-		if sampIsPlayerConnected(i) then
-			local result, cped = sampGetCharHandleBySampPlayerId(i)
-			local color = sampGetPlayerColor(i)
-			local aa, rr, gg, bb = explode_argb(color)
-			local color = join_argb(255, rr, gg, bb)
-			if result and doesCharExist(cped) and isCharOnScreen(cped) then
-				local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
-				for v = 1, #t do
-					pos1X, pos1Y, pos1Z = getBodyPartCoordinates(t[v], cped)
-					pos2X, pos2Y, pos2Z = getBodyPartCoordinates(t[v] + 1, cped)
-					 pos1, pos2 = convert3DCoordsToScreen(pos1X, pos1Y, pos1Z)
-					pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
-					renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
-				end
-				for v = 4, 5 do
-					pos2X, pos2Y, pos2Z = getBodyPartCoordinates(v * 10 + 1, cped)
-					pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
-					renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
-				end
-				local t = {53, 43, 24, 34, 6}
-				for v = 1, #t do
-					posX, posY, posZ = getBodyPartCoordinates(t[v], cped)
-					pos1, pos2 = convert3DCoordsToScreen(posX, posY, posZ)
+	while true do
+		wait(1)
+		for i = 0, sampGetMaxPlayerId() do
+			if sampIsPlayerConnected(i) then
+				local result, cped = sampGetCharHandleBySampPlayerId(i)
+				local color = sampGetPlayerColor(i)
+				local aa, rr, gg, bb = explode_argb(color)
+				local color = join_argb(255, rr, gg, bb)
+				if result and doesCharExist(cped) and isCharOnScreen(cped) then
+					local t = {3, 4, 5, 51, 52, 41, 42, 31, 32, 33, 21, 22, 23, 2}
+					for v = 1, #t do
+						pos1X, pos1Y, pos1Z = getBodyPartCoordinates(t[v], cped)
+						pos2X, pos2Y, pos2Z = getBodyPartCoordinates(t[v] + 1, cped)
+						pos1, pos2 = convert3DCoordsToScreen(pos1X, pos1Y, pos1Z)
+						pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
+						renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+					end
+					for v = 4, 5 do
+						pos2X, pos2Y, pos2Z = getBodyPartCoordinates(v * 10 + 1, cped)
+						pos3, pos4 = convert3DCoordsToScreen(pos2X, pos2Y, pos2Z)
+						renderDrawLine(pos1, pos2, pos3, pos4, 1, color)
+					end
+					local t = {53, 43, 24, 34, 6}
+					for v = 1, #t do
+						posX, posY, posZ = getBodyPartCoordinates(t[v], cped)
+						pos1, pos2 = convert3DCoordsToScreen(posX, posY, posZ)
+					end
 				end
 			end
 		end
