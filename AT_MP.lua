@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 script_name 'AT_MP' 
 script_author 'Neon4ik'
-local version = 2.3
+local version = 2.4
 require 'my_lib'
 encoding.default = 'CP1251' 
 local tag = '{B73CBF}AdminTools - Мероприятия{F0E68C}: '
