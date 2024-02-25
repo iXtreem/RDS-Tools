@@ -786,7 +786,7 @@ function update_info()
                 if tick[i].v <= cfg.info[i] then info_array[3] = info_array[3].." +" end
             elseif cfg.AT_MP.warningmute and i == 2 then 
                 info_array[4] = u8'Мутов: ' .. cfg.info[2]
-                if tick[i].v <= cfg.info[i] then info_array[4] = info.array[4] .." +" end
+                if tick[i].v <= cfg.info[i] then info_array[4] = info_array[4] .." +" end
             elseif cfg.AT_MP.warningjail and i == 3 then 
                 info_array[5] =  u8'Джайлов: ' .. cfg.info[3]
                 if tick[i].v <= cfg.info[i] then info_array[5] = info_array[5].. " +" end
