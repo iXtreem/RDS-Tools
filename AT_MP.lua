@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 script_name 'AT_MP' 
 script_author 'Neon4ik'
-local version = 2.4
+local version = 2.5
 require 'my_lib'
 encoding.default = 'CP1251' 
 local tag = '{B73CBF}AdminTools - Мероприятия{F0E68C}: '
@@ -261,11 +261,23 @@ function imgui.OnDrawFrame()
         imgui.SameLine()
         imgui.Text(u8'Количество проведенных мероприятий')
         if imgui.Button(u8'Сохранить позицию') then
-			cfg.AT_MP.staticposX = imgui.GetWindowPos().x
-			cfg.AT_MP.staticposY = imgui.GetWindowPos().y
-			save()
-            showCursor(false,false)
-            thisScript():reload()
+            lua_thread.create(function()
+                windows.stata_window_state.v = true
+                windows.static_window_state.v = false
+                sampAddChatMessage(tag .. 'Укажите курсором новое расположение окна и нажмите: Enter', -1)
+                sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
+                local old_pos_x, old_pos_y = cfg.AT_MP.staticposX, cfg.AT_MP.staticposY
+                while true do
+                    showCursor(true,true)
+                    cfg.AT_MP.staticposX, cfg.AT_MP.staticposY = getCursorPos()
+                    if wasKeyPressed(VK_RETURN) then save() break end
+                    if wasKeyPressed(VK_ESCAPE) then cfg.AT_MP.staticposX = old_pos_x cfg.AT_MP.staticposY = old_pos_y break end
+                    wait(1)
+                end
+			    save()
+                showCursor(false,false)
+                thisScript():reload()
+            end)
         end
         if imgui.Button(u8'Настройка ежедневной нормы') then imgui.OpenPopup('norma') end
         if imgui.BeginPopup('norma') then
@@ -311,7 +323,7 @@ function imgui.OnDrawFrame()
     end
     if windows.stata_window_state.v then
         imgui.SetNextWindowPos(imgui.ImVec2(cfg.AT_MP.staticposX, cfg.AT_MP.staticposY), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin("##AdminStata", windows.stata_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.Begin("##AdminStata", windows.stata_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.ShowCursor = false
         for k,v in pairs(info_array) do
             imgui.Text(v)
@@ -767,26 +779,26 @@ function update_info()
                 if cfg.AT_MP.data then info_array[1] = os.date('%H:%M | ') .. os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year end
                 if cfg.AT_MP.myreports then 
                     info_array[2] = u8'Репортов: ' .. cfg.info[0]
-                    if tick[i].v <= cfg.info[i] then info_array[2] = info_array[2] .. "+" end
+                    if tick[i].v <= cfg.info[i] then info_array[2] = info_array[2] .. " +" end
                 end
             elseif cfg.AT_MP.warningban and i == 1 then 
                 info_array[3] = u8'Банов: ' .. cfg.info[1]
-                if tick[i].v <= cfg.info[i] then info_array[3] = info_array[3].."+" end
+                if tick[i].v <= cfg.info[i] then info_array[3] = info_array[3].." +" end
             elseif cfg.AT_MP.warningmute and i == 2 then 
                 info_array[4] = u8'Мутов: ' .. cfg.info[2]
-                if tick[i].v <= cfg.info[i] then info_array[4] = info.array[4] .."+" end
+                if tick[i].v <= cfg.info[i] then info_array[4] = info.array[4] .." +" end
             elseif cfg.AT_MP.warningjail and i == 3 then 
                 info_array[5] =  u8'Джайлов: ' .. cfg.info[3]
-                if tick[i].v <= cfg.info[i] then info_array[5] = info_array[5].. "+" end
+                if tick[i].v <= cfg.info[i] then info_array[5] = info_array[5].. " +" end
             elseif cfg.AT_MP.warningkick and i == 4 then 
                 info_array[6] = u8'Киков: ' .. cfg.info[4]
-                if tick[i].v <= cfg.info[i] then info_array[6] = info_array[6].."+" end
+                if tick[i].v <= cfg.info[i] then info_array[6] = info_array[6].." +" end
             elseif cfg.AT_MP.warningmp and i == 6 then 
                 info_array[7]= u8'Мероприятий: '..cfg.info[6]
-                if tick[i].v <= cfg.info[i] then info_array[7] = info_array[7].."+" end
+                if tick[i].v <= cfg.info[i] then info_array[7] = info_array[7].." +" end
             elseif cfg.AT_MP.myonline and i == 5 then 
                 info_array[8]=u8'Онлайн: ' .. cfg.info[5] .. u8' мин.'
-                if tick[i].v <= cfg.info[i] then info_array[8] = info_array[8].."+" end
+                if tick[i].v <= cfg.info[i] then info_array[8] = info_array[8].." +" end
             end
         end
     end
