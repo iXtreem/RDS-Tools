@@ -735,7 +735,6 @@ sampRegisterChatCommand('wh' , function()
 	end
 end)
 sampRegisterChatCommand('tool', function()
-	if not sampTextdrawIsExists(452) then sampAddChatMessage(tag .. 'Вы не авторизовались.', -1) return false end
 	array.windows.menu_tools.v = not array.windows.menu_tools.v
 	imgui.Process = true
 end)
