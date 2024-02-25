@@ -2,7 +2,7 @@ require 'lib.moonloader'
 require 'my_lib'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
-local version = 1.7
+local version = 1.8
 local key = require 'vkeys'
 local cfg2 = inicfg.load({
 	settings = {
@@ -51,9 +51,9 @@ function main()
 	local nick = sampGetPlayerNickname(id)
 	if cfg.settings.server ~= sampGetCurrentServerAddress() or cfg.settings.nickname ~= nick then print('другой сервер, fast spawn off') return false end
 	while true do
-		if sampTextdrawIsExists(546) then
-			if sampIsDialogActive(657) then
-				if sampTextdrawIsExists(452) then
+		if sampTextdrawIsExists(0) then
+			if sampIsDialogActive(657) or sampIsDialogActive(658) then
+				if sampTextdrawIsExists(494) or sampTextdrawIsExists(500) then
 					break
 				end
 				if cfg.settings.spawn then
@@ -90,7 +90,7 @@ function main()
 	end
 	while sampIsDialogActive() do wait(200) end
 	if cfg.settings.parolalogin and cfg.settings.autoalogin then
-		while not sampTextdrawIsExists(452) do
+		while not (sampTextdrawIsExists(494) or sampTextdrawIsExists(500)) do
 			sampSendChat('/alogin ' .. cfg.settings.parolalogin)
 			wait(3000)
 		end
