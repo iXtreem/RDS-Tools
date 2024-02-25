@@ -1383,7 +1383,7 @@ function imgui.OnDrawFrame()
 					imgui.EndPopup()
 				end
 				imgui.SetCursorPosY(470)
-				if imgui.Button(u8'Перезагрузить скрипты '..fa.ICON_RECYCLE, imgui.ImVec2(250,24)) then reloadScripts() end
+				if imgui.Button(u8'Перезагрузить скрипты '..fa.ICON_RECYCLE, imgui.ImVec2(250,24)) then showCursor(false,false) reloadScripts() end
 				imgui.SameLine()
 				if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(228, 24)) then
 					sampAddChatMessage(tag .. 'Скрипты АТ выгружены. Если желаете загрузить их вновь, введите команду /rst',-1)
