@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.6			 								-- Версия скрипта
+local version = 6.66			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -263,11 +263,13 @@ function main()
 		local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
 		if data3 and data2 and data3 then
 			if tonumber(daysPassed(data3,data2,data1)) < 3 then
-				file = io.open('moonloader\\config\\chatlog\\'..v,'r')
+				local file = io.open('moonloader\\config\\chatlog\\'..v,'r')
 				for line in file:lines() do
-					if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = encrypt(line, -3)
-					elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = encrypt(line, -3)
-					elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = encrypt(line, -3) end
+					if #line > 3 then
+						if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = encrypt(line, -3)
+						elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = encrypt(line, -3)
+						elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = encrypt(line, -3) end
+					end
 				end
 				file:close()
 			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
@@ -313,15 +315,6 @@ function main()
 	
 	local AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', "r")
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
-	while true do
-		if sampTextdrawIsExists(494) or sampTextdrawIsExists(500) then
-			break
-		elseif wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then 
-			sampAddChatMessage(tag .. 'Авторизируйтесь в админ-панель!', -1) 
-		end
-		wait(30) 
-	end
-
 	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
 	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
 	func = lua_thread.create_suspended(autoonline)
