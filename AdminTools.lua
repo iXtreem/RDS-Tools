@@ -1,11 +1,11 @@
 require 'lib.moonloader'									-- Считываем библиотеки Moonloader
 require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
-import("\\resource\\AT_FastSpawn.lua")  			-- подгрузка быстрого спавна
+import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
 require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.51			 							-- Версия скрипта
+local version = 6.6			 								-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -69,6 +69,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		auto_cc     = false,
 		color_mute  = '{DA70D6}',
 	},
+	words = {},
 	customotvet = {},
 	myflood = {},
 	my_command = {},
@@ -108,6 +109,7 @@ local array = {
 		new_flood_mess 		= imgui.ImBool(false),
 		pravila 			= imgui.ImBool(false),
 		menu_chatlogger 	= imgui.ImBool(false),
+		filter   			= imgui.ImBool(false),
 	},
 	------=================== Выставление своих настроек, кнопки со значение True/False ===================----------------------
 	checkbox = {
@@ -174,6 +176,7 @@ local array = {
 		new_prfsa 			= imgui.ImBuffer(cfg.settings.prefixsa, 256),
 		find_log 			= imgui.ImBuffer(4096),
 		add_smart_automute  = imgui.ImBuffer(4096),
+		new_word 		 	= imgui.ImBuffer(4096),
 	},
 	chatlog_1 		= {}, 											-- чат-лог1
 	chatlog_2 		= {}, 											-- чат-лог2
@@ -189,11 +192,6 @@ local array = {
 	inforeport 		= {},											-- Вся информация о игроке в реконе хранится тут
 	pravila 		= {},											-- Правила/команды хранятся тут /ahelp
 	flood = { --[[сборник ID]]message = {},--[[Сообщение]]time = {},--[[время отправки]]count = {}--[[кол-во повторных сообщений]]},
-	textdraw_delete = {  											-- Текстдравы из рекон меню, подлежащие удалению (заменить при обнове)
-		144, 146, 141, 155, 153, 152, 154, 160, 179, 159, 157, 164, 180, 161,
-		169, 181, 166, 168, 174, 182, 171, 173, 150, 183, 183, 147, 149, 142,
-		143, 184, 176, 145, 158, 162, 163, 167, 172, 148
-	},
 	name_car = {'Landstalker','Bravura','Buffalo','Linerunner','Perrenial','Sentinel','Dumper','Firetruck','Trashmaster','Stretch','Manana','Infernus','Voodoo','Pony','Mule','Cheetah','Ambulance','Leviathan','Moonbeam','Esperanto','Taxi','Washington','Bobcat','Mr Whoopee','BF Injection','Hunter','Premier','Enforcer','Securicar','Banshee','Predator','Bus','Rhino','Barracks','Hotknife','Trailer','Previon','Coach','Cabbie','Stallion','Rumpo','RC Bandit','Romero','Packer','Monster','Admiral','Squalo','Seasparrow','Pizzaboy','Tram','Trailer2','Turismo','Speeder','Reefer','Tropic','Flatbed','Yankee','Caddy','Solair','BerkleysRCVan','Skimmer','PCJ-600','Faggio','Freeway','RC Baron','RC Raider','Glendale','Oceanic','Sanchez','Sparrow','Patriot','Quad','Coastguard','Dinghy','Hermes','Sabre','Rustler','ZR-350','Walton','Regina','Comet','BMX','Burrito','Camper','Marquis','Baggage','Dozer','Maverick','News Chopper','Rancher','FBI Rancher','Virgo','Greenwood','Jetmax','Hotring','Sandking','Blista Compact','Police Maverick','Boxville','Benson','Mesa','RC Goblin','Hotring Racer A','Hotring Racer B','Bloodring Banger','Rancher','Super GT','Elegant','Journey','Bike','Mountain Bike','Beagle','Cropdust','Stunt','Tanker','Roadtrain','Nebula','Majestic','Buccaneer','Shamal','Hydra','FCR-900','NRG-500','HPV1000','Cement Truck','Tow Truck','Fortune','Cadrona','FBI Truck','Willard','Forklift','Tractor','Combine','Feltzer','Remington','Slamvan','Blade','Freight','Streak','Vortex','Vincent','Bullet','Clover','Sadler','Firetruck LA','Hustler','Intruder','Primo','Cargobob','Tampa',	'Sunrise','Merit','Utility','Nevada','Yosemite','Windsor','Monster A','Monster B','Uranus','Jester',	'Sultan',	'Stratum','Elegy','Raindance','RC Tiger',	'Flash',	'Tahoma','Savanna','Bandito','Freight Flat','Streak Carriage','Kart','Mower','Duneride','Sweeper','Broadway','Tornado','AT-400','DFT-30','Huntley','Stafford','BF-400','Newsvan','Tug','Trailer3','Emperor','Wayfarer','Euros','Hotdog','Club','Freight Carriage','Trailer4','Andromada','Dodo','RC Cam','Launch','Police Car (LSPD)','Police Car (SFPD)','Police Car (LVPD)','Police Ranger','Picador','S.W.A.T. Van','Alpha','Phoenix','Glendale','Sadler','Luggage Trailer A','Luggage Trailer B','Stair Trailer','Boxville','Farm Plow','Utility Trailer'},
 
 	--AutoMute
@@ -267,16 +265,14 @@ function main()
 			if tonumber(daysPassed(data3,data2,data1)) < 3 then
 				file = io.open('moonloader\\config\\chatlog\\'..v,'r')
 				for line in file:lines() do
-					if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = string.gsub(encrypt(line, -3), '{(.+)}','')
-					elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = string.gsub(encrypt(line, -3), '{(.+)}','')
-					elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = string.gsub(encrypt(line, -3), '{(.+)}','') end
+					if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = encrypt(line, -3)
+					elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = encrypt(line, -3)
+					elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = encrypt(line, -3) end
 				end
 				file:close()
 			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
 		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 	end
-
-	while not sampIsLocalPlayerSpawned() do wait(2000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
 	local AdminTools = inicfg.load(nil, 'moonloader\\config\\AT\\AdminTools.ini')
@@ -317,8 +313,14 @@ function main()
 	
 	local AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', "r")
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
-
-	while not sampTextdrawIsExists(452) --[[ admin panel ]] do if wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then sampAddChatMessage(tag .. 'Авторизируйтесь в админ-панель!', -1) end wait(30) end
+	while true do
+		if sampTextdrawIsExists(494) or sampTextdrawIsExists(500) then
+			break
+		elseif wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then 
+			sampAddChatMessage(tag .. 'Авторизируйтесь в админ-панель!', -1) 
+		end
+		wait(30) 
+	end
 
 	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
 	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
@@ -431,6 +433,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		add_autoprefix ='Добавить администратора в исключение автопрефикса',
 		del_autoprefix ='Удалить администратора из исключений автопрефикса',
 		color_mute 	   ='Назначить цвет мута',
+		fl 			   ='Открыть редактор предложений для удаления их из чата',
 	},
 	help = {
 		uu      =  		'/unmute _',
@@ -565,6 +568,27 @@ sampRegisterChatCommand('prfzga', function(param) if #param ~= 0 then sampSendCh
 sampRegisterChatCommand('prfga', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Главный-Администратор ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
 sampRegisterChatCommand('or', function(param) if #param ~= 0 then sampSendChat('/mute '..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
 sampRegisterChatCommand('orf', function(param) if #param ~= 0 then sampSendChat('/muteakk '..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
+
+
+sampRegisterChatCommand('fl', function()
+	if #cfg.words == 0 then sampAddChatMessage(tag .. 'В словаре нет ни одного предложения, добавьте его в чат-логгере /opencl', -1) return false end
+	array.windows.filter.v = true
+	imgui.Process = true 
+end)
+
+sampRegisterChatCommand('spawncars', function(param)
+	if not ((#param == 1 or #param == 2) and tonumber(param)) then
+		sampSendChat('/spawncars '..param)
+		return false
+	end
+	sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
+	sampSendChat('/mess 15 Многоуважаемые дрифтеры и дрифтерши')
+	sampSendChat('/mess 15 Через '..param..' секунд пройдёт респавн всего транспорта на сервере.')
+	sampSendChat('/mess 15 Займите свои супер кары во избежания потери :3')
+	sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
+	sampSendChat('/delcarall')
+	sampSendChat('/spawncars '..param)
+end)
 
 sampRegisterChatCommand('add_autoprefix', function(param)
 	if #param > 4 then
@@ -2665,7 +2689,7 @@ function imgui.OnDrawFrame()
 		if imgui.IsWindowAppearing() then chat = {1, 500, 1} end -- 1 параметр начало массива, 2 параметр - конец массива, 3 - страница.
 		imgui.PushFont(fontsize)
 		imgui.CenterText(u8'Выберите файл для просмотра')
-		imgui.Text(u8'Примечание: Нажатие по тексту - копирует его в буфер обмена.\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
+		imgui.Text(u8'Примечание: Нажатие по тексту - добавляет его в фильтр.\nНажатие правой кнопкой мыши - копирует в буфер обмена\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
 		if imgui.Checkbox('##cl', array.checkbox.check_on_chatlog) then
 			cfg.settings.chat_log = not cfg.settings.chat_log
 			save()
@@ -2725,12 +2749,7 @@ function imgui.OnDrawFrame()
 					end
 				end
 			else chat[2] = #array.chatlog_1 end
-			for i = chat[1], chat[2] do
-				if string.rlower(array.chatlog_1[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
-					imgui.Text(u8(array.chatlog_1[i]))
-					if imgui.IsItemClicked(0) then setClipboardText(array.chatlog_1[i]) sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) end
-				end
-			end
+			check_chat = array.chatlog_1
 		end
 		if array.checkbox.option_find_log.v == 1 then
 			if #array.chatlog_2 > 500 then
@@ -2778,12 +2797,7 @@ function imgui.OnDrawFrame()
 					end
 				end
 			else chat[2] = #array.chatlog_2 end
-			for i = chat[1], chat[2] do
-				if string.rlower(array.chatlog_2[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
-					imgui.Text(u8(array.chatlog_2[i]))
-					if imgui.IsItemClicked(0) then setClipboardText(array.chatlog_2[i]) sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) end
-				end
-			end
+			check_chat = array.chatlog_2
 		end
 		if array.checkbox.option_find_log.v == 2 then
 			if #array.chatlog_3 > 500 then
@@ -2831,14 +2845,50 @@ function imgui.OnDrawFrame()
 					end
 				end
 			else chat[2] = #array.chatlog_3 end
-			for i = chat[1], chat[2] do
-				if string.rlower(array.chatlog_3[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
-					imgui.Text(u8(array.chatlog_3[i]))
-					if imgui.IsItemClicked(0) then setClipboardText(array.chatlog_3[i]) sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) end
+			check_chat = array.chatlog_3
+		end
+		for i = chat[1], chat[2] do
+			if string.rlower(check_chat[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
+				imgui.Text((string.gsub(u8(check_chat[i]), '{%w%w%w%w%w%w}', '')))
+				if imgui.IsItemClicked(0) then
+					array.buffer.new_word.v = string.gsub(u8(check_chat[i]), '%[(%d+)%:(%d+)%:(%d+)%] ', '')
+					imgui.OpenPopup('newword')
+				elseif imgui.IsItemClicked(1) then
+					setClipboardText(check_chat[i]) 
+					sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) 
 				end
 			end
 		end
-		imgui.PopFont()
+		if imgui.BeginPopup('newword') then
+			imgui.Text(u8'Замените слова, которые могут изменяться на *')
+			imgui.Text(u8'Пример: Администратор *[*] раздал всем игрокам * очков и *$ за онлайн')
+			imgui.PushItemWidth(500)
+			imgui.InputText('##', array.buffer.new_word)
+			imgui.PopItemWidth()
+			if imgui.Button(u8'Сохранить') then
+				table.insert(cfg.words,  u8:decode(array.buffer.new_word.v))
+				save()
+				sampAddChatMessage(tag .. 'Новое предложение добавлено, редактировать его можно через /filter',-1)
+			end
+			imgui.EndPopup()
+		end
+ 		imgui.PopFont()
+		imgui.End()
+	end
+	if array.windows.filter.v then
+		imgui.ShowCursor = true
+		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.SetNextWindowSize(imgui.ImVec2(800,400), imgui.Cond.FirstUseEver)
+		imgui.Begin(u8'Фильтрация чата', array.windows.menu_chatlogger, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.CenterText(u8'Ниже указан словарь предложений, которые будут удаляться из основного чата')
+		imgui.CenterText(u8'Нажмите на текст, чтобы удалить его из словаря.')
+		for i = 1, #cfg.words do
+			imgui.TextWrapped(u8(cfg.words[i]))
+			if imgui.IsItemClicked(0) then
+				table.remove( cfg.words, cfg.words[i] )
+				save()
+			end
+		end
 		imgui.End()
 	end
 end
@@ -2918,7 +2968,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 				if text:find(array.spisok_in_form[i]) and not AFK then
 					while true do -- пока цикл не будет прерван
 						array.admin_form = {}
-						local find_admin_form = string.gsub(text, '%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: {(.+)}', '')
+						local find_admin_form = string.gsub(text, '%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: {%w%w%w%w%w%w}', '')
 						if string.sub(find_admin_form, 1, 1) == '/' then
 							array.admin_form.idadmin = tonumber(text:match('%[(%d+)%]'))
 							array.admin_form.forma = find_admin_form
@@ -2975,7 +3025,7 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			if text:match('жалоба') then report = true end
 			if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
 			else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
-			local text = string.gsub(text, '{(.+)}', '')
+			local text = string.gsub(text, '{%w%w%w%w%w%w}', '')
 			if cfg.settings.smart_automute then
 				for i = 1, #cfg.spisokoskrod do
 					if text:match(' '.. cfg.spisokoskrod[i]) then
@@ -3072,6 +3122,9 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			return false
 		end
 	end
+	for _, word in pairs(cfg.words) do
+		if text:match(word) then print(text) return false end
+	end
 end
 function automute(array, oskid, text, nakaz, report)
 	local colorc = '{00BFFF}'
@@ -3143,7 +3196,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			elseif v == 'JAIL' then return false end
 		end
 		------=========== Удаляем лишние текстдравы, сравнивая их с массивом =======---------------
-		for i = 0, #array.textdraw_delete do if id == array.textdraw_delete[i] then return false end end
+		for i = 183, 226 do if id == i then return false end end
 	end
 end
 
@@ -3168,7 +3221,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					rang = 'Отсутствует'
 				end
 				if cfg.settings.autoprefix then
-					local color1, name,color2 = string.match(rang, '{(.+)}(.+){(.+)}')
+					local color1, name,color2 = string.match(rang, '{%w%w%w%w%w%w}(.+){%w%w%w%w%w%w}')
 					if name then
 						rang = '{'..color1..'}' .. name
 					end
@@ -3278,8 +3331,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 	elseif dialogId == 2349 then -- окно с самим репортом.
 		array.answer, array.windows.answer_player_report.v, peremrep, myid, reportid = {}, false, nil, nil, nil
 		local text = textSplit(text, '\n')
-		text[1] = string.gsub(string.gsub(text[1], '{(.+)}', ''), 'Игрок: ', '')
-		text[4] = string.gsub(string.gsub(text[4], '{(.+)}', ''), 'Жалоба: ', '')
+		text[1] = string.gsub(string.gsub(text[1], '{%w%w%w%w%w%w}', ''), 'Игрок: ', '')
+		text[4] = string.gsub(string.gsub(text[4], '{%w%w%w%w%w%w}', ''), 'Жалоба: ', '')
 		autor = text[1]																			--1
 		if sampGetPlayerIdByNickname(autor) then autorid = sampGetPlayerIdByNickname(autor)		--1
 		else autorid = 'Не в сети' end 
@@ -3597,6 +3650,8 @@ end
 
 function download_update()
 	local dlstatus = require('moonloader').download_status
+	imgui.Process = false
+	showCursor(false,false)
 	sampAddChatMessage(tag .. 'Ожидайте, начинаю процесс обновления.', -1)
 	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/my_lib.lua", 'moonloader//lib//my_lib.lua', function(id, status) end)
 	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader//config//AT//rules.txt', function(id, status)  end)
@@ -3618,6 +3673,7 @@ function download_update()
 		end 
 	end)
 	lua_thread.create(function()
+		sampAddChatMessage(tag .. 'Выполняю установку загруженных скриптов...', -1)
 		wait(8000)
 		reloadScripts()
 	end)
