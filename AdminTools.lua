@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.67			 							-- Версия скрипта
+local version = 6.7			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -44,6 +44,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		fast_key_ans = 'None',
 		fast_key_addText = 'None',
 		fast_key_wallhack = 'None',
+		key_automute = 'None',
 		prefixh = '',
 		prefixma = '',
 		prefixa = '',
@@ -67,7 +68,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		color_chat = '{0088ff}',
 		active_chat = true,
 		auto_cc     = false,
-		color_mute  = '{DA70D6}',
+		option_automute = 0,
 	},
 	words = {},
 	customotvet = {},
@@ -154,6 +155,7 @@ local array = {
 		active_chat 			   = imgui.ImBool(cfg.settings.active_chat),
 		vision_form				   = imgui.ImBool(cfg.settings.vision_form),
 		auto_cc					   = imgui.ImBool(cfg.settings.auto_cc),
+	 	option_automute 		   = imgui.ImInt(cfg.settings.option_automute),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -317,9 +319,9 @@ function main()
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
 	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
 	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
-	func = lua_thread.create_suspended(autoonline)
-	funcadm = lua_thread.create_suspended(render_admins)
+	func = lua_thread.create_suspended(render_admins)
 	func1 = lua_thread.create_suspended(wallhack)
+	funcadm = lua_thread.create_suspended(render_admins)
 	local func4 = lua_thread.create_suspended(binder_key)
 	func4:run() 										--binder_key
 	if cfg.settings.render_admins then
@@ -425,7 +427,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		size_chat	   ='Изменить размер рендера информации открытого чата',
 		add_autoprefix ='Добавить администратора в исключение автопрефикса',
 		del_autoprefix ='Удалить администратора из исключений автопрефикса',
-		color_mute 	   ='Назначить цвет мута',
 		fl 			   ='Открыть редактор предложений для удаления их из чата',
 	},
 	help = {
@@ -697,12 +698,6 @@ sampRegisterChatCommand('control_afk', function(param)
 		save()
 	else sampAddChatMessage(tag .. 'Значение указано неверно. Введите кол-во минут. 0 = выкл.', -1) end
 end)
-sampRegisterChatCommand('color_mute',function(param)
-	if #param ~= 6 then sampAddChatMessage(tag .. 'HTML цвет содержит 6 английских букв и цифр', -1) return false end
-	cfg.settings.color_mute = '{'..param..'}'
-	save()
-	sampAddChatMessage(tag .. param..'Новый цвет', -1)
-end)
 sampRegisterChatCommand('up', function(param)
 	if sampIsDialogActive() then return false end
 	if #param == 0 then sampAddChatMessage(tag .. '/up [id] [0/1 без очистки/с очисткой]', -1) return false end
@@ -853,22 +848,62 @@ function imgui.OnDrawFrame()
 					end
 					imgui.Tooltip(u8'Автоматическое принятие форм\nПредупреждение: ответственность несете Вы')
 				end
-				if imadd.ToggleButton('##automute', array.checkbox.check_automute) then
-					if cfg.settings.automute and cfg.settings.smart_automute then
-						cfg.settings.smart_automute = false
-						array.checkbox.check_smart_automute = imgui.ImBool(cfg.settings.smart_automute)
-					end
-					if cfg.settings.forma_na_mute then
-						cfg.settings.automute = false
-						array.checkbox.check_automute = imgui.ImBool(cfg.settings.automute)
-					else 
-						if not cfg.settings.automute then sampAddChatMessage(tag .. 'Команда /color_mute позволяет назначить HTML цвет выдачи наказания, ' ..cfg.settings.color_mute.. 'цвет по умолчанию', -1) end
-						cfg.settings.automute  = not cfg.settings.automute 
-					end
-					save()
-				end
+				if imgui.Button(fa.ICON_COG, imgui.ImVec2(30,20)) then imgui.OpenPopup('check_AM') end
 				imgui.SameLine()
-				imgui.Text(u8'Автомут')
+				imgui.Text(u8'Автовыдача мута')
+				if imgui.BeginPopup('check_AM') then
+					if imadd.ToggleButton('##automute', array.checkbox.check_automute) then
+						if cfg.settings.automute and cfg.settings.smart_automute then
+							cfg.settings.smart_automute = false
+							array.checkbox.check_smart_automute.v = false
+						end
+						if cfg.settings.forma_na_mute then
+							cfg.settings.automute = false
+							array.checkbox.check_automute.v = false
+						else 
+							cfg.settings.automute  = not cfg.settings.automute 
+						end
+						save()
+					end
+					imgui.SameLine()
+					imgui.Text(u8'Вкл/Выкл')
+					if cfg.settings.automute then
+						if imgui.RadioButton(u8"Обычный режим", array.checkbox.option_automute, 0) then cfg.settings.option_automute=0 save() end
+						if imgui.RadioButton(u8'AutoMute Premium', array.checkbox.option_automute, 1) then
+							local cfg_mp = inicfg.load({}, 'AT//AT_MP.ini')
+							if cfg_mp.AT_MP.access_automute then cfg.settings.option_automute = 1
+							else 
+								sampAddChatMessage(tag .. 'Данная функция доступна только внимательным администраторам.', -1)
+								sampAddChatMessage(tag .. 'Как доказать, что ты достоен этой опции?',-1)
+								sampAddChatMessage(tag .. 'Выдай 150 мутов за 1 день, тогда опция станет доступна',-1)
+								cfg.settings.option_automute = 0
+								array.checkbox.option_automute.v=0
+								array.windows.menu_tools.v = false
+							end
+							cfg_mp = nil
+							save()
+						end
+						if cfg.settings.option_automute == 0 then
+							imgui.CenterText(u8'Активация автомута: ')
+							imgui.SameLine()
+							imgui.Text(u8(cfg.settings.key_automute))
+							if imgui.Button(u8"Сoxрaнить.", imgui.ImVec2(250, 24)) then
+								if getDownKeysText() and not getDownKeysText():find('+') then
+									cfg.settings.key_automute = getDownKeysText()
+									save()
+								end
+							end
+							imgui.SameLine()
+							if imgui.Button(u8'Сбрocить', imgui.ImVec2(228,24)) then
+								cfg.settings.key_automute = 'None'
+								save()
+							end
+							if getDownKeysText() and not getDownKeysText():find('+') then imgui.Text(u8'Зажата клавиша: ' .. getDownKeysText())
+							else imgui.Text(u8'Нет зажатой клавиши') end
+						end
+					end
+					imgui.EndPopup()
+				end
 				imgui.SameLine()
 				imgui.SetCursorPosX(250)
 				if imadd.ToggleButton("##NotifyPlayer", array.checkbox.check_answer_player_report) then
@@ -3122,11 +3157,38 @@ function automute(array, oskid, text, nakaz, report)
 	local colorc = '{00BFFF}'
 	if report then command = '/rmute ' rcommand = 'REPORT'
 	else command = '/mute ' rcommand = 'CHAT' end
-	sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
-	sampAddChatMessage(colorc..'['..rcommand..']{D3D3D3} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. colorc..' ['..rcommand..']', -1)
-	sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
-	if not sampIsDialogActive() then sampSendChat(command..oskid..' '..nakaz) end
-	notify('{66CDAA}[AT-AutoMute]', sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. array)
+	if option_automute == 1 then
+		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
+		sampAddChatMessage(colorc..'['..rcommand..']{D3D3D3} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. colorc..' ['..rcommand..']', -1)
+		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
+		if not sampIsDialogActive() then sampSendChat(command..oskid..' '..nakaz) end
+		notify('{66CDAA}[AT-AutoMute]', sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. array)
+	else
+		lua_thread.create(function()
+			local font_watermark = renderCreateFont("Arial", 10, font.BOLD + font.BORDER + font.SHADOW)
+			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
+			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}[AT-AutoMute]', -1)
+			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}Предлагается наказание: ' .. command..oskid..' '..nakaz,-1)
+			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
+			notify('{66CDAA}[AT-AutoMute]', 'Запрещенное слово: '..array..'\n'..command..oskid..' '..nakaz..'\nКлавиша ' .. cfg.settings.key_automute .. " для подтверждения")
+			local count = 1200
+			local time = 12
+			while count ~= 0 do
+				wait(1)
+				if wasKeyPressed(strToIdKeys(cfg.settings.key_automute)) and not sampIsDialogActive() then
+					if sampIsPlayerConnected(oskid) then
+						sampSendChat(command..oskid..' '..nakaz)
+					else
+						sampAddChatMessage(tag .. 'Игрок не в сети.', -1)
+					end
+					break
+				end
+				renderFontDrawText(font_watermark, 'Время на принятие решения: '..time, sw-270, sh-30, 0xCCFFFFFF)
+				count = count - 1
+				if count%100==0 then time = time-1 end
+			end
+		end)
+	end
 end
 
 function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
@@ -3665,8 +3727,8 @@ function download_update()
 		end 
 	end)
 	lua_thread.create(function()
-		sampAddChatMessage(tag .. 'Выполняю установку загруженных скриптов...', -1)
 		wait(8000)
+		sampAddChatMessage(tag .. 'Выполняю установку загруженных скриптов...', -1)
 		reloadScripts()
 	end)
 end
