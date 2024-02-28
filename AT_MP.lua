@@ -1,7 +1,7 @@
 require 'lib.moonloader'
 script_name 'AT_MP' 
 script_author 'Neon4ik'
-local version = 2.5
+local version = 2.6
 require 'my_lib'
 encoding.default = 'CP1251' 
 local tag = '{B73CBF}AdminTools - Мероприятия{F0E68C}: '
@@ -40,6 +40,7 @@ local cfg = inicfg.load({
         staticposY = sh - 200,
         style = 0,
         wallhack = true,
+        access_automute = false,
         text = u8'/mess _ Приз данного мероприятия составляет *@/mess _ ================| Правила мероприятия |================@/mess _ Запрещено: выход из строя, покупка оружия, дм, /jp, /passive, /fly@/mess _ В том числе любая другая помеха игрокам.@/mess _ После телепорта сразу встаем в строй.'
     },
     info = {
@@ -79,6 +80,7 @@ local windows = {
 local new_flood = imgui.ImBuffer(cfg.AT_MP.text, 8192)
 local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 local mynick = sampGetPlayerNickname(myid)
+
 function main()
     while not isSampAvailable() do wait(0) end
     while not sampIsLocalPlayerSpawned() do wait(1000) end
@@ -90,7 +92,7 @@ function main()
     func3 = lua_thread.create_suspended(find_weapon) -- антисрыв мп
     func4 = lua_thread.create_suspended(check_my_auto)
     func5 = lua_thread.create_suspended(check_player)
-    func6 = lua_thread.create_suspended(update_info)
+    local func6 = lua_thread.create_suspended(update_info)
     func6:run()
     if cfg.info.data ~= os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year then
         for i = 0, 6 do cfg.info[i] = 0 end
@@ -157,28 +159,27 @@ local colors = {
     [16] = u8'Бледно-желтый',
     [17] = u8'Розово-красный',
 }
+sampRegisterChatCommand('test',function()
+    sampAddChatMessage('Поздравляем, вы выдали 150 мутов игрокам!', -1) 
+    cfg.AT_MP.access_automute = false
+    save()
+end)
 function sampev.onServerMessage(color,text)
     if text:match('%[A%] '..mynick..'%[(%d+)%] ответил (.+)%[(%d+)%]: ') then
         cfg.info[0] = cfg.info[0] + 1
-        save() 
     elseif text:match('Администратор '..mynick..' забанил%(.+%) игрока (.+) на (.+) дней%. Причина:') then
         cfg.info[1] = cfg.info[1] + 1
-        save()
     elseif text:match('Администратор '..mynick..' заткнул%(.+%) игрока (.+) на (.+) секунд%. Причина:') then
         cfg.info[2] = cfg.info[2] + 1
-        save()
+        if access_automute == false and cfg.info[2] >= 100 then sampAddChatMessage('Поздравляем, вы выдали 150 мутов игрокам!', -1)  cfg.AT_MP.access_automute = true save() end 
     elseif text:match('Администратор '..mynick..' посадил%(.+%) игрока (.+) в тюрьму на (.+) секунд%. Причина:') then
         cfg.info[3] = cfg.info[3] + 1
-        save()
     elseif text:find('Администратор '..mynick..' кикнул игрока (.+) Причина:') then
         cfg.info[4] = cfg.info[4] + 1
-        save()
     elseif text:match('Администратор '..mynick..' закрыл%(.+%) доступ к репорту игроку (.+) на (.+) секунд%. Причина:') then
         cfg.info[2] = cfg.info[2] + 1
-        save()
     elseif text:match('%[A%] (.+) '..mynick..'%((%d+)%) выдал%(.+%) приз игроку (.+)%((%d+)%)') then
         cfg.info[6] = cfg.info[6] + 1
-        save()
     end
 end
 function imgui.OnDrawFrame()
@@ -766,7 +767,6 @@ function time()
     while true do
         wait(60000)
         cfg.info[5] = cfg.info[5] + 1
-        save()
     end
 end
 function update_info()
@@ -801,6 +801,7 @@ function update_info()
                 if tick[i].v <= cfg.info[i] then info_array[8] = info_array[8].." +" end
             end
         end
+        save()
     end
 end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
