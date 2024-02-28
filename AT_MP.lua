@@ -159,11 +159,6 @@ local colors = {
     [16] = u8'Бледно-желтый',
     [17] = u8'Розово-красный',
 }
-sampRegisterChatCommand('test',function()
-    sampAddChatMessage('Поздравляем, вы выдали 150 мутов игрокам!', -1) 
-    cfg.AT_MP.access_automute = false
-    save()
-end)
 function sampev.onServerMessage(color,text)
     if text:match('%[A%] '..mynick..'%[(%d+)%] ответил (.+)%[(%d+)%]: ') then
         cfg.info[0] = cfg.info[0] + 1
@@ -171,7 +166,7 @@ function sampev.onServerMessage(color,text)
         cfg.info[1] = cfg.info[1] + 1
     elseif text:match('Администратор '..mynick..' заткнул%(.+%) игрока (.+) на (.+) секунд%. Причина:') then
         cfg.info[2] = cfg.info[2] + 1
-        if access_automute == false and cfg.info[2] >= 100 then sampAddChatMessage('Поздравляем, вы выдали 150 мутов игрокам!', -1)  cfg.AT_MP.access_automute = true save() end 
+        if access_automute == false and cfg.info[2] >= 150 then sampAddChatMessage('Поздравляем, вы выдали 150 мутов игрокам!', -1)  cfg.AT_MP.access_automute = true save() end 
     elseif text:match('Администратор '..mynick..' посадил%(.+%) игрока (.+) в тюрьму на (.+) секунд%. Причина:') then
         cfg.info[3] = cfg.info[3] + 1
     elseif text:find('Администратор '..mynick..' кикнул игрока (.+) Причина:') then
