@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.7			 							-- Версия скрипта
+local version = 6.71			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -319,7 +319,7 @@ function main()
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
 	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
 	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
-	func = lua_thread.create_suspended(render_admins)
+	func = lua_thread.create_suspended(autoonline)
 	func1 = lua_thread.create_suspended(wallhack)
 	funcadm = lua_thread.create_suspended(render_admins)
 	local func4 = lua_thread.create_suspended(binder_key)
@@ -805,15 +805,11 @@ function imgui.OnDrawFrame()
 			if menu == 'Главное меню' then
 				imgui.SetCursorPosX(8)
 				if imadd.ToggleButton("##autoonline", array.checkbox.check_autoonline) then
-					if cfg.settings.autoonline then
-						cfg.settings.autoonline = not cfg.settings.autoonline
-						save()
+					cfg.settings.autoonline = not cfg.settings.autoonline
+					save()
+					if not cfg.settings.autoonline then
 						func:terminate()
-					else
-						cfg.settings.autoonline = not cfg.settings.autoonline
-						save()
-						func:run()
-					end
+					else func:run() end
 				end
 				imgui.SameLine()
 				imgui.Text(u8'Авто-Выдача за онлайн')
@@ -1083,14 +1079,13 @@ function imgui.OnDrawFrame()
 				end
 				if imadd.ToggleButton("##render/admins", array.checkbox.check_render_admins) then
 					if cfg.settings.render_admins then
-						cfg.settings.render_admins = not cfg.settings.render_admins
 						array.admins = {}
 						array.windows.render_admins.v = false
 						funcadm:terminate()
 					else
-						cfg.settings.render_admins = not cfg.settings.render_admins
 						funcadm:run()
 					end
+					cfg.settings.render_admins = not cfg.settings.render_admins
 					save()
 				end
 				imgui.SameLine()
@@ -3149,9 +3144,6 @@ function sampev.onServerMessage(color,text) -- Поиск сообщений из чата
 			return false
 		end
 	end
-	for _, word in pairs(cfg.words) do
-		if text:match(word) then print(text) return false end
-	end
 end
 function automute(array, oskid, text, nakaz, report)
 	local colorc = '{00BFFF}'
@@ -3168,7 +3160,6 @@ function automute(array, oskid, text, nakaz, report)
 			local font_watermark = renderCreateFont("Arial", 10, font.BOLD + font.BORDER + font.SHADOW)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}[AT-AutoMute]', -1)
-			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}Предлагается наказание: ' .. command..oskid..' '..nakaz,-1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			notify('{66CDAA}[AT-AutoMute]', 'Запрещенное слово: '..array..'\n'..command..oskid..' '..nakaz..'\nКлавиша ' .. cfg.settings.key_automute .. " для подтверждения")
 			local count = 1200
@@ -3183,7 +3174,7 @@ function automute(array, oskid, text, nakaz, report)
 					end
 					break
 				end
-				renderFontDrawText(font_watermark, 'Время на принятие решения: '..time, sw-270, sh-30, 0xCCFFFFFF)
+				renderFontDrawText(font_watermark, 'Обнаружено нарушение в чате, выдать мут за '.. nakaz .. '?\nВремя на принятие решения: '..time, (sw*0.5)-200, (sh*0.5), 0xCCFFFFFF)
 				count = count - 1
 				if count%100==0 then time = time-1 end
 			end
@@ -3544,7 +3535,7 @@ end
 function autoonline() 
 	while true do
 		wait(63000) 
-		while sampIsDialogActive() do wait(500) end
+		while sampIsDialogActive() do wait(300) end
 		if not AFK then sampSendChat("/online") end 
 	end 
 end
