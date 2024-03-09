@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.71			 							-- Версия скрипта
+local version = 6.72			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -277,6 +277,7 @@ function main()
 			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
 		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 	end
+	while (not sampIsLocalPlayerSpawned()) do wait(1000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
 	local AdminTools = inicfg.load(nil, 'moonloader\\config\\AT\\AdminTools.ini')
@@ -303,7 +304,6 @@ function main()
 	 	else sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) end
 	end
 	local AdminTools = nil
-
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
 	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then rules = io.open('moonloader\\config\\AT\\rules.txt', 'w') thisScript():reload() end
 	local AutoMute_mat = file_exists('moonloader\\config\\AT\\mat.txt') if not AutoMute_mat then AutoMute_mat = io.open('moonloader\\config\\AT\\mat.txt', 'w') thisScript():reload() end
@@ -678,7 +678,7 @@ sampRegisterChatCommand('sbanip', function(param)
 		wait(1000)
 		sampSendChat('/banip ' .. regip .. ' ' .. text[2] .. ' ' .. reason)
 		wait(1000)
-		if lastip then -- на случай если аккаунт зареган впервые
+		if lastip then -- на случай если этого пункта не будет в диалоге
 			sampSendChat('/banip ' .. lastip .. ' ' .. text[2] .. ' ' .. reason)
 		end
 		find_ip_player, regip, lastip = false, nil, nil
