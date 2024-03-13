@@ -86,14 +86,13 @@ function main()
 				end
 			end
 		end
-		wait(200)
+		wait(500)
 	end
-	while sampIsDialogActive() do wait(200) end
+	while sampIsDialogActive() do wait(0) end
 	if cfg.settings.parolalogin and cfg.settings.autoalogin then
-		while not (sampTextdrawIsExists(494) or sampTextdrawIsExists(500)) do
-			sampSendChat('/alogin ' .. cfg.settings.parolalogin)
-			wait(3000)
-		end
+		sampSendChat('/alogin ' .. cfg.settings.parolalogin)
+		wait(2000)
+		sampSendChat('/alogin ' .. cfg.settings.parolalogin)
 	end
 	for i = 0, #cfg.command do
 		if cfg.command[i] and #(cfg.command[i]) >= 2 then
