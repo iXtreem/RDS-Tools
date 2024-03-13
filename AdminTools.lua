@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.72			 							-- Версия скрипта
+local version = 6.73			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -3241,7 +3241,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			elseif v == 'JAIL' then return false end
 		end
 		------=========== Удаляем лишние текстдравы, сравнивая их с массивом =======---------------
-		for i = 183, 226 do if id == i then return false end end
+		for i = 183, 236 do if id == i then return false end end
 	end
 end
 
