@@ -69,6 +69,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		active_chat = true,
 		auto_cc     = false,
 		option_automute = 0,
+		key_automute = "Enter",
 	},
 	words = {},
 	customotvet = {},
@@ -3162,8 +3163,8 @@ function automute(array, oskid, text, nakaz, report)
 			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}[AT-AutoMute]', -1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			notify('{66CDAA}[AT-AutoMute]', 'Запрещенное слово: '..array..'\n'..command..oskid..' '..nakaz..'\nКлавиша ' .. cfg.settings.key_automute .. " для подтверждения")
-			local count = 1200
-			local time = 12
+			local count = 600
+			local time = 6
 			while count ~= 0 do
 				wait(1)
 				if wasKeyPressed(strToIdKeys(cfg.settings.key_automute)) and not sampIsDialogActive() then
