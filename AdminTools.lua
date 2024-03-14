@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.73			 							-- Версия скрипта
+local version = 6.8  			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -70,8 +70,9 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		auto_cc     = false,
 		option_automute = 0,
 		key_automute = "Enter",
+		sek_automute = 8,
+		sokr_nick = "",
 	},
-	words = {},
 	customotvet = {},
 	myflood = {},
 	my_command = {},
@@ -111,7 +112,6 @@ local array = {
 		new_flood_mess 		= imgui.ImBool(false),
 		pravila 			= imgui.ImBool(false),
 		menu_chatlogger 	= imgui.ImBool(false),
-		filter   			= imgui.ImBool(false),
 	},
 	------=================== Выставление своих настроек, кнопки со значение True/False ===================----------------------
 	checkbox = {
@@ -157,6 +157,7 @@ local array = {
 		vision_form				   = imgui.ImBool(cfg.settings.vision_form),
 		auto_cc					   = imgui.ImBool(cfg.settings.auto_cc),
 	 	option_automute 		   = imgui.ImInt(cfg.settings.option_automute),
+		sek_automute 			   = imgui.ImInt(cfg.settings.sek_automute),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -180,6 +181,7 @@ local array = {
 		find_log 			= imgui.ImBuffer(4096),
 		add_smart_automute  = imgui.ImBuffer(4096),
 		new_word 		 	= imgui.ImBuffer(4096),
+		sokr_nick			= imgui.ImBuffer(cfg.settings.sokr_nick, 256),
 	},
 	chatlog_1 		= {}, 											-- чат-лог1
 	chatlog_2 		= {}, 											-- чат-лог2
@@ -196,7 +198,6 @@ local array = {
 	pravila 		= {},											-- Правила/команды хранятся тут /ahelp
 	flood = { --[[сборник ID]]message = {},--[[Сообщение]]time = {},--[[время отправки]]count = {}--[[кол-во повторных сообщений]]},
 	name_car = {'Landstalker','Bravura','Buffalo','Linerunner','Perrenial','Sentinel','Dumper','Firetruck','Trashmaster','Stretch','Manana','Infernus','Voodoo','Pony','Mule','Cheetah','Ambulance','Leviathan','Moonbeam','Esperanto','Taxi','Washington','Bobcat','Mr Whoopee','BF Injection','Hunter','Premier','Enforcer','Securicar','Banshee','Predator','Bus','Rhino','Barracks','Hotknife','Trailer','Previon','Coach','Cabbie','Stallion','Rumpo','RC Bandit','Romero','Packer','Monster','Admiral','Squalo','Seasparrow','Pizzaboy','Tram','Trailer2','Turismo','Speeder','Reefer','Tropic','Flatbed','Yankee','Caddy','Solair','BerkleysRCVan','Skimmer','PCJ-600','Faggio','Freeway','RC Baron','RC Raider','Glendale','Oceanic','Sanchez','Sparrow','Patriot','Quad','Coastguard','Dinghy','Hermes','Sabre','Rustler','ZR-350','Walton','Regina','Comet','BMX','Burrito','Camper','Marquis','Baggage','Dozer','Maverick','News Chopper','Rancher','FBI Rancher','Virgo','Greenwood','Jetmax','Hotring','Sandking','Blista Compact','Police Maverick','Boxville','Benson','Mesa','RC Goblin','Hotring Racer A','Hotring Racer B','Bloodring Banger','Rancher','Super GT','Elegant','Journey','Bike','Mountain Bike','Beagle','Cropdust','Stunt','Tanker','Roadtrain','Nebula','Majestic','Buccaneer','Shamal','Hydra','FCR-900','NRG-500','HPV1000','Cement Truck','Tow Truck','Fortune','Cadrona','FBI Truck','Willard','Forklift','Tractor','Combine','Feltzer','Remington','Slamvan','Blade','Freight','Streak','Vortex','Vincent','Bullet','Clover','Sadler','Firetruck LA','Hustler','Intruder','Primo','Cargobob','Tampa',	'Sunrise','Merit','Utility','Nevada','Yosemite','Windsor','Monster A','Monster B','Uranus','Jester',	'Sultan',	'Stratum','Elegy','Raindance','RC Tiger',	'Flash',	'Tahoma','Savanna','Bandito','Freight Flat','Streak Carriage','Kart','Mower','Duneride','Sweeper','Broadway','Tornado','AT-400','DFT-30','Huntley','Stafford','BF-400','Newsvan','Tug','Trailer3','Emperor','Wayfarer','Euros','Hotdog','Club','Freight Carriage','Trailer4','Andromada','Dodo','RC Cam','Launch','Police Car (LSPD)','Police Car (SFPD)','Police Car (LVPD)','Police Ranger','Picador','S.W.A.T. Van','Alpha','Phoenix','Glendale','Sadler','Luggage Trailer A','Luggage Trailer B','Stair Trailer','Boxville','Farm Plow','Utility Trailer'},
-
 	--AutoMute
 	mat 				= {},										-- автомут на мат
 	osk 				= {},										-- автомут на оск
@@ -565,12 +566,6 @@ sampRegisterChatCommand('or', function(param) if #param ~= 0 then sampSendChat('
 sampRegisterChatCommand('orf', function(param) if #param ~= 0 then sampSendChat('/muteakk '..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
 
 
-sampRegisterChatCommand('fl', function()
-	if #cfg.words == 0 then sampAddChatMessage(tag .. 'В словаре нет ни одного предложения, добавьте его в чат-логгере /opencl', -1) return false end
-	array.windows.filter.v = true
-	imgui.Process = true 
-end)
-
 sampRegisterChatCommand('spawncars', function(param)
 	if not ((#param == 1 or #param == 2) and tonumber(param)) then
 		sampSendChat('/spawncars '..param)
@@ -770,7 +765,6 @@ sampRegisterChatCommand('ears', function()
 		notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано')
 	end
 end)
-sampRegisterChatCommand('mp', function() sampSendChat('/mp') end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
 	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
@@ -895,6 +889,11 @@ function imgui.OnDrawFrame()
 								cfg.settings.key_automute = 'None'
 								save()
 							end
+							imgui.Text(u8'Кол-во секунд на ответ: ') imgui.SameLine()
+							if imgui.SliderInt('##Slid', array.checkbox.sek_automute, 5, 15) then
+								cfg.settings.sek_automute = array.checkbox.sek_automute.v
+								save()
+							end
 							if getDownKeysText() and not getDownKeysText():find('+') then imgui.Text(u8'Зажата клавиша: ' .. getDownKeysText())
 							else imgui.Text(u8'Нет зажатой клавиши') end
 						end
@@ -958,12 +957,6 @@ function imgui.OnDrawFrame()
 						imgui.OpenPopup('color')
 						sampAddChatMessage(tag .. 'Подсказка, /color_report *', -1)
 						sampAddChatMessage(tag .. 'Делает цвет ответа разноцветным.', -1)
-					end
-					if imgui.Button(u8'Редактирование кнопок', imgui.ImVec2(300,24)) then imgui.OpenPopup('button') end
-					if imgui.BeginPopup('button') then
-						if imgui.Button(u8'Данная функция будет доступна в следующем обновлении') then
-						end
-						imgui.EndPopup()
 					end
 					if imgui.BeginPopup('color') then
 						for i = 1, 256 do 
@@ -1220,54 +1213,10 @@ function imgui.OnDrawFrame()
 						save()
 					end
 					imgui.Tooltip(u8'Нажми, если у тебя есть все доступы\nКнопка будет отображена на второй странице')
-					if imgui.BeginPopup('autoform') then
-						imgui.CenterText(u8'Каких доступов у вас нет?')
-						if imgui.Checkbox('/ban', array.checkbox.check_form_ban) then
-							cfg.settings.forma_na_ban = not cfg.settings.forma_na_ban
-							save()
-						end
-						if imgui.Checkbox('/jail', array.checkbox.check_form_jail) then
-							cfg.settings.forma_na_jail = not cfg.settings.forma_na_jail
-							save()
-						end
-						if imgui.Checkbox('/mute', array.checkbox.check_form_mute) then
-							if not cfg.settings.automute then
-								cfg.settings.forma_na_mute = not cfg.settings.forma_na_mute
-							else 
-								cfg.settings.forma_na_mute = false
-								array.checkbox.check_form_mute = imgui.ImBool(cfg.settings.forma_na_mute)
-								sampAddChatMessage(tag .. 'У вас включен автомут, во избежания фарма данные опции совместно запрещены.', -1)
-							end
-							save()
-						end
-						if imgui.Checkbox('/kick', array.checkbox.check_form_kick) then
-							cfg.settings.forma_na_kick = not cfg.settings.forma_na_kick
-							save()
-						end
-						if imgui.Checkbox(u8'Добавлять // мой ник', array.checkbox.check_add_mynick_form) then
-							cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
-							save()
-						end
-						imgui.Text('')
-						if imgui.Checkbox(u8'У меня нет доступ к /tr', imgui.ImBool(atr)) then
-							if tr then
-								tr = false
-								sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32)
-							end
-							atr = not atr
-						end
-						if atr then
-							imgui.Text(u8'Активация TakeReport - /tr')
-						end
-						imgui.Text(u8'Скрипт сам будет\nотправлять формы старшим,\nне важно отправите вы\nэто полноценной командой,\nили быстрой.')
-						imgui.EndPopup()
-					end
+					vision_form()
 				end
 				imgui.SetCursorPosY(400)
 				imgui.Separator()
-				if update and imgui.Button(u8'Обновить АТ', imgui.ImVec2(480,24)) then
-					download_update()
-				end
 				imgui.Text(u8'Разработчик скрипта - N.E.O.N')
 				imgui.Text(u8'Обратная связь:')
 				imgui.SameLine()
@@ -1343,46 +1292,8 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				if imgui.Button(u8'Чат-логгер', imgui.ImVec2(228, 24)) then array.windows.menu_chatlogger.v = true array.windows.menu_tools.v = false end
 				if not array.checkbox.vision_form.v then
-					if imgui.Button(u8'Авто-отправка форм для младших администраторов', imgui.ImVec2(485, 24)) then imgui.OpenPopup('autoform') end
-					if imgui.BeginPopup('autoform') then
-						imgui.CenterText(u8'Каких доступов у вас нет?')
-						if imgui.Checkbox('/ban', array.checkbox.check_form_ban) then
-							cfg.settings.forma_na_ban = not cfg.settings.forma_na_ban
-							save()
-						end
-						if imgui.Checkbox('/jail', array.checkbox.check_form_jail) then
-							cfg.settings.forma_na_jail = not cfg.settings.forma_na_jail
-							save()
-						end
-						if imgui.Checkbox('/mute', array.checkbox.check_form_mute) then
-							if not cfg.settings.automute then
-								cfg.settings.forma_na_mute = not cfg.settings.forma_na_mute
-							else 
-								cfg.settings.forma_na_mute = false
-								array.checkbox.check_form_mute = imgui.ImBool(cfg.settings.forma_na_mute)
-								sampAddChatMessage(tag .. 'У вас включен автомут, во избежания фарма данные опции совместно запрещены.', -1)
-							end
-							save()
-						end
-						if imgui.Checkbox('/kick', array.checkbox.check_form_kick) then
-							cfg.settings.forma_na_kick = not cfg.settings.forma_na_kick
-							save()
-						end
-						if imgui.Checkbox(u8'Добавлять // мой ник', array.checkbox.check_add_mynick_form) then
-							cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
-							save()
-						end
-						if atr then imgui.Text(u8'Активация TakeReport - /tr')
-						else imgui.Text('') end
-						if imgui.Checkbox(u8'У меня нет доступ к /tr', imgui.ImBool(atr)) then
-							if tr then
-								tr = false
-								sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32)
-							end
-							atr = not atr
-						end
-						imgui.EndPopup()
-					end
+					if imgui.Button(u8'Автоматическая отправка форм', imgui.ImVec2(485, 24)) then imgui.OpenPopup('autoform') end
+					vision_form()
 				end
 				if imgui.Button(u8'Автозакрытие игры в AFK', imgui.ImVec2(485, 24)) then
 					if not cfg.settings.control_afk then
@@ -2712,7 +2623,7 @@ function imgui.OnDrawFrame()
 		if imgui.IsWindowAppearing() then chat = {1, 500, 1} end -- 1 параметр начало массива, 2 параметр - конец массива, 3 - страница.
 		imgui.PushFont(fontsize)
 		imgui.CenterText(u8'Выберите файл для просмотра')
-		imgui.Text(u8'Примечание: Нажатие по тексту - добавляет его в фильтр.\nНажатие правой кнопкой мыши - копирует в буфер обмена\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
+		imgui.Text(u8'Примечание: Нажатие по тексту - копирует его в буфер обмена\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
 		if imgui.Checkbox('##cl', array.checkbox.check_on_chatlog) then
 			cfg.settings.chat_log = not cfg.settings.chat_log
 			save()
@@ -2874,44 +2785,12 @@ function imgui.OnDrawFrame()
 			if string.rlower(check_chat[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
 				imgui.Text((string.gsub(u8(check_chat[i]), '{%w%w%w%w%w%w}', '')))
 				if imgui.IsItemClicked(0) then
-					array.buffer.new_word.v = string.gsub(u8(check_chat[i]), '%[(%d+)%:(%d+)%:(%d+)%] ', '')
-					imgui.OpenPopup('newword')
-				elseif imgui.IsItemClicked(1) then
 					setClipboardText(check_chat[i]) 
 					sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) 
 				end
 			end
 		end
-		if imgui.BeginPopup('newword') then
-			imgui.Text(u8'Замените слова, которые могут изменяться на *')
-			imgui.Text(u8'Пример: Администратор *[*] раздал всем игрокам * очков и *$ за онлайн')
-			imgui.PushItemWidth(500)
-			imgui.InputText('##', array.buffer.new_word)
-			imgui.PopItemWidth()
-			if imgui.Button(u8'Сохранить') then
-				table.insert(cfg.words,  u8:decode(array.buffer.new_word.v))
-				save()
-				sampAddChatMessage(tag .. 'Новое предложение добавлено, редактировать его можно через /filter',-1)
-			end
-			imgui.EndPopup()
-		end
  		imgui.PopFont()
-		imgui.End()
-	end
-	if array.windows.filter.v then
-		imgui.ShowCursor = true
-		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.SetNextWindowSize(imgui.ImVec2(800,400), imgui.Cond.FirstUseEver)
-		imgui.Begin(u8'Фильтрация чата', array.windows.menu_chatlogger, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
-		imgui.CenterText(u8'Ниже указан словарь предложений, которые будут удаляться из основного чата')
-		imgui.CenterText(u8'Нажмите на текст, чтобы удалить его из словаря.')
-		for i = 1, #cfg.words do
-			imgui.TextWrapped(u8(cfg.words[i]))
-			if imgui.IsItemClicked(0) then
-				table.remove( cfg.words, cfg.words[i] )
-				save()
-			end
-		end
 		imgui.End()
 	end
 end
@@ -2921,8 +2800,11 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
-					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					if #array.buffer.sokr_nick > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+					else
+						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					end
 				else SendChat('/a ' .. command) end
 				return false
 			end
@@ -2935,8 +2817,11 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				if cfg.settings.forma_na_ban then
 					printStyledString('send forms ...', 1000, 4)
 					if cfg.settings.add_mynick_in_form then
-						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+						if #array.buffer.sokr_nick > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+						else
+							local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+							SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+						end
 					else SendChat('/a ' .. command) end
 					return false
 				end
@@ -2945,8 +2830,11 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
-					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					if #array.buffer.sokr_nick > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+					else
+						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					end
 				else SendChat('/a ' .. command) end
 				return false
 			end
@@ -2954,8 +2842,11 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
-					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					if #array.buffer.sokr_nick > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+					else
+						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					end
 				else SendChat('/a ' .. command) end
 				return false
 			end
@@ -3163,8 +3054,8 @@ function automute(array, oskid, text, nakaz, report)
 			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}[AT-AutoMute]', -1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			notify('{66CDAA}[AT-AutoMute]', 'Запрещенное слово: '..array..'\n'..command..oskid..' '..nakaz..'\nКлавиша ' .. cfg.settings.key_automute .. " для подтверждения")
-			local count = 600
-			local time = 6
+			local count = cfg.settings.sek_automute * 100
+			local time = cfg.settings.sek_automute
 			while count ~= 0 do
 				wait(1)
 				if wasKeyPressed(strToIdKeys(cfg.settings.key_automute)) and not sampIsDialogActive() then
@@ -3375,6 +3266,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		return false
 	elseif dialogId == 2348 and array.windows.fast_report.v then array.windows.fast_report.v = false
 	elseif dialogId == 2349 then -- окно с самим репортом.
+		collectgarbage()
 		array.answer, array.windows.answer_player_report.v, peremrep, myid, reportid = {}, false, nil, nil, nil
 		local text = textSplit(text, '\n')
 		text[1] = string.gsub(string.gsub(text[1], '{%w%w%w%w%w%w}', ''), 'Игрок: ', '')
@@ -3907,6 +3799,55 @@ function keysync(playerId)
 end
 function notify(title, text)
 	if plagin_notify then plagin_notify.addNotify(title, text, 2,1,12) end
+end
+
+function vision_form()
+	if imgui.BeginPopup('autoform') then
+		imgui.CenterText(u8'Каких доступов у вас нет?')
+		if imgui.Checkbox('/ban', array.checkbox.check_form_ban) then
+			cfg.settings.forma_na_ban = not cfg.settings.forma_na_ban
+			save()
+		end
+		if imgui.Checkbox('/jail', array.checkbox.check_form_jail) then
+			cfg.settings.forma_na_jail = not cfg.settings.forma_na_jail
+			save()
+		end
+		if imgui.Checkbox('/mute', array.checkbox.check_form_mute) then
+			if not cfg.settings.automute then
+				cfg.settings.forma_na_mute = not cfg.settings.forma_na_mute
+			else 
+				cfg.settings.forma_na_mute = false
+				array.checkbox.check_form_mute = imgui.ImBool(cfg.settings.forma_na_mute)
+				sampAddChatMessage(tag .. 'У вас включен автомут, во избежания фарма данные опции совместно запрещены.', -1)
+			end
+			save()
+		end
+		if imgui.Checkbox('/kick', array.checkbox.check_form_kick) then
+			cfg.settings.forma_na_kick = not cfg.settings.forma_na_kick
+			save()
+		end
+		if imgui.Checkbox(u8'Добавлять // мой ник', array.checkbox.check_add_mynick_form) then
+			cfg.settings.add_mynick_in_form = not cfg.settings.add_mynick_in_form
+			save()
+		end
+		imgui.Text(u8'Сокращенный ник(при желании): ')
+		imgui.PushItemWidth(250)
+		imgui.InputText("######", array.buffer.sokr_nick)
+		imgui.PopItemWidth()
+		imgui.Text('')
+		if imgui.Checkbox(u8'У меня нет доступ к /tr', imgui.ImBool(atr)) then
+			if tr then
+				tr = false
+				sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32)
+			end
+			atr = not atr
+		end
+		if atr then
+			imgui.Text(u8'Активация TakeReport - /tr')
+		end
+		imgui.Text(u8'Скрипт сам будет\nотправлять формы старшим,\nне важно отправите вы\nэто полноценной командой,\nили быстрой.')
+		imgui.EndPopup()
+	end
 end
 
 function ScriptExport()
