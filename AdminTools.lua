@@ -3041,7 +3041,7 @@ function automute(array, oskid, text, nakaz, report)
 	local colorc = '{00BFFF}'
 	if report then command = '/rmute ' rcommand = 'REPORT'
 	else command = '/mute ' rcommand = 'CHAT' end
-	if option_automute == 1 then
+	if cfg.settings.option_automute == 1 then
 		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 		sampAddChatMessage(colorc..'['..rcommand..']{D3D3D3} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. colorc..' ['..rcommand..']', -1)
 		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
