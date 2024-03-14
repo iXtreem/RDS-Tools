@@ -2800,7 +2800,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
-					if #array.buffer.sokr_nick > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+					if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
 					else
 						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
@@ -2817,7 +2817,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				if cfg.settings.forma_na_ban then
 					printStyledString('send forms ...', 1000, 4)
 					if cfg.settings.add_mynick_in_form then
-						if #array.buffer.sokr_nick > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+						if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
 						else
 							local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 							SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
@@ -2830,7 +2830,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
-					if #array.buffer.sokr_nick > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+					if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
 					else
 						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
@@ -2842,7 +2842,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
-					if #array.buffer.sokr_nick > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+					if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
 					else
 						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
