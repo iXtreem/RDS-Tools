@@ -834,7 +834,7 @@ sampRegisterChatCommand('state', function()
     windows.static_window_state.v = not windows.static_window_state.v
     imgui.Process = windows.static_window_state.v
 end)
-sampRegisterChatCommand('/mp', function()
+sampRegisterChatCommand('mp', function()
     if menu == 'open mp' then
         windows.secondary_window_state.v = true
         imgui.Process = true
