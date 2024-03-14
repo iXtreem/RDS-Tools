@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.8  			 							-- Версия скрипта
+local version = 6.81  			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -3832,7 +3832,10 @@ function vision_form()
 		end
 		imgui.Text(u8'Сокращенный ник(при желании): ')
 		imgui.PushItemWidth(250)
-		imgui.InputText("######", array.buffer.sokr_nick)
+		if imgui.InputText("######", array.buffer.sokr_nick) then
+			cfg.settings.sokr_nick = array.buffer.sokr_nickюм
+			save()
+		end
 		imgui.PopItemWidth()
 		imgui.Text('')
 		if imgui.Checkbox(u8'У меня нет доступ к /tr', imgui.ImBool(atr)) then
