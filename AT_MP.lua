@@ -100,6 +100,8 @@ function main()
         save()
     end
     if cfg.AT_MP.adminstate then
+        while not info_array do wait(1) end
+        while not info_array[1] do wait(1) end
         windows.stata_window_state.v = true
         imgui.Process = true
     end
@@ -166,7 +168,7 @@ function sampev.onServerMessage(color,text)
         cfg.info[1] = cfg.info[1] + 1
     elseif text:match('Администратор '..mynick..' заткнул%(.+%) игрока (.+) на (.+) секунд%. Причина:') then
         cfg.info[2] = cfg.info[2] + 1
-        if access_automute == false and cfg.info[2] >= 150 then sampAddChatMessage('Поздравляем, вы выдали 150 мутов игрокам!', -1)  cfg.AT_MP.access_automute = true save() end 
+        if cfg.AT_MP.access_automute == false and cfg.info[2] >= 150 then sampAddChatMessage('Поздравляем, вы выдали 150 мутов игрокам!', -1)  cfg.AT_MP.access_automute = true save() end 
     elseif text:match('Администратор '..mynick..' посадил%(.+%) игрока (.+) в тюрьму на (.+) секунд%. Причина:') then
         cfg.info[3] = cfg.info[3] + 1
     elseif text:find('Администратор '..mynick..' кикнул игрока (.+) Причина:') then
@@ -321,6 +323,7 @@ function imgui.OnDrawFrame()
         imgui.SetNextWindowPos(imgui.ImVec2(cfg.AT_MP.staticposX, cfg.AT_MP.staticposY), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.Begin("##AdminStata", windows.stata_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
         imgui.ShowCursor = false
+        imgui.WindowBg 		= imgui.ImVec4(0.36, 0.42, 0.47, 1.00)
         for k,v in pairs(info_array) do
             imgui.Text(v)
         end
@@ -799,12 +802,6 @@ function update_info()
         save()
     end
 end
-function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
-    if dialogId == 5343 and menu == 'open mp' then
-        windows.secondary_window_state.v = true
-        imgui.Process = true
-    end
-end
 function getClosestCarId() -- узнать ид ближащего авто
     local minDist = 200 -- дистанция
     local closestId = -1
@@ -829,11 +826,17 @@ end
 function radius()
     local font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
     while true do
-        wait(3)
+        wait(2)
         renderFontDrawText(font_watermark, 'Игроков в радиусе: ' .. #(playersToStreamZone()) -1 , sh*0.5, sw*0.5, 0xCCFFFFFF)
     end
 end
 sampRegisterChatCommand('state', function()
     windows.static_window_state.v = not windows.static_window_state.v
     imgui.Process = windows.static_window_state.v
+end)
+sampRegisterChatCommand('/mp', function()
+    if menu == 'open mp' then
+        windows.secondary_window_state.v = true
+        imgui.Process = true
+    end
 end)
