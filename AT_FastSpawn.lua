@@ -49,7 +49,7 @@ function main()
 	if sampIsLocalPlayerSpawned() then return false end
 	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	local nick = sampGetPlayerNickname(id)
-	if cfg.settings.server ~= sampGetCurrentServerAddress() or cfg.settings.nickname ~= nick then print('другой сервер, fast spawn off') return false end
+	while not sampIsLocalPlayerSpawned() do wait(0) end
 	while true do
 		if sampTextdrawIsExists(0) then
 			if sampIsDialogActive(657) or sampIsDialogActive(658) then
