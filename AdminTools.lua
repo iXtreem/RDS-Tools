@@ -2893,7 +2893,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		sampAddChatMessage('',-1)
 		local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 		local _, id = text:match('(.+)%((%d+)%) пытался написать в чат:')
-		if true then
+		if tonumber(id) ~= myid and not AFK then
 			lua_thread.create(function()
 				wait(0)
 				sampAddChatMessage('{3CB371}[AT_HELP] {90EE90}Нажатие ' ..cfg.settings.key_automute..' автоматически вводит в чат /uu {AFEEEE}'..id, -1)
