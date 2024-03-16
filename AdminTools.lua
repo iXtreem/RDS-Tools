@@ -1,12 +1,11 @@
 -- [[ Редактируя код, я не ручаюсь за ваши ошибки, есть пожелание - предлагайте, возможно реализую. ]] --
 require 'lib.moonloader'									-- Считываем библиотеки Moonloader
-require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
 require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.93  			 							-- Версия скрипта
+local version = 6.95  			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -236,6 +235,7 @@ local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BO
 
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
+	while not isSampAvailable() do wait(1000) end
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -277,7 +277,7 @@ function main()
 			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
 		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 	end
-	while not sampTextdrawIsExists() do wait(0) end
+	while not sampIsLocalPlayerSpawned() do wait(1000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
 	local AdminTools = inicfg.load(nil, 'moonloader\\config\\AT\\AdminTools.ini')
