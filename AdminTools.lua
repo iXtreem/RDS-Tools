@@ -1,3 +1,4 @@
+-- [[ Редактируя код, я не ручаюсь за ваши ошибки, есть пожелание - предлагайте, возможно реализую. ]] --
 require 'lib.moonloader'									-- Считываем библиотеки Moonloader
 require 'lib.sampfuncs' 									-- Считываем библиотеки SampFuncs
 import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
@@ -5,7 +6,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.91  			 							-- Версия скрипта
+local version = 6.92  			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -39,8 +40,8 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		size_ears = 10,
 		strok_ears = 6,
 		strok_admin_chat = 6,
-		keysyncx = sh/2 + 300,
-		keysyncy = sw/2 - 40,
+		keysyncx = sh*0.5 + 300,
+		keysyncy = sw*0.5 - 40,
 		fast_key_ans = 'None',
 		fast_key_addText = 'None',
 		fast_key_wallhack = 'None',
@@ -73,6 +74,8 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		sek_automute = 8,
 		sokr_nick = "",
 		nodialog = true,
+		custom_addtext_report = "",
+		addBeginText = true,
 	},
 	customotvet = {},
 	myflood = {},
@@ -183,6 +186,7 @@ local array = {
 		add_smart_automute  = imgui.ImBuffer(4096),
 		new_word 		 	= imgui.ImBuffer(4096),
 		sokr_nick			= imgui.ImBuffer(cfg.settings.sokr_nick, 256),
+		custom_addtext_report = imgui.ImBuffer(cfg.settings.custom_addtext_report, 256),
 	},
 	chatlog_1 		= {}, 											-- чат-лог1
 	chatlog_2 		= {}, 											-- чат-лог2
@@ -215,7 +219,7 @@ local array = {
 		["Щ"] = "O", ["З"] = "P", ["Х"] = "{", ["Ъ"] = "}", ["Ф"] = "A", ["Ы"] = "S", ["В"] = "D", ["А"] = "F", ["П"] = "G", ["Р"] = "H", ["О"] = "J", ["Л"] = "K", ["Д"] = "L",
 		["Ж"] = ":", ["Э"] = "\"", ["Я"] = "Z", ["Ч"] = "X", ["С"] = "C", ["М"] = "V", ["И"] = "B", ["Т"] = "N", ["Ь"] = "M", ["Б"] = "<", ["Ю"] = ">"
 	},
-	keys = {
+	keys = { 	-- keysync
 		["onfoot"] = {},
 		["vehicle"] = {}
 	},
@@ -224,22 +228,27 @@ local menu 				= 'Главное меню' 								-- Разные вкладки в F3
 local menu_in_recon 	= 'Главное меню'								-- Разные вкладки в рекон
 local tag 				= '{2B6CC4}Admin Tools: {F0E68C}' 				-- Задаем название скрипта в самой игре
 local AFK 				= false											-- основной триггер скрипта, афк мы или нет
-local atr 				= false											-- проверка включена ли альтернатива /tr
-local tr 				= false 										-- сама альтернатива /tr
-local save_mute 		= false											-- запоминаем последнее выданное наказание
-local find_ip_player 	= false											-- поиск IP в /offstats
-local regip				= nil											-- Узнаем изначальный ип в /offstats
-local lastip			= nil											-- Узнаем последний ип в /offstats
-local autoprefix_access = false											-- Узнаем нужна ли вообще авто выдача префикса
 local target = -1														-- Игрок в виртуальных клавишах
 local control_player_recon = 0											-- Игрок в реконе
-local ad_time = require 'imgui'
 local font_adminchat = renderCreateFont("Arial", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW) -- шрифт админ чата
 local font_earschat  = renderCreateFont("Arial", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)	   -- шрифт ears чата
 local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW) -- шрифт открытого чата
 
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
+
+	-- Фикс ошибок sampisplayerspawned
+	local memory = memory or require 'memory'
+    local module = getModuleHandle("SAMPFUNCS.asi")
+    if module ~= 0 and memory.compare(module + 0xBABD, memory.strptr('\x8B\x43\x04\x8B\x5C\x24\x20\x8B\x48\x34\x83\xE1'), 12) then
+        memory.setuint16(module + 0x83349, 0x01ac, true)
+        memory.setuint16(module + 0x8343c, 0x01b0, true)
+        memory.setuint16(module + 0x866dd, 0x00f4, true)
+        memory.setuint16(module + 0x866e9, 0x0306, true)
+        memory.setuint8(module + 0x8e754, 0x40, true)
+    end
+	-- Фикс ошибок sampisplayerspawned
+
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -348,7 +357,7 @@ function main()
 	local translite = function(text) -- транслейт текста для замены . /
 		for k, v in pairs(array.chars) do text = string.gsub(text, k, v) end return text
 	end
-
+	local user32 = ffi.load("user32") -- caps chat
 	while true do
 
 		if not AFK then
@@ -371,7 +380,6 @@ function main()
 				local in1 = getStructElement(in1, 0x8, 4)
 				local in2 = getStructElement(in1, 0x8, 4)
 				local in3 = getStructElement(in1, 0xC, 4)
-
 				if (oldText ~= getInput and #getInput > 0)then
 					local firstChar = string.sub(getInput, 1, 1)
 					if (firstChar == "." or firstChar == "/") and cfg.settings.inputhelper then
@@ -397,14 +405,14 @@ function main()
 								'{FF9000}Золотой',
 								'{B313E7}Фиолетовый',
 								'{49E789}Бирюзовый',
-								'{139BEC}Синй',
+								'{139BEC}Синий',
 								'{2C9197}Сине-зеленый',
 								'{DDB201}Желтый',
 								'{B8B6B6}Серый',
 								'{FFEE8A}Бежевый',
 								'{FF9DB6}Розовый',
 								'{BE8A01}Коричневый',
-								'{E6284E}Светло-красный',
+								'{E6284E}Светлокрасный',
 							}
 							for k,v in pairs(color) do
 								s = s ..k .. ' - ' .. v .. "\n{FFFFFF}"
@@ -417,7 +425,7 @@ function main()
 				-- подсказки под чато
 
 				local ping = sampGetPlayerPing(pID) -- ping
-				local caps = (ffi.load("user32")).GetKeyState(0x14) -- Код клавиши CapsLock
+				local caps = (user32).GetKeyState(0x14) -- Код клавиши CapsLock
 	
 				if caps == 1 or caps == 3 then caps = 'ON'
 				else caps = 'OFF' end
@@ -586,21 +594,21 @@ for k,v in pairs(cfg.my_command) do
 end
 
 -- Команда or (оск/упом родни) содержит название переменной, потому создается отдельно
-sampRegisterChatCommand('prfma', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Мл.Администратор ' .. cfg.settings.prefixma) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
-sampRegisterChatCommand('prfa', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Администратор ' .. cfg.settings.prefixa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
-sampRegisterChatCommand('prfsa', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Ст.Администратор ' .. cfg.settings.prefixsa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
+sampRegisterChatCommand('prfma', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Мл.Администратор ' .. cfg.settings.prefixma) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
+sampRegisterChatCommand('prfa', function(param) if #param ~= 0 then   sampSendChat('/prefix '  .. param .. ' Администратор ' .. cfg.settings.prefixa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
+sampRegisterChatCommand('prfsa', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Ст.Администратор ' .. cfg.settings.prefixsa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
 
-sampRegisterChatCommand('prfpga', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Помощник.Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('prfzga', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Зам.Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('prfga', function(param) if #param ~= 0 then sampSendChat('/prefix ' .. param .. ' Главный-Администратор ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('or', function(param) if #param ~= 0 then sampSendChat('/mute '..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
-sampRegisterChatCommand('orf', function(param) if #param ~= 0 then sampSendChat('/muteakk '..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
+sampRegisterChatCommand('prfpga', function(param) if #param ~= 0 then sampSendChat('/prefix '.. param .. ' Помощник.Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('prfzga', function(param) if #param ~= 0 then sampSendChat('/prefix ' ..param .. ' Зам.Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('prfga', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Главный-Администратор ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
+sampRegisterChatCommand('or', function(param) if #param ~= 0 then     sampSendChat('/mute '       ..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
+sampRegisterChatCommand('orf', function(param) if #param ~= 0 then    sampSendChat('/muteakk '   ..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
 
 
 sampRegisterChatCommand('spawncars', function(param)
 	if not ((#param == 1 or #param == 2) and tonumber(param)) then
-		sampSendChat('/spawncars '..param)
-		return false
+		sampAddChatMessage(tag .. 'Вы не указали время, потому оно было выбрано по умолчанию - 15 секунд.', -1)
+		param = 15
 	end
 	sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
 	sampSendChat('/mess 15 Многоуважаемые дрифтеры и дрифтерши')
@@ -1250,13 +1258,14 @@ function imgui.OnDrawFrame()
 				end
 			elseif menu == 'Дополнительные функции' then -- мульти выбор
 				imgui.SetCursorPosX(8)
-				imgui.CenterText(u8'Дополнительный текст команд')
-				imgui.PushItemWidth(485)
-				if imgui.InputText('##doptextcommand', array.buffer.add_new_text) then
+				if imgui.NewInputText('##doptextcomыmand', array.buffer.custom_addtext_report, 485, u8'Дополнительный текст в начале ответа', 2) then
+					cfg.settings.custom_addtext_report = u8:decode(array.buffer.custom_addtext_report.v)
+					save()	
+				end
+				if imgui.NewInputText('##doptextcomыmanыd', array.buffer.add_new_text, 485, u8'Дополнительный текст в конце ответа', 2) then
 					cfg.settings.mytextreport = u8:decode(array.buffer.add_new_text.v)
 					save()	
 				end
-				imgui.PopItemWidth()
 				imgui.Separator()
 				imgui.Text(u8'Префикс Хелпера')
 				imgui.SameLine()
@@ -2185,17 +2194,24 @@ function imgui.OnDrawFrame()
 			imgui.Tooltip('Y')
 		end
 		imgui.Separator()
+		if imadd.ToggleButton("#####", imgui.ImBool(cfg.settings.addBeginText)) then
+			cfg.settings.addBeginText = not cfg.settings.addBeginText
+			save()
+		end
+		imgui.SameLine()
+		imgui.Text(u8'Добавить текст в начале ответа '.. fa.ICON_COMMENTING_O)
 		if imadd.ToggleButton('##doptextans', array.checkbox.check_add_answer_report) then
 			cfg.settings.add_answer_report = not cfg.settings.add_answer_report
 			save()
 		end
+		imgui.Tooltip(u8'Добавляет ваш текст к ответу\n'..u8:decode(array.buffer.text_ans.v)..u8(cfg.settings.mytextreport) .. u8'\nНе сработает, если кол-во символов в ответе превысит максимум\nЕсли функция включена и текст не указан - берет из словаря.')
 		imgui.SameLine()
-		imgui.Text(u8'Добавить дополнительный текст к ответу ' .. fa.ICON_COMMENTING_O)
+		imgui.Text(u8'Добавить текст в конце ответа  ' .. fa.ICON_COMMENTING_O)
 		if imadd.ToggleButton('##saveans', array.checkbox.check_save_answer) then
 			cfg.settings.custom_answer_save = not cfg.settings.custom_answer_save
 			save()
 		end
-		imgui.Tooltip(u8'Добавляет ваш текст к ответу. Не сработает, если кол-во символов в ответе превысит максимум')
+		imgui.Tooltip(u8'Добавляет ваш текст к ответу\n'..u8:decode(array.buffer.custom_addtext_report.v..array.buffer.text_ans.v).. '\nНе сработает, если кол-во символов в ответе превысит максимум')
 		imgui.SameLine()
 		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта ' .. fa.ICON_DATABASE)
 		imgui.PopFont()
@@ -2982,14 +2998,15 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 				lua_thread.create(function()
 					wait(0)
 					sampAddChatMessage('{3CB371}[AT_HELP] {90EE90}Нажатие ' ..cfg.settings.key_automute..' автоматически вводит в чат /pm {AFEEEE}'..id.." ", -1)
-					for i = 0, 10000 do
+					for i = 0, 999 do
 						if isKeyDown(VK_RETURN) and not sampIsChatInputActive() and not sampGetChatInputText():match("/pm ") then
 							sampSetChatInputText("/pm " .. id .. " ")
 							break
 						end
 						wait(1)
 					end
-					for i = 0, 2000 do
+					for i = 0, 200 do
+						if not sampGetChatInputText():match("/pm ") then sampSetChatInputText("/pm " .. id .. " ") end
 						if not sampIsChatInputActive() then
 							sampSetChatInputEnabled(true)
 						end
@@ -3420,6 +3437,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				end
 				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = (peremrep ..('{'..color()..'} '..cfg.settings.mytextreport)) end
 				if #(peremrep) < 4 then peremrep = peremrep .. '    ' end
+				if cfg.settings.addBeginText and #peremrep + #array.buffer.custom_addtext_report.v < 80 then peremrep = addBeginText().. peremrep end
 				if cfg.settings.custom_answer_save and array.answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(array.buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
 				sampCloseCurrentDialogWithButton(0)
@@ -3971,6 +3989,19 @@ function ScriptExport()
 	if cfg.settings.wallhack then off_wallhack() end
 	showCursor(false,false)
 	thisScript():unload()
+end
+function addBeginText()
+	if #array.buffer.custom_addtext_report.v > 1 then return u8:decode(array.buffer.custom_addtext_report.v)
+	else
+		local text = {
+			"Доброго времени суток,",
+			"Приветствую!",
+			"Привет!",
+			"Уважаемый игрок,",
+			"Здравствуйте!",
+		}
+		return ( text[math.random(1,#text)] .. " " )
+	end
 end
 --------=================== Подпись ID в килл-чате =============------------------------
 ffi.cdef[[
