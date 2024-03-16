@@ -44,67 +44,78 @@ local main_window_state = imgui.ImBool(false)
 
 function main()
 	while not isSampAvailable() do wait(1000) end
+		
+	if not file_exists('moonloader\\control_work_AT.lua') then
+		local dlstatus = require('moonloader').download_status
+		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader\\control_work_AT.lua', function(id, status)
+			if status == dlstatus.STATUS_ENDDOWNLOADDATA then
+				reloadScripts()
+			end
+		end)
+	end
+
 	for k,v in pairs(cfg.command) do if (v and #(v)>1) and k~=0 then inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(tostring(v)), 256) else table.remove(cfg.command, k) inicfg.save(cfg, 'AT//AT_FS.ini') end end
 	for k,v in pairs(cfg.wait_command) do inputWait[#inputWait+1] = imgui.ImInt(v) end
-	if not sampTextdrawIsExists() then return false end
-	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-	local nick = sampGetPlayerNickname(id)
-	while true do
-		if sampTextdrawIsExists(0) then
-			if sampIsDialogActive(657) or sampIsDialogActive(658) then
-				if sampTextdrawIsExists(494) or sampTextdrawIsExists(500) then
+	if not sampIsLocalPlayerSpawned() then
+		local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+		local nick = sampGetPlayerNickname(id)
+		while true do
+			if sampTextdrawIsExists(0) then
+				if sampIsDialogActive(657) or sampIsDialogActive(658) then
+					if sampTextdrawIsExists(494) or sampTextdrawIsExists(500) then
+						break
+					end
+					if cfg.settings.spawn then
+						sampSendDialogResponse(657, 1, 1)
+						sampSendDialogResponse(658, 1, 1)
+						wait(100)
+						sampCloseCurrentDialogWithButton(1)
+						setVirtualKeyDown(13, true)
+						wait(200)						--- а потому что закрывается но не хрена не скрывается
+						setVirtualKeyDown(13, false)
+					end
+					access = true
 					break
+				elseif sampIsDialogActive() then
+					break
+				elseif cfg.settings.spawn then
+					local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					if not sampIsLocalPlayerSpawned() then
+						setVirtualKeyDown(16, true)
+						wait(100)
+						setVirtualKeyDown(16, false)
+					end
 				end
-				if cfg.settings.spawn then
-					sampSendDialogResponse(657, 1, 1)
-					sampSendDialogResponse(658, 1, 1)
-					wait(100)
-					sampCloseCurrentDialogWithButton(1)
-					setVirtualKeyDown(13, true)
-					wait(200)						--- а потому что закрывается но не хрена не скрывается
-					setVirtualKeyDown(13, false)
-				end
-				access = true
-				break
-			elseif sampIsDialogActive() then
-				break
-			elseif cfg.settings.spawn then
-				local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-				if not sampIsLocalPlayerSpawned(id) then
-					setVirtualKeyDown(16, true)
-					wait(100)
-					setVirtualKeyDown(16, false)
+			elseif sampIsDialogActive(1) and not access then
+				if cfg.settings.autorizate and cfg.settings.parolaccount then
+					_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					if cfg.settings.nickname == sampGetPlayerNickname(id) and cfg.settings.server == sampGetCurrentServerAddress() then
+						printStyledString('~w~Auto authorization ~n~~p~FastSpawn', 4000, 7)
+						sampSendDialogResponse(1, 1, 0, cfg.settings.parolaccount)
+					end
 				end
 			end
-		elseif sampIsDialogActive(1) and not access then
-			if cfg.settings.autorizate and cfg.settings.parolaccount then
-				_, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-				if cfg.settings.nickname == sampGetPlayerNickname(id) and cfg.settings.server == sampGetCurrentServerAddress() then
-					printStyledString('~w~Auto authorization ~n~~p~FastSpawn', 4000, 7)
-					sampSendDialogResponse(1, 1, 0, cfg.settings.parolaccount)
-				end
-			end
+			wait(500)
 		end
-		wait(500)
-	end
-	while sampIsDialogActive() do wait(0) end
-	if cfg.settings.parolalogin and cfg.settings.autoalogin then
-		sampSendChat('/alogin ' .. cfg.settings.parolalogin)
-		wait(2000)
-		sampSendChat('/alogin ' .. cfg.settings.parolalogin)
-	end
-	for i = 0, #cfg.command do
-		if cfg.command[i] and #(cfg.command[i]) >= 2 then
-			local press_wait = 0
-			if cfg.wait_command[i] == 0 then press_wait = 500
-			elseif cfg.wait_command[i] == 1 then press_wait = 1000
-			elseif cfg.wait_command[i] == 2 then press_wait = 1500
-			elseif cfg.wait_command[i] == 3 then press_wait = 2000
-			elseif cfg.wait_command[i] == 4 then press_wait = 3000 end
-			if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
-				wait(press_wait)
-				while sampIsDialogActive() or sampIsChatInputActive() do wait(100) end
-				sampProcessChatInput(cfg.command[i])
+		while sampIsDialogActive() do wait(0) end
+		if cfg.settings.parolalogin and cfg.settings.autoalogin then
+			sampSendChat('/alogin ' .. cfg.settings.parolalogin)
+			wait(2000)
+			sampSendChat('/alogin ' .. cfg.settings.parolalogin)
+		end
+		for i = 0, #cfg.command do
+			if cfg.command[i] and #(cfg.command[i]) >= 2 then
+				local press_wait = 0
+				if cfg.wait_command[i] == 0 then press_wait = 500
+				elseif cfg.wait_command[i] == 1 then press_wait = 1000
+				elseif cfg.wait_command[i] == 2 then press_wait = 1500
+				elseif cfg.wait_command[i] == 3 then press_wait = 2000
+				elseif cfg.wait_command[i] == 4 then press_wait = 3000 end
+				if #(tostring(cfg.command[i])) ~= 0 and #(tostring(press_wait)) ~= 0 then
+					wait(press_wait)
+					while sampIsDialogActive() or sampIsChatInputActive() do wait(100) end
+					sampProcessChatInput(cfg.command[i])
+				end
 			end
 		end
 	end
@@ -206,15 +217,6 @@ sampRegisterChatCommand('fs', function()
     main_window_state.v = not main_window_state.v
     imgui.Process = main_window_state.v
 end)
-
-if not file_exists('moonloader\\control_work_AT.lua') then
-	local dlstatus = require('moonloader').download_status
-	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/control_work_AT.lua", 'moonloader\\control_work_AT.lua', function(id, status)
-		if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-			reloadScripts()
-		end
-	end)
-end
 
 
 
