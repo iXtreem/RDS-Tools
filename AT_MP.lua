@@ -83,10 +83,10 @@ local mynick = sampGetPlayerNickname(myid)
 
 function main()
     while not isSampAvailable() do wait(0) end
-    while not sampIsLocalPlayerSpawned() do wait(1000) end
+    while not sampTextdrawIsExists() do wait(0) end
     _, myid = sampGetPlayerIdByCharHandle(playerPed)
     mynick = sampGetPlayerNickname(myid) 
-    func1 = lua_thread.create_suspended(time) -- время для статистики
+    local func1 = lua_thread.create_suspended(time) -- время для статистики
     func1:run()
     func2 = lua_thread.create_suspended(radius) -- поиск игроков в радиусе для пряток
     func3 = lua_thread.create_suspended(find_weapon) -- антисрыв мп
@@ -105,7 +105,6 @@ function main()
         windows.stata_window_state.v = true
         imgui.Process = true
     end
-    wait(-1) -- бесконечное ожидание
 end
 function check_player()
     while true do
