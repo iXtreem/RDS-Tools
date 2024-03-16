@@ -6,7 +6,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.92  			 							-- Версия скрипта
+local version = 6.93  			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -228,7 +228,7 @@ local menu 				= 'Главное меню' 								-- Разные вкладки в F3
 local menu_in_recon 	= 'Главное меню'								-- Разные вкладки в рекон
 local tag 				= '{2B6CC4}Admin Tools: {F0E68C}' 				-- Задаем название скрипта в самой игре
 local AFK 				= false											-- основной триггер скрипта, афк мы или нет
-local target = -1														-- Игрок в виртуальных клавишах
+local target            = -1											-- Игрок в виртуальных клавишах
 local control_player_recon = 0											-- Игрок в реконе
 local font_adminchat = renderCreateFont("Arial", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW) -- шрифт админ чата
 local font_earschat  = renderCreateFont("Arial", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)	   -- шрифт ears чата
@@ -236,19 +236,6 @@ local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BO
 
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
-
-	-- Фикс ошибок sampisplayerspawned
-	local memory = memory or require 'memory'
-    local module = getModuleHandle("SAMPFUNCS.asi")
-    if module ~= 0 and memory.compare(module + 0xBABD, memory.strptr('\x8B\x43\x04\x8B\x5C\x24\x20\x8B\x48\x34\x83\xE1'), 12) then
-        memory.setuint16(module + 0x83349, 0x01ac, true)
-        memory.setuint16(module + 0x8343c, 0x01b0, true)
-        memory.setuint16(module + 0x866dd, 0x00f4, true)
-        memory.setuint16(module + 0x866e9, 0x0306, true)
-        memory.setuint8(module + 0x8e754, 0x40, true)
-    end
-	-- Фикс ошибок sampisplayerspawned
-
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -290,7 +277,7 @@ function main()
 			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
 		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 	end
-	while (not sampIsLocalPlayerSpawned()) do wait(1000) end
+	while not sampTextdrawIsExists() do wait(0) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
 	local AdminTools = inicfg.load(nil, 'moonloader\\config\\AT\\AdminTools.ini')
