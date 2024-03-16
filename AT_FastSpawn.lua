@@ -46,10 +46,9 @@ function main()
 	while not isSampAvailable() do wait(1000) end
 	for k,v in pairs(cfg.command) do if (v and #(v)>1) and k~=0 then inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(tostring(v)), 256) else table.remove(cfg.command, k) inicfg.save(cfg, 'AT//AT_FS.ini') end end
 	for k,v in pairs(cfg.wait_command) do inputWait[#inputWait+1] = imgui.ImInt(v) end
-	if sampIsLocalPlayerSpawned() then return false end
+	if not sampTextdrawIsExists() then return false end
 	local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 	local nick = sampGetPlayerNickname(id)
-	while not sampIsLocalPlayerSpawned() do wait(0) end
 	while true do
 		if sampTextdrawIsExists(0) then
 			if sampIsDialogActive(657) or sampIsDialogActive(658) then
