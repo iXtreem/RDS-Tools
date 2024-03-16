@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.9  			 							-- Версия скрипта
+local version = 6.91  			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -1423,14 +1423,14 @@ function imgui.OnDrawFrame()
 				imgui.CenterText(u8'Подтверждение действия: ')
 				imgui.SameLine()
 				imgui.Text(u8(cfg.settings.key_automute))
-				if imgui.Button(u8"Сoxрaнить.", imgui.ImVec2(250, 24)) then
+				if imgui.Button(u8"Coxpaнить.", imgui.ImVec2(250, 24)) then
 					if getDownKeysText() and not getDownKeysText():find('+') then
 						cfg.settings.key_automute = getDownKeysText()
 						save()
 					end
 				end
 				imgui.SameLine()
-				if imgui.Button(u8'Сбрocить', imgui.ImVec2(228,24)) then
+				if imgui.Button(u8'Сбpocить', imgui.ImVec2(228,24)) then
 					cfg.settings.key_automute = 'None'
 					save()
 				end
