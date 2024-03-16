@@ -83,7 +83,7 @@ local mynick = sampGetPlayerNickname(myid)
 
 function main()
     while not isSampAvailable() do wait(0) end
-    while not sampTextdrawIsExists() do wait(0) end
+	while not sampIsLocalPlayerSpawned() do wait(1000) end
     _, myid = sampGetPlayerIdByCharHandle(playerPed)
     mynick = sampGetPlayerNickname(myid) 
     local func1 = lua_thread.create_suspended(time) -- время для статистики
@@ -838,4 +838,5 @@ sampRegisterChatCommand('mp', function()
         windows.secondary_window_state.v = true
         imgui.Process = true
     end
+    sampSendChat('/mp')
 end)
