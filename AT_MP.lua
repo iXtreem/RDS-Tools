@@ -261,19 +261,20 @@ function imgui.OnDrawFrame()
             lua_thread.create(function()
                 windows.stata_window_state.v = true
                 windows.static_window_state.v = false
+                if not info_array[1] then info_array[1] = u8"Вы редактируете данное окно" end
                 sampAddChatMessage(tag .. 'Укажите курсором новое расположение окна и нажмите: Enter', -1)
                 sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
                 local old_pos_x, old_pos_y = cfg.AT_MP.staticposX, cfg.AT_MP.staticposY
                 while true do
                     showCursor(true,true)
                     cfg.AT_MP.staticposX, cfg.AT_MP.staticposY = getCursorPos()
-                    if wasKeyPressed(VK_RETURN) then save() break end
+                    if wasKeyPressed(VK_RETURN) then break end
                     if wasKeyPressed(VK_ESCAPE) then cfg.AT_MP.staticposX = old_pos_x cfg.AT_MP.staticposY = old_pos_y break end
                     wait(1)
                 end
+                update_info()
 			    save()
                 showCursor(false,false)
-                thisScript():reload()
             end)
         end
         if imgui.Button(u8'Настройка ежедневной нормы') then imgui.OpenPopup('norma') end
@@ -319,11 +320,10 @@ function imgui.OnDrawFrame()
         imgui.End()
     end
     if windows.stata_window_state.v then
-        imgui.SetNextWindowPos(imgui.ImVec2(cfg.AT_MP.staticposX, cfg.AT_MP.staticposY), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.Begin("##AdminStata", windows.stata_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+        imgui.SetNextWindowPos(imgui.ImVec2(cfg.AT_MP.staticposX, cfg.AT_MP.staticposY))
+        imgui.Begin("##AdminStata", windows.stata_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
         imgui.ShowCursor = false
-        imgui.WindowBg 		= imgui.ImVec4(0.36, 0.42, 0.47, 1.00)
-        for k,v in pairs(info_array) do
+        for _,v in pairs(info_array) do
             imgui.Text(v)
         end
         imgui.End()
