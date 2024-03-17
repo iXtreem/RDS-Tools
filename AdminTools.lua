@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.96  			 							-- Версия скрипта
+local version = 6.97  			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -39,8 +39,8 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		size_ears = 10,
 		strok_ears = 6,
 		strok_admin_chat = 6,
-		keysyncx = sh*0.5 + 300,
-		keysyncy = sw*0.5 - 40,
+		keysyncx = sh*0.6,
+		keysyncy = sw*0.7,
 		fast_key_ans = 'None',
 		fast_key_addText = 'None',
 		fast_key_wallhack = 'None',
@@ -306,11 +306,12 @@ function main()
 	end
 	local AdminTools = nil
 	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
-	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then rules = io.open('moonloader\\config\\AT\\rules.txt', 'w') thisScript():reload() end
-	local AutoMute_mat = file_exists('moonloader\\config\\AT\\mat.txt') if not AutoMute_mat then AutoMute_mat = io.open('moonloader\\config\\AT\\mat.txt', 'w') thisScript():reload() end
-	local AutoMute_osk = file_exists('moonloader\\config\\AT\\osk.txt') if not AutoMute_osk then AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', 'w') thisScript():reload() end	
+	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then 
+		sampProcessChatInput('/reset')
+	end
+
 	local rules = io.open('moonloader\\config\\AT\\rules.txt',"r")
-	if rules then for line in rules:lines() do array.pravila[ #(array.pravila) + 1] = line;end rules:close() else rules = io.open('moonloader\\config\\AT\\rules.txt',"w") thisScript():reload() end
+	if rules then for line in rules:lines() do array.pravila[ #(array.pravila) + 1] = line;end rules:close() end
 	
 	--------------------============ АВТОМУТ =====================---------------------------------
 	local AutoMute_mat = io.open('moonloader\\config\\AT\\mat.txt', "r")
@@ -773,6 +774,37 @@ sampRegisterChatCommand('ahelp', function()
 	imgui.Process = true
 end)
 sampRegisterChatCommand('update', function() download_update() end)
+sampRegisterChatCommand('reset', function()
+	local dlstatus = require('moonloader').download_status
+	imgui.Process = false
+	showCursor(false,false)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader//config//AT//rules.txt', function(id, status)
+		if status == dlstatus.STATUS_ENDDOWNLOADDATA then 
+			sampAddChatMessage(tag..'Правила загружены.', -1) 
+		end 
+	end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/mat.txt", 'moonloader//config//AT//mat.txt', function(id, status) 
+		if  status == dlstatus.STATUS_ENDDOWNLOADDATA then  
+			sampAddChatMessage(tag..'Автомут на маты загружены.', -1) 
+		end 
+	end)  
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", 'moonloader//config//AT//osk.txt', function(id, status) 
+		if  status == dlstatus.STATUS_ENDDOWNLOADDATA then 
+			sampAddChatMessage(tag..'Автомут на оскорбления загружен.', -1) 
+		end 
+	end)
+	downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_main.ini", 'moonloader//config//AT//AT_main.ini', function(id, status) 
+		if  status == dlstatus.STATUS_ENDDOWNLOADDATA then 
+			sampAddChatMessage(tag..'Настройки АТ подгружены.', -1) 
+		end 
+	end)
+	lua_thread.create(function()
+		wait(5000)
+		sampAddChatMessage(tag ..'Выполняется перезагрузка..', -1)
+		reloadScripts()
+	end)
+	
+end)
 sampRegisterChatCommand('tr', function()
 	if cfg.settings.atr then
 		if not tr then sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы{32CD32} включили режим TakeReport by AT.', 0x32CD32)
@@ -2031,16 +2063,7 @@ function imgui.OnDrawFrame()
 				if imgui.BeginPopup('reset') then
 					imgui.Text(u8'Вы уверены, что хотите сбросить настройки?')
 					if imgui.Button(u8'Да', imgui.ImVec2(150,25)) then
-						local dlstatus = require('moonloader').download_status
-						downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/rules.txt", 'moonloader\\' .. "\\config\\AT\\rules.txt", function(id, status) end)
-						downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AT_main.ini", 'moonloader//config//AT//AT_main.ini', function(id, status) end)
-						downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/mat.txt", 'moonloader\\' .. "\\config\\AT\\mat.txt", function(id, status) end)
-						downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/osk.txt", 'moonloader\\' .. "\\config\\AT\\osk.txt", function(id, status) end)
-						sampAddChatMessage(tag .. 'Загружаю базовые настройки, АТ будет автоматически перезагружен через пару секунд.', -1)
-						lua_thread.create(function()
-							wait(15000)
-							reloadScripts()
-						end)
+						sampProcessChatInput('/reset')
 					end
 					imgui.Text(u8'Сброс настроек скачает рекомендуемые настройки АТ и автомута')
 					imgui.EndPopup()
@@ -2619,7 +2642,7 @@ function imgui.OnDrawFrame()
 			}
 			if imgui.CollapsingHeader( u8('Мои команды') ) then
 				for k,v in pairs(cfg.my_command) do
-					imgui.CenterText( u8('/'..k) )
+					imgui.Text( u8('/'..k ..' =') )imgui.SameLine()
 					imgui.TextWrapped( u8(v) )
 				end
 			end
@@ -2827,8 +2850,22 @@ function imgui.OnDrawFrame()
 end
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' then
-		if command:match('mute (.+) (.+) (.+)') and cfg.settings.forma_na_mute then
-			if sampIsPlayerConnected(command:match('(%d+)')) then
+		if ( command:match('mute (.+) (.+) (.+)') or command:match('muteakk (.+) (.+) (.+)') or command:match('muteoff (.+) (.+) (.+)')) and cfg.settings.forma_na_mute then
+			printStyledString('send forms ...', 1000, 4)
+			if cfg.settings.add_mynick_in_form then
+				if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+				else
+					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+				end
+			else SendChat('/a ' .. command) end
+			return false
+		elseif command:match('ban (%d+) (%d+) .+') or command:match('banoff (%d+) (%d+) .+') or command:match('banakk (%d+) (%d+) .+') then
+			if command:match('off') or command:match('akk') then
+				sampAddChatMessage(tag .. '====== Подсказка ======')
+				sampAddChatMessage(tag .. '/sbanip блокирует аккаунт игрока в оффлайне вместе с IP адресом. Но работает только у зга +', -1)
+			end
+			if cfg.settings.forma_na_ban then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
 					if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
@@ -2839,37 +2876,17 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				else SendChat('/a ' .. command) end
 				return false
 			end
-		elseif command:match('ban (%d+) (%d+) .+') then
-			if sampIsPlayerConnected(command:match('(%d+)')) then
-				if command:match('off') or command:match('akk') then
-					sampAddChatMessage(tag .. '====== Подсказка ======')
-					sampAddChatMessage(tag .. '/sbanip блокирует аккаунт игрока в оффлайне вместе с IP адресом. Но работает только у зга +', -1)
+		elseif (command:match('/jail (%d+) (%d+) .+') or command:match('/jailakk (%d+) (%d+) .+') or command:match('/jailoff (%d+) (%d+) .+')) and cfg.settings.forma_na_jail then
+			printStyledString('send forms ...', 1000, 4)
+			if cfg.settings.add_mynick_in_form then
+				if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+				else
+					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+					SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
 				end
-				if cfg.settings.forma_na_ban then
-					printStyledString('send forms ...', 1000, 4)
-					if cfg.settings.add_mynick_in_form then
-						if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
-						else
-							local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-							SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
-						end
-					else SendChat('/a ' .. command) end
-					return false
-				end
-			end
-		elseif command:match('/jail (%d+) (%d+) .+') and cfg.settings.forma_na_jail then
-			if sampIsPlayerConnected(command:match('(%d+)')) then
-				printStyledString('send forms ...', 1000, 4)
-				if cfg.settings.add_mynick_in_form then
-					if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
-					else
-						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
-					end
-				else SendChat('/a ' .. command) end
-				return false
-			end
-		elseif command:match('/kick (%d+) .+') and cfg.settings.forma_na_kick then
+			else SendChat('/a ' .. command) end
+			return false
+		elseif command:match('/kick (%d+) (.+)') and cfg.settings.forma_na_kick then
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
