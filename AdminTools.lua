@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.95  			 							-- Версия скрипта
+local version = 6.96  			 							-- Версия скрипта
 local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
@@ -75,6 +75,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		nodialog = true,
 		custom_addtext_report = "",
 		addBeginText = true,
+		atr = false,
 	},
 	customotvet = {},
 	myflood = {},
@@ -228,11 +229,11 @@ local menu_in_recon 	= 'Главное меню'								-- Разные вкладки в рекон
 local tag 				= '{2B6CC4}Admin Tools: {F0E68C}' 				-- Задаем название скрипта в самой игре
 local AFK 				= false											-- основной триггер скрипта, афк мы или нет
 local target            = -1											-- Игрок в виртуальных клавишах
+local tr 				= false
 local control_player_recon = 0											-- Игрок в реконе
 local font_adminchat = renderCreateFont("Arial", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW) -- шрифт админ чата
 local font_earschat  = renderCreateFont("Arial", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)	   -- шрифт ears чата
 local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW) -- шрифт открытого чата
-
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
 	while not isSampAvailable() do wait(1000) end
@@ -773,7 +774,7 @@ sampRegisterChatCommand('ahelp', function()
 end)
 sampRegisterChatCommand('update', function() download_update() end)
 sampRegisterChatCommand('tr', function()
-	if atr then
+	if cfg.settings.atr then
 		if not tr then sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы{32CD32} включили режим TakeReport by AT.', 0x32CD32)
 		else sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32) end
 		tr = not tr
@@ -1345,7 +1346,7 @@ function imgui.OnDrawFrame()
 				end
 				imgui.Tooltip(u8'Выключить если есть проблемы с открытыми диалогами')
 				imgui.SetCursorPosY(470)
-				if imgui.Button(u8'Перезагрузить скрипты '..fa.ICON_RECYCLE, imgui.ImVec2(250,24)) then showCursor(false,false) reloadScripts() end
+				if imgui.Button(u8'Перезагрузить скрипты '..fa.ICON_RECYCLE, imgui.ImVec2(250,24)) then reloadScripts() end
 				imgui.SameLine()
 				if imgui.Button(u8'Выгрузить скрипт ' .. fa.ICON_POWER_OFF, imgui.ImVec2(228, 24)) then
 					sampAddChatMessage(tag .. 'Скрипты АТ выгружены. Если желаете загрузить их вновь, введите команду /rst',-1)
@@ -3565,7 +3566,7 @@ function binder_key()
 		if not (sampIsChatInputActive() or sampIsDialogActive() or array.windows.fast_report.v or array.windows.answer_player_report.v or AFK) then
 			if wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then  -- кнопка активации окна
 				array.windows.menu_tools.v = not array.windows.menu_tools.v
-				imgui.Process = true
+				imgui.Process = array.windows.menu_tools.v
 				if array.windows.recon_menu.v then 	-- активация курсора если рекон меню активно
 					lua_thread.create(function()
 						setVirtualKeyDown(70, true)
@@ -3914,23 +3915,24 @@ function vision_form()
 		imgui.Text(u8'Сокращенный ник(при желании): ')
 		imgui.PushItemWidth(250)
 		if imgui.InputText("######", array.buffer.sokr_nick) then
-			cfg.settings.sokr_nick = array.buffer.sokr_nickюм
+			cfg.settings.sokr_nick = array.buffer.sokr_nick
 			save()
 		end
 		imgui.PopItemWidth()
 		imgui.Text('')
-		if imgui.Checkbox(u8'У меня нет доступ к /tr', imgui.ImBool(atr)) then
+		if imgui.Checkbox(u8'У меня нет доступ к /tr', imgui.ImBool(cfg.settings.atr)) then
 			if tr then
 				tr = false
 				sampAddChatMessage('{37aa0d}[Информация] {FFFFFF}Вы {FF0000}выключили режим TakeReport.', 0x32CD32)
 			end
-			atr = not atr
+			cfg.settings.atr = not cfg.settings.atr
+			save()
 		end
-		if atr then
+		if cfg.settings.atr then
 			imgui.Text(u8'Активация TakeReport - /tr')
 		end
 		imgui.Text(u8'Скрипт сам будет\nотправлять формы старшим,\nне важно отправите вы\nэто полноценной командой,\nили быстрой.')
-		imgui.Text(u8'Подсказка: /ahelp содержит..\n..все серверные правила и команды')
+		imgui.Text(u8'Подсказка: /ahelp содержит\nвсе серверные правила и команды')
 		imgui.EndPopup()
 	end
 end
