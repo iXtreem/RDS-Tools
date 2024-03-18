@@ -3187,7 +3187,7 @@ function automute(array, oskid, text, nakaz, report)
 		lua_thread.create(function()
 			local nakaz_name = string.gsub(nakaz, textSplit(nakaz, ' ')[1]..' ', '')
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
-			sampAddChatMessage('Выдать мут по причине ' ..nakaz_name ..'? Клавиша '..cfg.settings.key_automute ..' для подтверждения',-1)
+			sampAddChatMessage('Выдать мут по причине: "' ..nakaz_name ..'"? Клавиша '..cfg.settings.key_automute ..' для подтверждения',-1)
 			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}[AT-AutoMute]', -1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			local count = cfg.settings.sek_automute * 100
