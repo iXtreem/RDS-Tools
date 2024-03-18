@@ -5,8 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.97  			 							-- Версия скрипта
-local plagin_notify = import('\\lib\\lib_imgui_notf.lua')
+local version = 6.99  			 							-- Версия скрипта
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
 	settings = {
@@ -98,6 +97,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 	spisokoskadm = {
 		'админ',
 	},
+	auto_ban = {},
 }, 'AT//AT_main.ini')
 inicfg.save(cfg, 'AT//AT_main.ini')
 style(cfg.settings.style)
@@ -404,7 +404,7 @@ function main()
 								'{E6284E}Светлокрасный',
 							}
 							for k,v in pairs(color) do
-								s = s ..k .. ' - ' .. v .. "\n{FFFFFF}"
+								s = s ..k-1 .. ' - ' .. v .. "\n{FFFFFF}"
 							end --  in2 + 5, in3 + 60
 	
 							renderFontDrawText(font_chat, s, in2 + 5, in3 + 50, -1)
@@ -458,6 +458,8 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		add_autoprefix ='Добавить администратора в исключение автопрефикса',
 		del_autoprefix ='Удалить администратора из исключений автопрефикса',
 		fl 			   ='Открыть редактор предложений для удаления их из чата',
+		reset 		   ='Сбросить настройки по умолчанию',
+		autoban 	   ='Автоматический бан за рекламу, ключевые слова',
 	},
 	help = {
 		uu      =  		'/unmute _',
@@ -742,15 +744,15 @@ sampRegisterChatCommand('wh' , function()
 	if not cfg.settings.wallhack then
 		cfg.settings.wallhack = true
 		save()
-		notify('{66CDAA}[AT-WallHack]', 'Опция успешно включена')
 		array.checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		on_wallhack()
+		sampAddChatMessage(tag ..'WallHack ON', -1)
 	else
 		cfg.settings.wallhack = false
 		save()
-		notify('{66CDAA}[AT-WallHack]', 'Опция успешно выключена')
 		array.checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		off_wallhack()
+		sampAddChatMessage(tag ..'WallHack OFF', -1)
 	end
 end)
 sampRegisterChatCommand('tool', function()
@@ -818,17 +820,49 @@ sampRegisterChatCommand('ears', function()
 	if array.checkbox.check_render_ears.v then
 		array.ears = {}
 		array.checkbox.check_render_ears.v = false
-		notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно приостановлено')
+		print('Сканирование ЛС успешно активировано.', -1)
 	else
 		array.checkbox.check_render_ears.v = true
-		notify('{66CDAA}[AT] Сканирование ЛС', 'Сканирование личных сообщений\nБыло успешно инициализировано')
+		print('Сканирование ЛС успешно активировано.', -1)
 	end
+end)
+sampRegisterChatCommand('autoban', function(param)
+	local param1 = textSplit(param, ' ')
+	if not param1[1] then param1[1] = "4" end
+	local param1 = param1[1]
+	local param2 = string.gsub(param, param1..' ', '')
+	if param1 == "0" then
+		local text = false
+		for k,v in pairs(cfg.auto_ban) do
+			if tostring(v) == param2 then
+				text = k
+			end
+		end
+		if text then
+			sampAddChatMessage(tag ..'Текст ' ..param2..' было удалено из списка', -1)
+			table.remove( cfg.auto_ban,k )
+		else
+			sampAddChatMessage(tag ..'Данный текст не найден в списке', -1)
+		end
+	elseif param1 == "1" then
+		sampAddChatMessage(tag ..'Текст ' ..param2..' было добавлено для поиска в чате и автоматической блокировки за рекламу', -1)
+		table.insert( cfg.auto_ban, tostring(param2) )
+	elseif param1 == '2' then
+		sampAddChatMessage(tag ..'Словарь: ', -1)
+		for k,v in pairs(cfg.auto_ban) do
+			sampAddChatMessage(v,-1)
+		end
+	else
+		sampAddChatMessage(tag ..'/autoban [0-2] text',-1)
+		sampAddChatMessage(tag ..'0 - удалить слово, 1 - добавить, 2 - список', -1)
+	end
+	save()
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
 	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
 		showCursor(false,false)
-		if cfg.settings.render_admins then if #array.admins~=0 then array.windows.render_admins.v = true end
+		if cfg.settings.render_admins then array.windows.render_admins.v = true
 		else imgui.Process = false end
 	end
 	if array.windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
@@ -989,10 +1023,12 @@ function imgui.OnDrawFrame()
 					save()
 				end
 				imgui.SameLine()
-				imgui.Text(u8'Кастом ответ на репорт')
+				imgui.Text(u8'Ответ на репорт')
 				imgui.SameLine()
-				imgui.Text(fa.ICON_COG)
-				if imgui.IsItemClicked(0) then imgui.OpenPopup('option_ans') end
+				imgui.SetCursorPosX(190)
+				if imgui.Button(fa.ICON_COG, imgui.ImVec2(21,21)) then
+					imgui.OpenPopup('option_ans')
+				end
 				if imgui.BeginPopup('option_ans') then
 					if imgui.Button(u8'Назначить цвет репорта', imgui.ImVec2(300,24)) then
 						if not html_color then
@@ -2138,7 +2174,7 @@ function imgui.OnDrawFrame()
 			imgui.Tooltip('E')
 			imgui.SameLine()
 			if imgui.Button('Skin/Color', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_R) and not sampIsChatInputActive()) then
-				start_my_answer()
+				windows.custom_ans.v = true
 			end
 			imgui.Tooltip('R')
 			imgui.SameLine()
@@ -3099,7 +3135,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					if array.flood.count[oskid] == 3 and cfg.settings.smart_automute then -- если 4 сообщения то мут
 						array.flood.message[oskid] = nil
 						lua_thread.create(function()
-							while sampIsDialogActive() do wait(1000) end
+							while sampIsDialogActive() do wait(0) end
 							sampAddChatMessage(tag .. 'Обнаружен флуд в чате! Нарушитель ' .. sampGetPlayerNickname(oskid)..'['..oskid..']', -1)
 							sampAddChatMessage(tag .. 'Отправил 4 сообщения за ' .. math.ceil(os.clock() - array.flood.time[oskid]) .. '/40 сек.', 0xA9A9A9)
 							sampAddChatMessage('{CD853F}Flood {ffffff}- '..sampGetPlayerNickname(oskid)..'['..oskid..']: '..text, -1)
@@ -3111,6 +3147,15 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 				array.flood.message[oskid] = text
 				array.flood.time[oskid] = os.clock()
 				array.flood.count[oskid] = 1
+			end
+			for k,v in pairs(cfg.auto_ban) do
+				if text:match(v) then
+					lua_thread.create(function()
+						while sampIsDialogActive() do wait(0) end
+						sampProcessChatInput('/rk ' ..oskid)
+					end)
+					return text
+				end
 			end
 		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack then
 			if not sampIsDialogActive() then 
@@ -3132,14 +3177,13 @@ function automute(array, oskid, text, nakaz, report)
 		sampAddChatMessage(colorc..'['..rcommand..']{D3D3D3} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. colorc..' ['..rcommand..']', -1)
 		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 		if not sampIsDialogActive() then sampSendChat(command..oskid..' '..nakaz) end
-		notify('{66CDAA}[AT-AutoMute]', sampGetPlayerNickname(oskid) .. '[' .. oskid .. ']\n' .. 'Ключевое слово: ' .. array)
 	else
 		lua_thread.create(function()
-			local font_watermark = renderCreateFont("Arial", 12, font.BOLD + font.BORDER + font.SHADOW)
+			local nakaz_name = string.gsub(nakaz, nakaz:match("(.+)"), '')
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
+			sampAddChatMessage('Выдать мут за ' ..nakaz_name ..'? Клавиша '..cfg.settings.key_automute ..' для подтверждения',-1)
 			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}[AT-AutoMute]', -1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
-			notify('{66CDAA}[AT-AutoMute]', 'Запрещенное слово: '..array..'\n'..command..oskid..' '..nakaz..'\nКлавиша ' .. cfg.settings.key_automute .. " для подтверждения")
 			local count = cfg.settings.sek_automute * 100
 			local time = cfg.settings.sek_automute
 			while count ~= 0 do
@@ -3152,7 +3196,6 @@ function automute(array, oskid, text, nakaz, report)
 					end
 					break
 				end
-				renderFontDrawText(font_watermark, 'Выдать мут за '.. nakaz .. '?\nВремя на принятие решения: '..time, sw*0.3, sh*0.4, 0xCCFFFFFF)
 				count = count - 1
 				if count%100==0 then time = time-1 end
 			end
@@ -3180,11 +3223,6 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 						while array.windows.recon_menu.v do
 							array.inforeport = textSplit(sampTextdrawGetString(array.textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
 							if array.inforeport[3] ==   '-1'   then array.inforeport[3] = false end  --========= ХП АВТО
-							if cfg.settings.weapon_hack and array.inforeport[6]:find('-') then 
-								sampAddChatMessage(tag .. 'У игрока в реконе обнаружен чит.', -1)
-								while sampIsDialogActive() do wait(1) end
-								sampSendChat('/iwep ' .. control_player_recon)
-							end
 							--=========== Название ВИП =======--------
 							if array.inforeport[11] == '1' then array.inforeport[11] = 'Standart'
 							elseif array.inforeport[11] == '2' then array.inforeport[11] = 'Premium'
@@ -3268,7 +3306,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampSendChat('/prefix ' .. id .. ' Мл.Администратор ' .. cfg.settings.prefixma)
 							wait(10000)
 							sampSendChat('/admins')
-							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.')
+							sampAddChatMessage('Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.',-1)
 						elseif (lvl > 11 and lvl < 15) and rang ~= '{'..cfg.settings.prefixa..'}Администратор' then
 							wait(5000)
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
@@ -3276,7 +3314,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampSendChat('/prefix ' .. id .. ' Администратор ' .. cfg.settings.prefixa)
 							wait(3000)
 							sampSendChat('/admins')
-							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.')
+							sampAddChatMessage('Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.',-1)
 						elseif (lvl > 16 and lvl < 18) and rang ~= '{'..cfg.settings.prefixsa..'}Ст.Администратор' then
 							wait(5000)
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
@@ -3284,7 +3322,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampSendChat('/prefix ' .. id .. ' Ст.Администратор ' .. cfg.settings.prefixsa)
 							wait(3000)
 							sampSendChat('/admins')
-							notify('{FF6347}[AT] Автоматическая выдача префикса', 'Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.')
+							sampAddChatMessage('Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.',-1)
 						end
 					elseif lvl == 18 and rang ~= 'Ст.Администратор' and not autoprefix_access then
 						autoprefix_access = true
@@ -3307,7 +3345,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				if (text[i]:find('-')) or (weapon == '0' and patron ~= '0') then
 					sampAddChatMessage(tag .. 'Пробиваемый игрок - ' .. title..'['..sampGetPlayerIdByNickname(title)..']',-1)
 					sampAddChatMessage(tag .. 'Оружие (ID): ' .. weapon..'. Патроны: '..patron, -1)
-					notify('{66CDAA}[AT] Анти-чит', 'Оружие (ID): ' .. weapon..'\nПатроны: '..patron)
 					imgui.Process = false
 					wait(2000)
 					ffi.cast("void (*__stdcall)()", sampGetBase() + 0x70FC0)()
@@ -3324,10 +3361,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 				while sampIsDialogActive() do wait(0) end
 				if sampIsPlayerConnected(player) then
 					sampSendChat('/iban '..player..' 7 Чит на оружие')
-					notify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты')
 				else 
 					sampSendChat('/banoff '..title..' 7 Чит на оружие')
-					notify('{66CDAA}[AT] Анти-чит', 'Скриншот /iwep можно найти в\nДокументах игры - скриншоты')
 				end
 			else sampAddChatMessage(tag .. 'Пробил игрока ' .. title .. '[' .. sampGetPlayerIdByNickname(title) .. ']. По результатам проверки читов не обнаружено.', -1) end
 		end)
@@ -3436,13 +3471,13 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					sampCloseCurrentDialogWithButton(0)
 				end)
 			else
+				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = (peremrep ..('{'..color()..'} '..cfg.settings.mytextreport)) end
+				if cfg.settings.addBeginText and #peremrep + #array.buffer.custom_addtext_report.v < 80 then peremrep = addBeginText().. peremrep end
 				if cfg.settings.color_report and (#peremrep + 6) < 80 then
 					if cfg.settings.color_report == '*' then peremrep = ('{'..color()..'}' .. peremrep)
 					else peremrep = (cfg.settings.color_report .. peremrep) end
 				end
-				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = (peremrep ..('{'..color()..'} '..cfg.settings.mytextreport)) end
-				if #(peremrep) < 4 then peremrep = peremrep .. '    ' end
-				if cfg.settings.addBeginText and #peremrep + #array.buffer.custom_addtext_report.v < 80 then peremrep = addBeginText().. peremrep end
+				if #(peremrep) < 4 then peremrep = peremrep .. '    ' end			
 				if cfg.settings.custom_answer_save and array.answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(array.buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
 				sampCloseCurrentDialogWithButton(0)
@@ -3606,24 +3641,9 @@ function binder_key()
 		if isGamePaused() then 
 			if not AFK and tonumber(cfg.settings.control_afk) then
 				lua_thread.create(function()
-
-					mem.write(0x747FB6, 0x1, 1, true) -- выходим в афк
-					mem.write(0x74805A, 0x1, 1, true)
-					mem.fill(0x74542B, 0x90, 8, true)
-					mem.fill(0x53EA88, 0x90, 6, true)
-
 					for i = 0, (cfg.settings.control_afk*10) do
 						wait(6000)
 						if not AFK then
-							local memset = function(addr, arr)
-								for i = 1, #arr do
-									mem.write(addr + i - 1, arr[i], 1, true)
-								end
-							end
-							mem.write(0x747FB6, 0x0, 1, true) -- выходим из афк
-							mem.write(0x74805A, 0x0, 1, true)
-							memset(0x74542B, { 0x50, 0x51, 0xFF, 0x15, 0x00, 0x83, 0x85, 0x00 })
-							memset(0x53EA88, { 0x0F, 0x84, 0x7B, 0x01, 0x00, 0x00 })
 							break
 						elseif i == (cfg.settings.control_afk*10) then ffi.C.ExitProcess(0)--[[game over]] end
 					end
@@ -3895,9 +3915,6 @@ function keysync(playerId)
 		end
 	end
 	return
-end
-function notify(title, text)
-	if plagin_notify then plagin_notify.addNotify(title, text, 2,1,12) end
 end
 
 function vision_form()
