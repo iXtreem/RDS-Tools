@@ -2176,7 +2176,7 @@ function imgui.OnDrawFrame()
 			imgui.Tooltip('E')
 			imgui.SameLine()
 			if imgui.Button('Skin/Color', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_R) and not sampIsChatInputActive()) then
-				windows.custom_ans.v = true
+				array.windows.custom_ans.v = true
 			end
 			imgui.Tooltip('R')
 			imgui.SameLine()
