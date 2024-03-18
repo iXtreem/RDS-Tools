@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 6.99  			 							-- Версия скрипта
+local version = 7   			 							-- Версия скрипта
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
 	settings = {
@@ -289,7 +289,6 @@ function main()
 				sampAddChatMessage(tag .. 'Обнаружено новое {808080}обязательное {F0E68C}обновление скрипта! Произвожу самообновление.', -1)
 				download_update()
 			end
-			update = true
 		end
 		if cfg.settings.versionFS and cfg.settings.versionMP then
 			if AdminTools.script.versionMP > cfg.settings.versionMP then update = true end
@@ -298,10 +297,6 @@ function main()
 		if sampGetCurrentServerAddress() ~= '46.174.52.246' and sampGetCurrentServerAddress() ~= '46.174.49.170' then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
 			ScriptExport()
-		elseif update then
-			sampAddChatMessage       ('==================================================================================', '0x'..(color()))
-			sampAddChatMessage(tag .. 'Обнаружено новое {FF0000}обновление {F0E68C}, /tool - обновить скрипт', '0x'..(color()))
-			sampAddChatMessage       ('==================================================================================', '0x'..(color()))
 	 	else sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) end
 	end
 	local AdminTools = nil
@@ -756,12 +751,19 @@ sampRegisterChatCommand('wh' , function()
 	end
 end)
 sampRegisterChatCommand('tool', function()
-	array.windows.menu_tools.v = not array.windows.menu_tools.v
 	imgui.Process = true
+	array.windows.menu_tools.v = not array.windows.menu_tools.v
+	if array.windows.recon_menu.v then 	-- активация курсора если рекон меню активно
+		lua_thread.create(function()
+			setVirtualKeyDown(70, true)
+			wait(150)
+			setVirtualKeyDown(70, false)
+		end)
+	end
 end)
 sampRegisterChatCommand('opencl', function()
 	array.windows.menu_chatlogger.v = not array.windows.menu_chatlogger.v
-	imgui.Process = true
+	imgui.Process = array.windows.menu_chatlogger.v
 end)
 sampRegisterChatCommand('spp', function()
 	lua_thread.create(function() 
@@ -773,7 +775,7 @@ sampRegisterChatCommand('spp', function()
 end)
 sampRegisterChatCommand('ahelp', function()
 	array.windows.pravila.v = not array.windows.pravila.v
-	imgui.Process = true
+	imgui.Process = array.windows.pravila.v
 end)
 sampRegisterChatCommand('update', function() download_update() end)
 sampRegisterChatCommand('reset', function()
@@ -862,7 +864,7 @@ end)
 function imgui.OnDrawFrame()
 	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
 		showCursor(false,false)
-		if cfg.settings.render_admins then array.windows.render_admins.v = true
+		if cfg.settings.render_admins then 	array.windows.render_admins.v = true
 		else imgui.Process = false end
 	end
 	if array.windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
@@ -2584,7 +2586,7 @@ function imgui.OnDrawFrame()
 	if array.windows.render_admins.v then -- рендер админов
 		imgui.ShowCursor = false
 		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.render_admins_positionX, cfg.settings.render_admins_positionY))
-		imgui.Begin('##render_admins', array.windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
+		imgui.Begin('##render_admins.', array.windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
 		for i = 1, #array.admins do imgui.TextColoredRGB(array.admins[i]) end
         imgui.End()
 	end
@@ -2875,8 +2877,12 @@ function imgui.OnDrawFrame()
 			if string.rlower(check_chat[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
 				imgui.Text((string.gsub(u8(check_chat[i]), '{%w%w%w%w%w%w}', '')))
 				if imgui.IsItemClicked(0) then
-					setClipboardText(check_chat[i]) 
-					sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) 
+					if getCurrentLanguageName() == '00000419' then 
+						sampAddChatMessage(tag ..'Измените раскладку клавиатуры на русский язык для одинаковой кодировки', -1)
+					else
+						sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) 
+						setClipboardText(check_chat[i])
+					end
 				end
 			end
 		end
@@ -3040,7 +3046,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					wait(0)
 					sampAddChatMessage('{3CB371}[AT_HELP] {90EE90}Нажатие ' ..cfg.settings.key_automute..' автоматически вводит в чат /pm {AFEEEE}'..id.." ", -1)
 					for i = 0, 999 do
-						if isKeyDown(VK_RETURN) and not sampIsChatInputActive() and not sampGetChatInputText():match("/pm ") then
+						if isKeyDown(VK_RETURN) and not sampIsChatInputActive() and not sampIsDialogActive() and not sampGetChatInputText():match("/pm ") then
 							sampSetChatInputText("/pm " .. id .. " ")
 							break
 						end
@@ -3179,16 +3185,16 @@ function automute(array, oskid, text, nakaz, report)
 		if not sampIsDialogActive() then sampSendChat(command..oskid..' '..nakaz) end
 	else
 		lua_thread.create(function()
-			local nakaz_name = string.gsub(nakaz, nakaz:match("(.+)"), '')
+			local nakaz_name = string.gsub(nakaz, textSplit(nakaz, ' ')[1]..' ', '')
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
-			sampAddChatMessage('Выдать мут за ' ..nakaz_name ..'? Клавиша '..cfg.settings.key_automute ..' для подтверждения',-1)
+			sampAddChatMessage('Выдать мут по причине ' ..nakaz_name ..'? Клавиша '..cfg.settings.key_automute ..' для подтверждения',-1)
 			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}[AT-AutoMute]', -1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			local count = cfg.settings.sek_automute * 100
 			local time = cfg.settings.sek_automute
 			while count ~= 0 do
 				wait(1)
-				if wasKeyPressed(strToIdKeys(cfg.settings.key_automute)) and not sampIsDialogActive() then
+				if wasKeyPressed(strToIdKeys(cfg.settings.key_automute)) and not sampIsDialogActive() and not sampIsChatInputActive() then
 					if sampIsPlayerConnected(oskid) then
 						sampSendChat(command..oskid..' '..nakaz)
 					else
@@ -3617,8 +3623,8 @@ function binder_key()
 	while true do
 		if not (sampIsChatInputActive() or sampIsDialogActive() or array.windows.fast_report.v or array.windows.answer_player_report.v or AFK) then
 			if wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then  -- кнопка активации окна
+				imgui.Process = true
 				array.windows.menu_tools.v = not array.windows.menu_tools.v
-				imgui.Process = array.windows.menu_tools.v
 				if array.windows.recon_menu.v then 	-- активация курсора если рекон меню активно
 					lua_thread.create(function()
 						setVirtualKeyDown(70, true)
