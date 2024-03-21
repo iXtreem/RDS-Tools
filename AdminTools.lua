@@ -270,7 +270,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/del_autoprefix [ФД!]"] ='Удалить администратора из исключений автопрефикса',
 		["/reset"] 		   	='Сбросить настройки по умолчанию',
 		["/autoban [ФД!]"] 	   	='Автоматический бан за рекламу, ключевые слова',
-		["/kfind"] 			='Поменять метод поиска команд в чате',	
 		["/up"] = "/mute _ 1000 Упом стор. проектов",
 	},
 	help = {
@@ -298,8 +297,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/n"]       =  	'/ot _ Нарушений со стороны игрока не наблюдается.',
 		["/fo"]      =  	'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru',
 		["/rep"]     =  	'/ot _ Нашли нарушителя? Появился вопрос? Напишите /report!',
-		["/al"]      =		'/ot _ Здравствуйте! Вы забыли ввести /alogin !\n'..
-							'/ot _ Введите /alogin и свой пароль, пожалуйста.',
+		["/al"]      =		'/ot _ Введите /alogin и свой пароль, пожалуйста.',
 	},
 	mute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
 		["/fd"]     =  		'/mute _ 120 Флуд/Спам',			--[[x10]]["/fd2"]='/mute _ 240 Флуд x2',["/fd3"]='/mute _ 360 Флуд x3',["/fd4"]='/mute _ 480 Флуд x4',["/fd5"]='/mute _ 600 Флуд x5',["/fd6"]='/mute _ 720 Флуд x6',["/fd7"]='/mute _ 840 Флуд x7',["/fd8"]='/mute _ 960 Флуд x8',["/fd9"]='/mute _ 1080 Флуд x9',["/fd10"]='/mute _ 1200 Флуд x10',
@@ -352,9 +350,9 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/obm [ФД!]"] 	= 		'/siban _ 30 Обман/Развод',
 	},
 	kick = {
-		["/kk3"] 	= 		'/ban _ 7 Смените ник 3/3',
-		["/kk2"] 	= 		'/kick _ Смените ник 2/3',
-		["/kk1"] 	= 		'/kick _ Смените ник 1/3',
+		["/kk3"] 	= 		'/ban _ 7 Смените ник 3/3.',
+		["/kk2"] 	= 		'/kick _ Смените ник 2/3.',
+		["/kk1"] 	= 		'/kick _ Смените ник 1/3.',
 		["/cafk"] 	= 		'/kick _ AFK in /arena',
 		["/dj"] 	= 		'/kick _ DM in jail',
 	},
@@ -557,7 +555,7 @@ function main()
 					if #getInput > 1 then
 						for _, razdel in pairs(basic_command) do
 							for name, command in pairs(razdel) do
-								if name:match(getInput) and not tonumber(string.sub(name, -1))  then
+								if name:match(getInput) and not tonumber(string.sub(command, -1))  then
 									renderDrawBox(in2 + 5, in3 + 55 + (count*6), sw * 0.6 - 10, 30, 0x88000000)
 									renderFontDrawText(font_chat,  name .. " -> " .. string.gsub(command, "_", "[ID]"), in2 + 10, in3 + 60 + (count*6) , -1)
 									count = count + 5
