@@ -5,7 +5,14 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7   			 							-- Версия скрипта
+local version = 7.1   			 							-- Версия скрипта
+
+
+local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в реконе
+
+for i = 186, 250 do -- генератор предположительных ID текстдравов
+	table.insert(DELETE_TEXTDRAW_RECON, i, #DELETE_TEXTDRAW_RECON+1)
+end
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
 	settings = {
@@ -81,7 +88,6 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 	my_command = {},
 	binder_key = {},
 	render_admins_exception = {},
-	mute_players = {data = os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year},
 	spisokoskrod = {
 		'mq',
 	},
@@ -234,6 +240,129 @@ local control_player_recon = 0											-- Игрок в реконе
 local font_adminchat = renderCreateFont("Arial", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW) -- шрифт админ чата
 local font_earschat  = renderCreateFont("Arial", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)	   -- шрифт ears чата
 local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW) -- шрифт открытого чата
+
+
+--======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
+local basic_command = { -- базовые команды, 1 аргумент = символ '_'
+	prochee = {
+		["/update"]  	= 		'Обновить скрипт',
+		["/fs"] 		=		'Открыть меню FastSpawn',
+		["/trassera"] 	= 		'Открыть настройку трассеров пуль',
+		["/ears"] 		=		'Включить/выключить рендер личных сообщений игроков',
+		["/ahelp"] 		= 		'Все команды скрипта/сервера и правила',
+		["/wh"] 		= 		'Включить/выключить WallHack',
+		["/c"] 			=		'Быстрый ответ игроку в формате репорта',
+		["/rst"] 		= 		'Принудительная перезагрузка всех Lua скриптов',
+		["/tool"] 		= 		'Активировать меню АТ',
+		["/sbanip [ФД!]"] 	= 	'Выдать блокировку аккаунта с IP адресом (ФД!)',
+		["/opencl"]  	= 		'Открыть меню чат-логгера',
+		["/atr"] 		=		'бесплатная альтернатива /tr, автоматически берет новые репорты',
+		["/spp"] 		= 		'Заспавнить игроков в радиусе',
+		["/prfma [ФД!]"] 		= 		'Выдать префикс мл.админу',
+		["/prfa [ФД!]"] 		= 		'Выдать префикс админу',
+		["/prfsa [ФД!]"] 		= 		'Выдать префикс старшему админу',
+		["/prfpga [ФД!]"] 	= 		'Выдать префикс ПГА',
+		["/prfzga [ФД!]"] 	= 		'Выдать префикс ЗГА',
+		["/prfga [ФД!]"] 		= 		'Выдать префикс ГА',
+		["/color_report"]   ='Назначить цвет ответа на репорт',
+		["/control_afk"]    ='Автоматически закрывать игру, при AFK более указанного кол-ва минут',
+		["/add_autoprefix [ФД!]"] ='Добавить администратора в исключение автопрефикса',
+		["/del_autoprefix [ФД!]"] ='Удалить администратора из исключений автопрефикса',
+		["/reset"] 		   	='Сбросить настройки по умолчанию',
+		["/autoban [ФД!]"] 	   	='Автоматический бан за рекламу, ключевые слова',
+		["/kfind"] 			='Поменять метод поиска команд в чате',	
+		["/up"] = "/mute _ 1000 Упом стор. проектов",
+	},
+	help = {
+		["/uu"]      =  	'/unmute _',
+		["/uj"]      =  	'/unjail _',
+		["/ur"]      =  	'/unrmute _',
+		["/uuf"] 	 =		'/muteakk _ 5 Наказание снято.',
+		["/ujf"] 	 =		'/jailakk _ 5 Наказание снято.',
+		["/urf"] 	 = 		'/rmuteoff _ 5 Наказание снято.',
+		["/as"]      =  	'/aspawn _',
+		["/gv [ФД!]"] 	 =		'/giveaccess _',
+		["/mk [ФД!]"] 	 =		'/makeadmin _',
+		["/sa [ФД!]"]		 =		'/setadmin',
+		["/sn"] 	 =		'/setnick _',
+		["/stw"]     =  	'/setweap _ 38 5000',
+		["/vig [ФД!]"] 	 =		"/vvig _ 1 Злоупотребление VIP'ом",
+	},
+	ans = { 														-- с вариативностью есть доп/текст или нет
+		["/nv"]      =  	'/ot _ Игрок не в сети',
+		["/cl"]      =  	'/ot _ Данный игрок чист.',
+		["/pmv"]     =  	'/ot _ Помогли вам. Обращайтесь ещё',
+		["/dpr"]     =  	'/ot _ У игрока куплены функции за /donate',
+		["/afk"]     =  	'/ot _ Игрок бездействует или находится в AFK',
+		["/nak"]     =  	'/ot _ Игрок был наказан! Благодарим за обращение.',
+		["/n"]       =  	'/ot _ Нарушений со стороны игрока не наблюдается.',
+		["/fo"]      =  	'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru',
+		["/rep"]     =  	'/ot _ Нашли нарушителя? Появился вопрос? Напишите /report!',
+		["/al"]      =		'/ot _ Здравствуйте! Вы забыли ввести /alogin !\n'..
+							'/ot _ Введите /alogin и свой пароль, пожалуйста.',
+	},
+	mute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
+		["/fd"]     =  		'/mute _ 120 Флуд/Спам',			--[[x10]]["/fd2"]='/mute _ 240 Флуд x2',["/fd3"]='/mute _ 360 Флуд x3',["/fd4"]='/mute _ 480 Флуд x4',["/fd5"]='/mute _ 600 Флуд x5',["/fd6"]='/mute _ 720 Флуд x6',["/fd7"]='/mute _ 840 Флуд x7',["/fd8"]='/mute _ 960 Флуд x8',["/fd9"]='/mute _ 1080 Флуд x9',["/fd10"]='/mute _ 1200 Флуд x10',
+		["/po"] 	=  		'/mute _ 120 Попрошайничество',		--[[x10]]["/po2"]='/mute _ 240 Попрошайничество x2',["/po3"]='/mute _ 360 Попрошайничество x3',["/po4"] ='/mute _ 480 Попрошайничество x4',["/po5"] ='/mute _ 600 Попрошайничество x5',["/po6"] ='/mute _ 720 Попрошайничество x6',["/po7"] ='/mute _ 840 Попрошайничество x7',["/po8"] ='/mute _ 960 Попрошайничество x8',["/po9"] ='/mute _ 1080 Попрошайничество x9',["/po10"] ='/mute _ 1200 Попрошайничество x10',
+		["/m"]      =  		'/mute _ 300 Нецензурная лексика',	--[[x10]]["/m2"]='/mute _ 600 Нецензурная лексика x2',["/m3"]='/mute _ 900 Нецензурная лексика x3',["/m4"]='/mute _ 1200 Нецензурная лексика x4',["/m5"]='/mute _ 1500 Нецензурная лексика x5',["/m6"]='/mute _ 1800 Нецензурная лексика x6',["/m7"]='/mute _ 2100 Нецензурная лексика x7',["/m8"]='/mute _ 2400 Нецензурная лексика x8',["/m9"]='/mute _ 2700 Нецензурная лексика x9',["/m10"]='/mute _ 3000 Нецензурная лексика x10',
+		["/ok"]     =  		'/mute _ 400 Оскорбление/Унижение',	--[[x10]]["/ok2"]='/mute _ 800 Оскорбление/Унижение x2',["/ok3"]='/mute _ 1200 Оскорбление/Унижение x3',["/ok4"]='/mute _ 1600 Оскорбление/Унижение x4',["/ok5"]='/mute _ 2000 Оскорбление/Унижение x5',["/ok6"]='/mute _ 2400 Оскорбление/Унижение x6',["/ok7"]='/mute _ 2800 Оскорбление/Унижение x7',["/ok8"]='/mute _ 3200 Оскорбление/Унижение x8',["/ok9"]='/mute _ 3600 Оскорбление/Унижение x9',["/ok10"]='/mute _ 4000 Оскорбление/Унижение x10',
+		["/oa"] 	=  		'/mute _ 2500 Оскорбление администрации',
+		["/kl"] 	=  		'/mute _ 3000 Клевета на администрацию',
+		["/zs"] 	=  		'/mute _ 600 Злоупотребление символами',
+		["/nm"] 	=  		'/mute _ 600 Неадекватное поведение.',
+		["/rekl"] 	=  		'/mute _ 1000 Реклама',
+		["/rz"]		=  		'/mute _ 5000 Розжиг межнац. розни',
+		["/or"]		= 		'/mute _ 5000 Оскорбление/Упоминание родни',
+		["/ia"] 	=  		'/mute _ 2500 Выдача себя за администратора',
+	},
+	rmute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
+		["oft"] 	= 		'/rmute _ 120 оффтоп в репорт',		--[[x10]]["/oft2"]='/rmute _ 240 оффтоп в репорт x2',["/oft3"]='/rmute _ 360 оффтоп в репорт x3',["/oft4"]='/rmute _ 480 оффтоп в репорт х4',["/oft5"]='/rmute _ 600 оффтоп в репорт х5',["/oft6"]='/rmute _ 720 оффтоп в репорт x6',["/oft7"]='/rmute _ 840 оффтоп в репорт х7',["/oft8"]='/rmute _ 960 оффтоп в репорт х8',["/oft9"]='/rmute _ 1080 оффтоп в репорт х9',["/oft10"]='/rmute _ 1200 оффтоп в репорт х10',
+		["cp"] 		= 		'/rmute _ 120 caps in /report',		--[[x10]]["/cp2"]='/rmute _ 240 Caps in /report x2',["/cp3"]='/rmute _ 360 Caps in /report x3',["/cp4"]='/rmute _ 480 Caps in /report x4',["/cp5"]='/rmute _ 600 Caps in /report x5',["/cp6"]='/rmute _ 720 Caps in /report x6',["/cp7"]='/rmute _ 840 Caps in /report x7',["/cp8"]='/rmute _ 960 Caps in /report x8',["/cp9"]='/rmute _ 1080 Caps in /report x9',["/cp10"]='/rmute _ 1200 Caps in /report x10',
+		["rpo"]		=		'/rmute _ 120 Попрошайка в /report',--[[x10]]["/rpo2"]='/rmute _ 240 Попрошайка в /report x2',["/rpo3"]='/rmute _ 360 Попрошайка в /report x3',["/rpo4"]='/rmute _ 480 Попрошайка в /report x4',["/rpo5"]='/rmute _ 600 Попрошайка в /report x5',["/rpo6"]='/rmute _ 720 Попрошайка в /report x6',["/rpo7"]='/rmute _ 840 Попрошайка в /report x7',["/rpo8"]='/rmute _ 960 Попрошайка в /report x8',["/rpo9"]='/rmute _ 1080 Попрошайка в /report x9',["/rpo10"]='/rmute _ 1200 Попрошайка в /report x10',
+		["rm"] 		= 		'/rmute _ 300 мат в /report',		--[[x10]]["/rm2"]='/rmute _ 600 мат в /report x2',["/rm3"]='/rmute _ 900 мат в /report x3',["/rm4"]='/rmute _ 600 мат в /report x4',["/rm5"]='/rmute _ 600 мат в /report x5',["/rm6"]='/rmute _ 600 мат в /report x6',["/rm7"]='/rmute _ 600 мат в /report x7',["/rm8"]='/rmute _ 600 мат в /report x8',["/rm9"]='/rmute _ 600 мат в /report x9',["/rm10"]='/rmute _ 600 мат в /report x10',
+		["rok"] 	= 		'/rmute _ 400 Оскорбление в /report',--[[x10]]["/rok2"]='/rmute _ 800 Оскорбление в /report x2',["/rok3"]='/rmute _ 1200 Оскорбление в /report x3',["/rok4"]='/rmute _ 1600 Оскорбление в /report x4',["/rok5"]='/rmute _ 2000 Оскорбление в /report x5',["/rok6"]='/rmute _ 2400 Оскорбление в /report x6',["/rok7"]='/rmute _ 2800 Оскорбление в /report x7',["/rok8"]='/rmute _ 3200 Оскорбление в /report x8',["/rok9"]='/rmute _ 3600 Оскорбление в /report x9',["/rok10"]='/rmute _ 4000 Оскорбление в /report x10',
+		["roa"] 	= 		'/rmute _ 2500 Оскорблeние администрации',
+		["ror"] 	= 		'/rmute _ 5000 Оскорблeние/Упоминание родных',
+		["rzs"] 	= 		'/rmute _ 600 Злоупотребление символaми',
+		["rrz"] 	= 		'/rmute _ 5000 Розжиг межнац. рoзни',
+		["rkl"] 	= 		'/rmute _ 3000 Клевeта на администрацию'
+	},
+	jail = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
+		["/bg"] 	= 		'/jail _ 300 Багоюз',
+		["/td"] 	= 		'/jail _ 300 car in /trade',
+		["/jm"] 	= 		'/jail _ 300 Нарушение правил МП',	--[[x10]]jm2='/jail _ 600 Нарушение правил МП x2',jm3='/jail _ 900 Нарушение правил МП x3',jm4='/jail _ 1200 Нарушение правил МП x4',jm5='/jail _ 1500 Нарушение правил МП x5',jm6='/jail _ 1800 Нарушение правил МП x6',jm7='/jail _ 2100 Нарушение правил МП x7',jm8='/jail _ 2400 Нарушение правил МП x8',jm9='/jail _ 2700 Нарушение правил МП x9',jm10='/jail _ 3000 Нарушение правил МП x10',
+		["/dz"]		=		'/jail _ 300 ДМ/ДБ в зеленой зоне',	--[[x10]]dz2='/jail _ 600 ДМ/ДБ в зеленой зоне x2',dz3='/jail _ 900 ДМ/ДБ в зеленой зоне x3',dz4='/jail _ 1200 ДМ/ДБ в зеленой зоне x4',dz5='/jail _ 1500 ДМ/ДБ в зеленой зоне x5',dz6='/jail _ 1800 ДМ/ДБ в зеленой зоне x6',dz7='/jail _ 2100 ДМ/ДБ в зеленой зоне x7',dz8='/jail _ 2400 ДМ/ДБ в зеленой зоне x8',dz9='/jail _ 2700 ДМ/ДБ в зеленой зоне x9',dz10='/jail _ 3000 ДМ/ДБ в зеленой зоне x10',
+		["/sk"] 	= 		'/jail _ 300 Spawn Kill',			--[[x10]]sk2='/jail _ 600 Spawn Kill x2',sk3='/jail _ 900 Spawn Kill x3',sk4='/jail _ 1200 Spawn Kill x4',sk5='/jail _ 1500 Spawn Kill x5',sk6='/jail _ 1800 Spawn Kill x6',sk7='/jail _ 2100 Spawn Kill x7',sk8='/jail _ 2400 Spawn Kill x8',sk9='/jail _ 2700 Spawn Kill x9',sk10='/jail _ 3000 Spawn Kill x10',
+		["/dk"] 	= 		'/jail _ 900 ДБ Ковш в зеленой зоне',
+		["/jc"] 	= 		'/jail _ 900 сторонний скрипт/ПО',
+		["/sh"] 	= 		'/jail _ 900 SpeedHack/FlyCar',
+		["/prk"] 	=		'/jail _ 900 Parkour mode',
+		["/vs"] 	=		'/jail _ 900 Дрифт мод',
+		["/jcb"] 	= 		'/jail _ 3000 читерский скрипт/ПО',
+		["/zv"] 	= 		"/jail _ 3000 Злоупотребление VIP'ом",
+		["/dmp"] 	= 		'/jail _ 3000 Серьезная помеха на МП',
+	},
+	ban = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
+		["/bh"] 	= 		'/ban _ 3 Нарушение правил /helper',
+		["/nmb"] 	= 		'/ban _ 3 Неадекватное поведение',
+		["/ch"]		= 		'/iban _ 7 читерский скрипт/ПО',
+		["/obh"] 	= 		'/iban _ 7 Обход прошлого бана',
+		["/bosk [ФД!]"] 	= 		'/siban _ 999 Оскорбление проекта',
+		["/rk [ФД!]"] 	= 		'/siban _ 999 Реклама',
+		["/obm [ФД!]"] 	= 		'/siban _ 30 Обман/Развод',
+	},
+	kick = {
+		["/kk3"] 	= 		'/ban _ 7 Смените ник 3/3',
+		["/kk2"] 	= 		'/kick _ Смените ник 2/3',
+		["/kk1"] 	= 		'/kick _ Смените ник 1/3',
+		["/cafk"] 	= 		'/kick _ AFK in /arena',
+		["/dj"] 	= 		'/kick _ DM in jail',
+	},
+	server = {},
+}
+
+
+
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
 	while not isSampAvailable() do wait(1000) end
@@ -300,14 +429,19 @@ function main()
 	 	else sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) end
 	end
 	local AdminTools = nil
-	--------------------============ ПРАВИЛА И КОМАНДЫ =====================---------------------------------
 	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then 
 		sampProcessChatInput('/reset')
 	end
 
 	local rules = io.open('moonloader\\config\\AT\\rules.txt',"r")
 	if rules then for line in rules:lines() do array.pravila[ #(array.pravila) + 1] = line;end rules:close() end
-	
+	for k,v in pairs(array.pravila) do
+		if v:match('%[(.+) lvl%]') then
+			local v = string.gsub(v, '%[(.+) lvl%] ', "")
+			local command = textSplit(u8:decode(v), " - ")[1]
+			basic_command.server[command] = string.gsub( u8:decode(v), command..' %- ', "")
+		end
+	end
 	--------------------============ АВТОМУТ =====================---------------------------------
 	local AutoMute_mat = io.open('moonloader\\config\\AT\\mat.txt', "r")
 	if AutoMute_mat then for line in AutoMute_mat:lines() do line = u8:decode(line) if line and #(line) > 2 then array.mat[#array.mat + 1] = line end;end AutoMute_mat:close() end
@@ -406,7 +540,7 @@ function main()
 						end
 					end
 				end
-				-- подсказки под чато
+				-- подсказки под чатом
 
 				local ping = sampGetPlayerPing(pID) -- ping
 				local caps = (user32).GetKeyState(0x14) -- Код клавиши CapsLock
@@ -418,145 +552,40 @@ function main()
 				else raskl = 'EN' end
 	
 				local text = ("Ваш ник: "..cfg.settings.color_chat..name.."["..pID.."]{ffffff}, Ваш пинг: "..cfg.settings.color_chat..ping.."{ffffff}, Раскладка: "..cfg.settings.color_chat..raskl.."{ffffff}, Capslock: "..cfg.settings.color_chat..caps)
-				renderFontDrawText(font_chat, text, in2 + 5, in3 + 45, -1)
+				local count = 0
+				if cfg.settings.active_chat then
+					if #getInput > 1 then
+						for _, razdel in pairs(basic_command) do
+							for name, command in pairs(razdel) do
+								if name:match(getInput) and not tonumber(string.sub(name, -1))  then
+									renderDrawBox(in2 + 5, in3 + 55 + (count*6), sw * 0.6 - 10, 30, 0x88000000)
+									renderFontDrawText(font_chat,  name .. " -> " .. string.gsub(command, "_", "[ID]"), in2 + 10, in3 + 60 + (count*6) , -1)
+									count = count + 5
+									if count == 20 then break break end -- не более 8 подсказок
+								end
+							end
+						end
+						count = 0
+					else
+						renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1)
+					end
+				end
 			end
 		end
-
 		wait(1) -- задержка
 	end
 end
---======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
-local basic_command = { -- базовые команды, 1 аргумент = символ '_'
-	prochee = {
-		update  = 		'Обновить скрипт',
-		fs 		=		'Открыть меню FastSpawn',
-		trassera= 		'Открыть настройку трассеров пуль',
-		ears 	=		'Включить/выключить рендер личных сообщений игроков',
-		ahelp 	= 		'Все команды скрипта/сервера и правила',
-		wh 		= 		'Включить/выключить WallHack',
-		c 		=		'Быстрый ответ игроку в формате репорта',
-		rst 	= 		'Принудительная перезагрузка всех Lua скриптов',
-		tool 	= 		'Активировать меню АТ',
-		sbanip 	= 		'Выдать блокировку аккаунта с IP адресом (ФД!)',
-		opencl  = 		'Открыть меню чат-логгера',
-		atr 	=		'бесплатная альтернатива /tr, автоматически берет новые репорты',
-		spp 	= 		'Заспавнить игроков в радиусе',
-		prfma 	= 		'Выдать префикс мл.админу',
-		prfa 	= 		'Выдать префикс админу',
-		prfsa 	= 		'Выдать префикс старшему админу',
-		prfpga 	= 		'Выдать префикс ПГА',
-		prfzga 	= 		'Выдать префикс ЗГА',
-		prfga 	= 		'Выдать префикс ГА',
-		color_report   ='Назначить цвет ответа на репорт',
-		control_afk    ='Автоматически закрывать игру, если стоишь в AFK более указанного кол-ва минут',
-		size_chat	   ='Изменить размер рендера информации открытого чата',
-		add_autoprefix ='Добавить администратора в исключение автопрефикса',
-		del_autoprefix ='Удалить администратора из исключений автопрефикса',
-		fl 			   ='Открыть редактор предложений для удаления их из чата',
-		reset 		   ='Сбросить настройки по умолчанию',
-		autoban 	   ='Автоматический бан за рекламу, ключевые слова',
-	},
-	help = {
-		uu      =  		'/unmute _',
-		uj      =  		'/unjail _',
-		ur      =  		'/unrmute _',
-		uuf 	=		'/muteakk _ 5 Наказание снято.',
-		ujf 	=		'/jailakk _ 5 Наказание снято.',
-		urf 	= 		'/rmuteoff _ 5 Наказание снято.',
-		as      =  		'/aspawn _',
-		gv 		=		'/giveaccess _',
-		mk 		=		'/makeadmin _',
-		sa		=		'/setadmin',
-		sn 		=		'/setnick _',
-		stw     =  		'/setweap _ 38 5000',
-		vig 	=		"/vvig _ 1 Злоупотребление VIP'ом",
-	},
-	ans = { 														-- с вариативностью есть доп/текст или нет
-		nv      =  		'/ot _ Игрок не в сети',
-		cl      =  		'/ot _ Данный игрок чист.',
-		pmv     =  		'/ot _ Помогли вам. Обращайтесь ещё',
-		dpr     =  		'/ot _ У игрока куплены функции за /donate',
-		afk     =  		'/ot _ Игрок бездействует или находится в AFK',
-		nak     =  		'/ot _ Игрок был наказан! Благодарим за обращение.',
-		n       =  		'/ot _ Нарушений со стороны игрока не наблюдается.',
-		fo      =  		'/ot _ Обратитесь с данной проблемой на форум https://forumrds.ru',
-		rep     =  		'/ot _ Нашли нарушителя? Появился вопрос? Напишите /report!',
-		al 		=		'/ot _ Здравствуйте! Вы забыли ввести /alogin !\n'..
-						'/ot _ Введите /alogin и свой пароль, пожалуйста.',
-	},
-	mute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
-		fd      =  		'/mute _ 120 Флуд/Спам',			--[[x10]]fd2='/mute _ 240 Флуд x2',fd3='/mute _ 360 Флуд x3',fd4='/mute _ 480 Флуд x4',fd5='/mute _ 600 Флуд x5',fd6='/mute _ 720 Флуд x6',fd7='/mute _ 840 Флуд x7',fd8='/mute _ 960 Флуд x8',fd9='/mute _ 1080 Флуд x9',fd10='/mute _ 1200 Флуд x10',
-		po 		=  		'/mute _ 120 Попрошайничество',		--[[x10]]po2='/mute _ 240 Попрошайничество x2',po3='/mute _ 360 Попрошайничество x3',po4 ='/mute _ 480 Попрошайничество x4',po5 ='/mute _ 600 Попрошайничество x5',po6 ='/mute _ 720 Попрошайничество x6',po7 ='/mute _ 840 Попрошайничество x7',po8 ='/mute _ 960 Попрошайничество x8',po9 ='/mute _ 1080 Попрошайничество x9',po10 ='/mute _ 1200 Попрошайничество x10',
-		m       =  		'/mute _ 300 Нецензурная лексика',	--[[x10]]m2='/mute _ 600 Нецензурная лексика x2',m3='/mute _ 900 Нецензурная лексика x3',m4='/mute _ 1200 Нецензурная лексика x4',m5='/mute _ 1500 Нецензурная лексика x5',m6='/mute _ 1800 Нецензурная лексика x6',m7='/mute _ 2100 Нецензурная лексика x7',m8='/mute _ 2400 Нецензурная лексика x8',m9='/mute _ 2700 Нецензурная лексика x9',m10='/mute _ 3000 Нецензурная лексика x10',
-		ok      =  		'/mute _ 400 Оскорбление/Унижение',	--[[x10]]ok2='/mute _ 800 Оскорбление/Унижение x2',ok3='/mute _ 1200 Оскорбление/Унижение x3',ok4='/mute _ 1600 Оскорбление/Унижение x4',ok5='/mute _ 2000 Оскорбление/Унижение x5',ok6='/mute _ 2400 Оскорбление/Унижение x6',ok7='/mute _ 2800 Оскорбление/Унижение x7',ok8='/mute _ 3200 Оскорбление/Унижение x8',ok9='/mute _ 3600 Оскорбление/Унижение x9',ok10='/mute _ 4000 Оскорбление/Унижение x10',
-		oa 		=  		'/mute _ 2500 Оскорбление администрации',
-		kl 		=  		'/mute _ 3000 Клевета на администрацию',
-		zs 		=  		'/mute _ 600 Злоупотребление символами',
-		nm 		=  		'/mute _ 600 Неадекватное поведение.',
-		rekl 	=  		'/mute _ 1000 Реклама',
-		rz		=  		'/mute _ 5000 Розжиг межнац. розни',
-		ia 		=  		'/mute _ 2500 Выдача себя за администратора',
-	},
-	rmute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
-		oft 	= 		'/rmute _ 120 оффтоп в репорт',		--[[x10]]oft2='/rmute _ 240 оффтоп в репорт x2',oft3='/rmute _ 360 оффтоп в репорт x3',oft4='/rmute _ 480 оффтоп в репорт х4',oft5='/rmute _ 600 оффтоп в репорт х5',oft6='/rmute _ 720 оффтоп в репорт x6',oft7='/rmute _ 840 оффтоп в репорт х7',oft8='/rmute _ 960 оффтоп в репорт х8',oft9='/rmute _ 1080 оффтоп в репорт х9',oft10='/rmute _ 1200 оффтоп в репорт х10',
-		cp 		= 		'/rmute _ 120 caps in /report',		--[[x10]]cp2='/rmute _ 240 Caps in /report x2',cp3='/rmute _ 360 Caps in /report x3',cp4='/rmute _ 480 Caps in /report x4',cp5='/rmute _ 600 Caps in /report x5',cp6='/rmute _ 720 Caps in /report x6',cp7='/rmute _ 840 Caps in /report x7',cp8='/rmute _ 960 Caps in /report x8',cp9='/rmute _ 1080 Caps in /report x9',cp10='/rmute _ 1200 Caps in /report x10',
-		rpo		=		'/rmute _ 120 Попрошайка в /report',--[[x10]]rpo2='/rmute _ 240 Попрошайка в /report x2',rpo3='/rmute _ 360 Попрошайка в /report x3',rpo4='/rmute _ 480 Попрошайка в /report x4',rpo5='/rmute _ 600 Попрошайка в /report x5',rpo6='/rmute _ 720 Попрошайка в /report x6',rpo7='/rmute _ 840 Попрошайка в /report x7',rpo8='/rmute _ 960 Попрошайка в /report x8',rpo9='/rmute _ 1080 Попрошайка в /report x9',rpo10='/rmute _ 1200 Попрошайка в /report x10',
-		rm 		= 		'/rmute _ 300 мат в /report',		--[[x10]]rm2='/rmute _ 600 мат в /report x2',rm3='/rmute _ 900 мат в /report x3',rm4='/rmute _ 600 мат в /report x4',rm5='/rmute _ 600 мат в /report x5',rm6='/rmute _ 600 мат в /report x6',rm7='/rmute _ 600 мат в /report x7',rm8='/rmute _ 600 мат в /report x8',rm9='/rmute _ 600 мат в /report x9',rm10='/rmute _ 600 мат в /report x10',
-		rok 	= 		'/rmute _ 400 Оскорбление в /report',--[[x10]]rok2='/rmute _ 800 Оскорбление в /report x2',rok3='/rmute _ 1200 Оскорбление в /report x3',rok4='/rmute _ 1600 Оскорбление в /report x4',rok5='/rmute _ 2000 Оскорбление в /report x5',rok6='/rmute _ 2400 Оскорбление в /report x6',rok7='/rmute _ 2800 Оскорбление в /report x7',rok8='/rmute _ 3200 Оскорбление в /report x8',rok9='/rmute _ 3600 Оскорбление в /report x9',rok10='/rmute _ 4000 Оскорбление в /report x10',
-		roa 	= 		'/rmute _ 2500 Оскорблeние администрации',
-		ror 	= 		'/rmute _ 5000 Оскорблeние/Упоминание родных',
-		rzs 	= 		'/rmute _ 600 Злоупотребление символaми',
-		rrz 	= 		'/rmute _ 5000 Розжиг межнац. рoзни',
-		rkl 	= 		'/rmute _ 3000 Клевeта на администрацию'
-	},
-	jail = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
-		bg 		= 		'/jail _ 300 Багоюз',
-		td 		= 		'/jail _ 300 car in /trade',
-		jm 		= 		'/jail _ 300 Нарушение правил МП',	--[[x10]]jm2='/jail _ 600 Нарушение правил МП x2',jm3='/jail _ 900 Нарушение правил МП x3',jm4='/jail _ 1200 Нарушение правил МП x4',jm5='/jail _ 1500 Нарушение правил МП x5',jm6='/jail _ 1800 Нарушение правил МП x6',jm7='/jail _ 2100 Нарушение правил МП x7',jm8='/jail _ 2400 Нарушение правил МП x8',jm9='/jail _ 2700 Нарушение правил МП x9',jm10='/jail _ 3000 Нарушение правил МП x10',
-		dz		=		'/jail _ 300 ДМ/ДБ в зеленой зоне',	--[[x10]]dz2='/jail _ 600 ДМ/ДБ в зеленой зоне x2',dz3='/jail _ 900 ДМ/ДБ в зеленой зоне x3',dz4='/jail _ 1200 ДМ/ДБ в зеленой зоне x4',dz5='/jail _ 1500 ДМ/ДБ в зеленой зоне x5',dz6='/jail _ 1800 ДМ/ДБ в зеленой зоне x6',dz7='/jail _ 2100 ДМ/ДБ в зеленой зоне x7',dz8='/jail _ 2400 ДМ/ДБ в зеленой зоне x8',dz9='/jail _ 2700 ДМ/ДБ в зеленой зоне x9',dz10='/jail _ 3000 ДМ/ДБ в зеленой зоне x10',
-		sk 		= 		'/jail _ 300 Spawn Kill',			--[[x10]]sk2='/jail _ 600 Spawn Kill x2',sk3='/jail _ 900 Spawn Kill x3',sk4='/jail _ 1200 Spawn Kill x4',sk5='/jail _ 1500 Spawn Kill x5',sk6='/jail _ 1800 Spawn Kill x6',sk7='/jail _ 2100 Spawn Kill x7',sk8='/jail _ 2400 Spawn Kill x8',sk9='/jail _ 2700 Spawn Kill x9',sk10='/jail _ 3000 Spawn Kill x10',
-		dk 		= 		'/jail _ 900 ДБ Ковш в зеленой зоне',
-		jc 		= 		'/jail _ 900 сторонний скрипт/ПО',
-		sh 		= 		'/jail _ 900 SpeedHack/FlyCar',
-		prk 	=		'/jail _ 900 Parkour mode',
-		vs 		=		'/jail _ 900 Дрифт мод',
-		jcb 	= 		'/jail _ 3000 читерский скрипт/ПО',
-		zv 		= 		"/jail _ 3000 Злоупотребление VIP'ом",
-		dmp 	= 		'/jail _ 3000 Серьезная помеха на МП',
-	},
-	ban = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
-		bh 		= 		'/ban _ 3 Нарушение правил /helper',
-		nmb 	= 		'/ban _ 3 Неадекватное поведение',
-		ch 		= 		'/iban _ 7 читерский скрипт/ПО',
-		obh 	= 		'/iban _ 7 Обход прошлого бана',
-		bosk 	= 		'/siban _ 999 Оскорбление проекта',
-		rk 		= 		'/siban _ 999 Реклама',
-		obm 	= 		'/siban _ 30 Обман/Развод',
-	},
-	kick = {
-		kk3 	= 		'/ban _ 7 Смените ник 3/3',
-		kk2 	= 		'/kick _ Смените ник 2/3',
-		kk1 	= 		'/kick _ Смените ник 1/3',
-		cafk 	= 		'/kick _ AFK in /arena',
-		dj 		= 		'/kick _ DM in jail',
-	},
-}
 --------============= Инициализируем команды, указанные выше ===========================---------------------------
-for k,v in pairs(basic_command.ans) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then for k,v in pairs(textSplit(v, '\n')) do sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.mute) do  sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
-for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.kick) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.ban) do sampRegisterChatCommand(k, function(param)  if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.help) do sampRegisterChatCommand(k, function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
---============= Регистрация тех же команд из массива, но для выдачи в ОФФЛАЙНЕ (окончание f) ===============================--
-for k,v in pairs(basic_command.mute) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(v, '_', param), '/mute', '/muteoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.rmute) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(v, '_', param) , '/rmute', '/rmuteoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.jail) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(v, '_', param) , '/jail', '/jailakk') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.ban) do sampRegisterChatCommand(k..'f', function(param) if #param ~= 0 then sampSendChat(string.gsub(string.gsub(string.gsub(v, '_', param) , '/siban', '/banoff') ,'/iban', '/banoff') ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
---------============= Инициализируем команды ниже (особые свойства) ===========================---------------------------
-for k,v in pairs(cfg.my_command) do 
+for k,v in pairs(basic_command.ans) do   																 sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then for k,v in pairs(textSplit(v, '\n')) do sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.mute) do if not string.sub(k, -1) == "f" and not tonumber(string.sub(v, -1)) then basic_command.mute[k.."f"] = string.gsub(v, '/mute', '/muteoff') end sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
+for k,v in pairs(basic_command.rmute) do if not string.sub(k, -1) == "f" and not tonumber(string.sub(v, -1)) then  basic_command.rmute[k.."f"] = string.gsub(v, '/rmute', '/rmuteoff') end sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.jail) do if not string.sub(k, -1) == "f" and not tonumber(string.sub(v, -1)) then basic_command.jail[k.."f"] = string.gsub(v , '/jail', '/jailoff') end sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.kick) do 																	sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.ban) do if not string.sub(k, -1) == "f"  and not tonumber(string.sub(v, -1)) then basic_command.ban[k.."f"] = string.gsub (string.gsub(v , '/siban', '/banoff') ,'/iban', '/banoff') end sampRegisterChatCommand(string.sub(k,2), function(param)  if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.help) do 																	sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(cfg.my_command) do
 	local v = string.gsub(v, '\\n','\n')
+	basic_command.prochee[k] = v
 	sampRegisterChatCommand(k, function(param) 
 		lua_thread.create(function() 
 			for a,b in pairs(textSplit(string.gsub(v, '_', param), '\n')) do
@@ -578,7 +607,6 @@ for k,v in pairs(cfg.my_command) do
 		end) 
 	end) 
 end
-
 -- Команда or (оск/упом родни) содержит название переменной, потому создается отдельно
 sampRegisterChatCommand('prfma', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Мл.Администратор ' .. cfg.settings.prefixma) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
 sampRegisterChatCommand('prfa', function(param) if #param ~= 0 then   sampSendChat('/prefix '  .. param .. ' Администратор ' .. cfg.settings.prefixa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
@@ -587,9 +615,6 @@ sampRegisterChatCommand('prfsa', function(param) if #param ~= 0 then  sampSendCh
 sampRegisterChatCommand('prfpga', function(param) if #param ~= 0 then sampSendChat('/prefix '.. param .. ' Помощник.Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
 sampRegisterChatCommand('prfzga', function(param) if #param ~= 0 then sampSendChat('/prefix ' ..param .. ' Зам.Глав.Администратора ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
 sampRegisterChatCommand('prfga', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Главный-Администратор ' .. color()) else sampAddChatMessage(tag .. 'Вы не указали значение', -1) end end)
-sampRegisterChatCommand('or', function(param) if #param ~= 0 then     sampSendChat('/mute '       ..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
-sampRegisterChatCommand('orf', function(param) if #param ~= 0 then    sampSendChat('/muteakk '   ..param..' 5000 Оскорбление/Упоминание родных') else sampAddChatMessage(tag ..'Вы не указали значение') end end)
-
 
 sampRegisterChatCommand('spawncars', function(param)
 	if not ((#param == 1 or #param == 2) and tonumber(param)) then
@@ -1028,8 +1053,8 @@ function imgui.OnDrawFrame()
 				imgui.Text(u8'Ответ на репорт')
 				imgui.SameLine()
 				imgui.SetCursorPosX(190)
-				if imgui.Button(fa.ICON_COG, imgui.ImVec2(21,21)) then
-					imgui.OpenPopup('option_ans')
+				if imgui.Button(fa.ICON_COG.."##aa", imgui.ImVec2(21,21)) then
+					 imgui.OpenPopup('option_ans')
 				end
 				if imgui.BeginPopup('option_ans') then
 					if imgui.Button(u8'Назначить цвет репорта', imgui.ImVec2(300,24)) then
@@ -1071,9 +1096,7 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.Text(u8'Реакция на чит-оружие')
 				if imadd.ToggleButton("##autoupdate", array.checkbox.active_chat) then
-					if array.checkbox.active_chat.v then cfg.settings.size_text_f6 = 8
-					else cfg.settings.size_text_f6 = 1 end
-					font_chat = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW)
+					cfg.settings.active_chat = not cfg.settings.active_chat
 					save()
 				end
 				imgui.SameLine()
@@ -1087,6 +1110,7 @@ function imgui.OnDrawFrame()
 					if imgui.SliderInt('##Slider8', array.checkbox.size_chat, 8, 18) then
 						cfg.settings.size_text_f6 = array.checkbox.size_chat.v
 						save()
+						sampSetChatInputEnabled(true)
 						font_chat = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW) 
 					end
 					if imgui.Button(u8'Назначить цвет', imgui.ImVec2(272,24)) then
@@ -2951,21 +2975,6 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		sampAddChatMessage('',-1)
 		sampAddChatMessage(text, 0xff6347) -- чтобы не пропускали такие сообщения
 		sampAddChatMessage('',-1)
-		local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-		local _, id = text:match('(.+)%((%d+)%) пытался написать в чат:')
-		if tonumber(id) ~= myid and not AFK then
-			lua_thread.create(function()
-				wait(0)
-				sampAddChatMessage('{3CB371}[AT_HELP] {90EE90}Нажатие ' ..cfg.settings.key_automute..' автоматически вводит в чат /uu {AFEEEE}'..id, -1)
-				for i = 0, 10000 do
-					if isKeyDown(VK_RETURN) and not sampIsChatInputActive() and not sampIsDialogActive() then
-						sampProcessChatInput('/uu ' ..id)
-						break
-					end
-					wait(1)
-				end
-			end)
-		end
 		return false
 	elseif text:match('%[A%] NEARBY CHAT: .+') or text:match('%[A%] SMS: .+') then
 		array.checkbox.check_render_ears.v = true
@@ -3038,30 +3047,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 			return false
 		end
 	elseif not AFK then
-		if text:match('<PM> (.+) %[(%d+)%] %-%-> (.+) %[(%d+)%]: +') then
-			local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-			local _, id, _, _ = text:match('<PM> (.+) %[(%d+)%] %-%-> (.+) %[(%d+)%]: +')
-			if tonumber(id) ~= myid then
-				lua_thread.create(function()
-					wait(0)
-					sampAddChatMessage('{3CB371}[AT_HELP] {90EE90}Нажатие ' ..cfg.settings.key_automute..' автоматически вводит в чат /pm {AFEEEE}'..id.." ", -1)
-					for i = 0, 999 do
-						if isKeyDown(VK_RETURN) and not sampIsChatInputActive() and not sampIsDialogActive() and not sampGetChatInputText():match("/pm ") then
-							sampSetChatInputText("/pm " .. id .. " ")
-							break
-						end
-						wait(1)
-					end
-					for i = 0, 200 do
-						if not sampGetChatInputText():match("/pm ") then sampSetChatInputText("/pm " .. id .. " ") end
-						if not sampIsChatInputActive() then
-							sampSetChatInputEnabled(true)
-						end
-						wait(1)
-					end
-				end)
-			end
-		elseif cfg.settings.automute and (text:match("%((%d+)%): (.+)") or text:match("%[(%d+)%]: (.+)")) 			and not (text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") or text:match('написал %[(%d+)%]:') or text:match('ответил (.+)%[(%d+)%]: ')) then
+		if cfg.settings.automute and (text:match("%((%d+)%): (.+)") or text:match("%[(%d+)%]: (.+)")) 			and not (text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") or text:match('написал %[(%d+)%]:') or text:match('ответил (.+)%[(%d+)%]: ')) then
 			local text = text:rlower() .. ' '
 			local report = false
 			if text:match('жалоба') then report = true end
@@ -3163,7 +3149,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					return text
 				end
 			end
-		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack then
+		elseif text==('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack then
 			if not sampIsDialogActive() then 
 				lua_thread.create(function()
 					while sampIsChatInputActive() do wait(1) end
@@ -3188,7 +3174,7 @@ function automute(array, oskid, text, nakaz, report)
 			local nakaz_name = string.gsub(nakaz, textSplit(nakaz, ' ')[1]..' ', '')
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			sampAddChatMessage('Выдать мут по причине: "' ..nakaz_name ..'"? Клавиша '..cfg.settings.key_automute ..' для подтверждения',-1)
-			sampAddChatMessage('{00BFFF}[AT-AutoMute] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}[AT-AutoMute]', -1)
+			sampAddChatMessage('{00BFFF}['..rcommand..'] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}['..rcommand..']', -1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			local count = cfg.settings.sek_automute * 100
 			local time = cfg.settings.sek_automute
@@ -3263,7 +3249,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 			elseif v == 'JAIL' then return false end
 		end
 		------=========== Удаляем лишние текстдравы, сравнивая их с массивом =======---------------
-		for i = 183, 236 do if id == i then return false end end
+		if DELETE_TEXTDRAW_RECON[id] then return false end
 	end
 end
 
@@ -3483,7 +3469,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					if cfg.settings.color_report == '*' then peremrep = ('{'..color()..'}' .. peremrep)
 					else peremrep = (cfg.settings.color_report .. peremrep) end
 				end
-				if #(peremrep) < 4 then peremrep = peremrep .. '    ' end			
+				if #peremrep < 5 then peremrep = peremrep .. '    ' end			
 				if cfg.settings.custom_answer_save and array.answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(array.buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
 				sampCloseCurrentDialogWithButton(0)
@@ -4023,10 +4009,10 @@ function addBeginText()
 	if #array.buffer.custom_addtext_report.v > 1 then return u8:decode(array.buffer.custom_addtext_report.v)
 	else
 		local text = {
-			"Доброго времени суток,",
+			"Доброго времени суток!",
 			"Приветствую!",
 			"Привет!",
-			"Уважаемый игрок,",
+			"Уважаемый игрок!",
 			"Здравствуйте!",
 		}
 		return ( text[math.random(1,#text)] .. " " )
