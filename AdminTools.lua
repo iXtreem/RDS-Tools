@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.1   			 							-- Версия скрипта
+local version = 7.11   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в реконе
@@ -314,16 +314,16 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/ia"] 	=  		'/mute _ 2500 Выдача себя за администратора',
 	},
 	rmute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
-		["oft"] 	= 		'/rmute _ 120 оффтоп в репорт',		--[[x10]]["/oft2"]='/rmute _ 240 оффтоп в репорт x2',["/oft3"]='/rmute _ 360 оффтоп в репорт x3',["/oft4"]='/rmute _ 480 оффтоп в репорт х4',["/oft5"]='/rmute _ 600 оффтоп в репорт х5',["/oft6"]='/rmute _ 720 оффтоп в репорт x6',["/oft7"]='/rmute _ 840 оффтоп в репорт х7',["/oft8"]='/rmute _ 960 оффтоп в репорт х8',["/oft9"]='/rmute _ 1080 оффтоп в репорт х9',["/oft10"]='/rmute _ 1200 оффтоп в репорт х10',
-		["cp"] 		= 		'/rmute _ 120 caps in /report',		--[[x10]]["/cp2"]='/rmute _ 240 Caps in /report x2',["/cp3"]='/rmute _ 360 Caps in /report x3',["/cp4"]='/rmute _ 480 Caps in /report x4',["/cp5"]='/rmute _ 600 Caps in /report x5',["/cp6"]='/rmute _ 720 Caps in /report x6',["/cp7"]='/rmute _ 840 Caps in /report x7',["/cp8"]='/rmute _ 960 Caps in /report x8',["/cp9"]='/rmute _ 1080 Caps in /report x9',["/cp10"]='/rmute _ 1200 Caps in /report x10',
-		["rpo"]		=		'/rmute _ 120 Попрошайка в /report',--[[x10]]["/rpo2"]='/rmute _ 240 Попрошайка в /report x2',["/rpo3"]='/rmute _ 360 Попрошайка в /report x3',["/rpo4"]='/rmute _ 480 Попрошайка в /report x4',["/rpo5"]='/rmute _ 600 Попрошайка в /report x5',["/rpo6"]='/rmute _ 720 Попрошайка в /report x6',["/rpo7"]='/rmute _ 840 Попрошайка в /report x7',["/rpo8"]='/rmute _ 960 Попрошайка в /report x8',["/rpo9"]='/rmute _ 1080 Попрошайка в /report x9',["/rpo10"]='/rmute _ 1200 Попрошайка в /report x10',
-		["rm"] 		= 		'/rmute _ 300 мат в /report',		--[[x10]]["/rm2"]='/rmute _ 600 мат в /report x2',["/rm3"]='/rmute _ 900 мат в /report x3',["/rm4"]='/rmute _ 600 мат в /report x4',["/rm5"]='/rmute _ 600 мат в /report x5',["/rm6"]='/rmute _ 600 мат в /report x6',["/rm7"]='/rmute _ 600 мат в /report x7',["/rm8"]='/rmute _ 600 мат в /report x8',["/rm9"]='/rmute _ 600 мат в /report x9',["/rm10"]='/rmute _ 600 мат в /report x10',
-		["rok"] 	= 		'/rmute _ 400 Оскорбление в /report',--[[x10]]["/rok2"]='/rmute _ 800 Оскорбление в /report x2',["/rok3"]='/rmute _ 1200 Оскорбление в /report x3',["/rok4"]='/rmute _ 1600 Оскорбление в /report x4',["/rok5"]='/rmute _ 2000 Оскорбление в /report x5',["/rok6"]='/rmute _ 2400 Оскорбление в /report x6',["/rok7"]='/rmute _ 2800 Оскорбление в /report x7',["/rok8"]='/rmute _ 3200 Оскорбление в /report x8',["/rok9"]='/rmute _ 3600 Оскорбление в /report x9',["/rok10"]='/rmute _ 4000 Оскорбление в /report x10',
-		["roa"] 	= 		'/rmute _ 2500 Оскорблeние администрации',
-		["ror"] 	= 		'/rmute _ 5000 Оскорблeние/Упоминание родных',
-		["rzs"] 	= 		'/rmute _ 600 Злоупотребление символaми',
-		["rrz"] 	= 		'/rmute _ 5000 Розжиг межнац. рoзни',
-		["rkl"] 	= 		'/rmute _ 3000 Клевeта на администрацию'
+		["/oft"] 	= 		'/rmute _ 120 оффтоп в репорт',		--[[x10]]["/oft2"]='/rmute _ 240 оффтоп в репорт x2',["/oft3"]='/rmute _ 360 оффтоп в репорт x3',["/oft4"]='/rmute _ 480 оффтоп в репорт х4',["/oft5"]='/rmute _ 600 оффтоп в репорт х5',["/oft6"]='/rmute _ 720 оффтоп в репорт x6',["/oft7"]='/rmute _ 840 оффтоп в репорт х7',["/oft8"]='/rmute _ 960 оффтоп в репорт х8',["/oft9"]='/rmute _ 1080 оффтоп в репорт х9',["/oft10"]='/rmute _ 1200 оффтоп в репорт х10',
+		["/cp"] 		= 		'/rmute _ 120 caps in /report',		--[[x10]]["/cp2"]='/rmute _ 240 Caps in /report x2',["/cp3"]='/rmute _ 360 Caps in /report x3',["/cp4"]='/rmute _ 480 Caps in /report x4',["/cp5"]='/rmute _ 600 Caps in /report x5',["/cp6"]='/rmute _ 720 Caps in /report x6',["/cp7"]='/rmute _ 840 Caps in /report x7',["/cp8"]='/rmute _ 960 Caps in /report x8',["/cp9"]='/rmute _ 1080 Caps in /report x9',["/cp10"]='/rmute _ 1200 Caps in /report x10',
+		["/rpo"]		=		'/rmute _ 120 Попрошайка в /report',--[[x10]]["/rpo2"]='/rmute _ 240 Попрошайка в /report x2',["/rpo3"]='/rmute _ 360 Попрошайка в /report x3',["/rpo4"]='/rmute _ 480 Попрошайка в /report x4',["/rpo5"]='/rmute _ 600 Попрошайка в /report x5',["/rpo6"]='/rmute _ 720 Попрошайка в /report x6',["/rpo7"]='/rmute _ 840 Попрошайка в /report x7',["/rpo8"]='/rmute _ 960 Попрошайка в /report x8',["/rpo9"]='/rmute _ 1080 Попрошайка в /report x9',["/rpo10"]='/rmute _ 1200 Попрошайка в /report x10',
+		["/rm"] 		= 		'/rmute _ 300 мат в /report',		--[[x10]]["/rm2"]='/rmute _ 600 мат в /report x2',["/rm3"]='/rmute _ 900 мат в /report x3',["/rm4"]='/rmute _ 600 мат в /report x4',["/rm5"]='/rmute _ 600 мат в /report x5',["/rm6"]='/rmute _ 600 мат в /report x6',["/rm7"]='/rmute _ 600 мат в /report x7',["/rm8"]='/rmute _ 600 мат в /report x8',["/rm9"]='/rmute _ 600 мат в /report x9',["/rm10"]='/rmute _ 600 мат в /report x10',
+		["/rok"] 	= 		'/rmute _ 400 Оскорбление в /report',--[[x10]]["/rok2"]='/rmute _ 800 Оскорбление в /report x2',["/rok3"]='/rmute _ 1200 Оскорбление в /report x3',["/rok4"]='/rmute _ 1600 Оскорбление в /report x4',["/rok5"]='/rmute _ 2000 Оскорбление в /report x5',["/rok6"]='/rmute _ 2400 Оскорбление в /report x6',["/rok7"]='/rmute _ 2800 Оскорбление в /report x7',["/rok8"]='/rmute _ 3200 Оскорбление в /report x8',["/rok9"]='/rmute _ 3600 Оскорбление в /report x9',["/rok10"]='/rmute _ 4000 Оскорбление в /report x10',
+		["/roa"] 	= 		'/rmute _ 2500 Оскорблeние администрации',
+		["/ror"] 	= 		'/rmute _ 5000 Оскорблeние/Упоминание родных',
+		["/rzs"] 	= 		'/rmute _ 600 Злоупотребление символaми',
+		["/rrz"] 	= 		'/rmute _ 5000 Розжиг межнац. рoзни',
+		["/rkl"] 	= 		'/rmute _ 3000 Клевeта на администрацию'
 	},
 	jail = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
 		["/bg"] 	= 		'/jail _ 300 Багоюз',
@@ -969,6 +969,7 @@ function imgui.OnDrawFrame()
 						if cfg.settings.forma_na_mute then
 							cfg.settings.automute = false
 							array.checkbox.check_automute.v = false
+							sampAddChatMessage(tag .. 'У вас включены автоформы на мут. Во избежания флуда совмещать эти функции запрещено.', -1)
 						else 
 							cfg.settings.automute  = not cfg.settings.automute 
 						end
@@ -1024,6 +1025,7 @@ function imgui.OnDrawFrame()
 							cfg.settings.smart_automute = false
 							array.checkbox.check_automute = imgui.ImBool(cfg.settings.automute)
 							array.checkbox.check_smart_automute = imgui.ImBool(cfg.settings.smart_automute)
+							sampAddChatMessage(tag .. 'У вас включены автоформы на мут. Во избежания флуда совмещать эти функции запрещено.', -1)
 						else
 							cfg.settings.automute  = not cfg.settings.automute
 							array.checkbox.check_automute = imgui.ImBool(cfg.settings.automute)
