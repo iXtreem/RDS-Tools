@@ -1,4 +1,5 @@
 
+local vk = require('VK_API')
 local token = --[[Токен группы VK]]"vk1.a.CeLIzK9OTcpIzmnlvUPNaBk-f8PVBBjBIKYMgOvci7RAq-hi9up1REVQC_T77bW71PpOdeijhTk3k4F1_-9XckYBiAMGiJzlLV3xCR0JI5_sWGi96om1qPLPFRyGFeWVILb1d7Jw8GLIHk_WhfwAydb9070C_vx2fNt0RygHMob7AGRhfHgQanNho6ox7tN-LZuSU7E93WH9scneUzbM1w"
 local ID = "508415544"	-- ID VK кому отправлять
 local message = "" -- сообщение отправленное VK
@@ -17,7 +18,7 @@ function onSystemMessage(msg, type, script)
                 sampShowDialog(252, '{FFFFFF}Кажется, что-то пошло не так ...', 'В скрипте {7B68EE}' .. scripts[i] .. ' {ffffff}произошла ошибка, вследствии чего все скрипты будут перезагружены.\nКод ошибки:\n\n'..msg, 'reload', 'send report', 0)
                 while sampIsDialogActive(252) do wait(500) end
                 local _, button, _, _ = sampHasDialogRespond(252)
-                if button == 1 then
+                if button == 0 then
                     sampShowDialog(252, "Желаете отправить отчет об ошибке?", ('Нет\nДа\nДа, со своими комментариями\nНе выполнять перезагрузку скриптов'), "Выбрать", nil, 2)
                     while sampIsDialogActive(252) do wait(500) end
                     local _, _, button, _ = sampHasDialogRespond(252)
@@ -33,10 +34,10 @@ function onSystemMessage(msg, type, script)
                         local nick = sampGetPlayerNickname(id)
                         local data = (os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year .. ' '..os.date("*t").hour..':'..os.date("*t").min ..':'..os.date("*t").sec)
 
-                        if nick ~= 'N.E.O.N' and nick ~= 'chieftain' then -- разработчику незачем мучать себя уведомлениями
-                            vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
-                            vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua'.. '\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
-                        end
+                      
+                        vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
+                        vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua'.. '\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
+
                         sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
                     end
                     if button ~= 3 then
