@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.21   			 							-- Версия скрипта
+local version = 7.3   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в реконе
@@ -204,7 +204,9 @@ local array = {
 	nakazatreport 	= {},											-- Возможность наказать прямо из репорта
 	answer 			= {}, 											-- Выбор ответа в репорте
 	adminchat 		= {},											-- Все админ-сообщения хранятся тут
+	adminchat_minimal = {},											-- Сокращенный AdminChat
 	ears 			= {},											-- Все ears сообщения хранятся тут
+	ears_minimal 	= {},											-- Сокращенный EARS
 	inforeport 		= {},											-- Вся информация о игроке в реконе хранится тут
 	pravila 		= {},											-- Правила/команды хранятся тут /ahelp
 	flood = { --[[сборник ID]]message = {},--[[Сообщение]]time = {},--[[время отправки]]count = {}--[[кол-во повторных сообщений]]},
@@ -482,16 +484,26 @@ function main()
 
 		if not AFK then
 			-- рендер чатов 
+			local mouseX, mouseY = getCursorPos() 
 			for i = 1, #array.adminchat do
-				renderFontDrawText(font_adminchat, array.adminchat[i], cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15), 0xCCFFFFFF)
+				local coordinateX, coordinateY = cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15)
+				if sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20) then
+					renderFontDrawText(font_adminchat, array.adminchat[i], coordinateX, coordinateY, 0xCCFFFFFF)
+				else
+					renderFontDrawText(font_adminchat, array.adminchat_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
+				end
 			end
-			for i = 1, #array.ears do 
-				renderFontDrawText(font_earschat, array.ears[i], cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15), 0xCCFFFFFF)
+			for i = 1, #array.ears do
+				local coordinateX, coordinateY = cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15)
+				if sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20) then
+					renderFontDrawText(font_earschat, array.ears[i], coordinateX, coordinateY, 0xCCFFFFFF)
+				else
+					renderFontDrawText(font_earschat, array.ears_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
+				end
 			end
 
 			--Название проги в углу экрана
 			renderFontDrawText(font_watermark, tag..'{808080}version['..version..']', 10, sh-20, 0xCCFFFFFF)
-
 			-- автозамена . /
 			if sampIsChatInputActive() then
 				local in1 = sampGetInputInfoPtr() -- координаты под чатом
@@ -560,7 +572,7 @@ function main()
 						for _, razdel in pairs(basic_command) do
 							for name, command in pairs(razdel) do
 								if string.sub(getInput, 1,1) == "/" and name:match("/"..string.gsub(getInput, '%p', '')) and not tonumber(string.sub(command, -1))  then
-									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 600, 30, 0x88000000)
+									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000)
 									renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "[ID]"), in2 + 10, in3 + 60 + (count*6) , -1)
 									count = count + 5
 									if count > 16 then break break end -- не более 8 подсказок
@@ -858,6 +870,7 @@ sampRegisterChatCommand('ears', function()
 	sampSendChat('/ears')
 	if array.checkbox.check_render_ears.v then
 		array.ears = {}
+		array.ears_minimal = {}
 		array.checkbox.check_render_ears.v = false
 		print('Сканирование ЛС успешно активировано.', -1)
 	else
@@ -1153,7 +1166,7 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.SetCursorPosX(250)
 				if imadd.ToggleButton("##AdminChat", array.checkbox.check_admin_chat) then
-					if cfg.settings.admin_chat then array.adminchat = {} end
+					if cfg.settings.admin_chat then array.adminchat, array.adminchat_minimal = {}, {} end
 					cfg.settings.admin_chat = not cfg.settings.admin_chat
 					save()
 				end
@@ -1173,11 +1186,11 @@ function imgui.OnDrawFrame()
 					if imgui.SliderInt('##Slider4', array.checkbox.selected_adminchat2, 3, 20) then
 						cfg.settings.strok_admin_chat = array.checkbox.selected_adminchat2.v
 						save()
-						if #array.adminchat > cfg.settings.strok_admin_chat then for i = cfg.settings.strok_admin_chat, #array.adminchat do array.adminchat[i] = nil end end
+						if #array.adminchat > cfg.settings.strok_admin_chat then for i = cfg.settings.strok_admin_chat, #array.adminchat do array.adminchat_minimal[i] = nil array.adminchat[i] = nil end end
 					end
 					if imgui.Button(u8'Изменить позицию',imgui.ImVec2(140,24)) then
 						lua_thread.create(function()
-							if #array.adminchat < 1 then array.adminchat[1] = 'Тестовое сообщение для видимости новой позиции.' end 
+							if #array.adminchat < 1 then array.adminchat[1], array.adminchat_minimal[1] = 'Тестовое сообщение для видимости новой позиции.', 'Тестовое сообщение для видимости новой позиции.' end 
 							sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
 							sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
 							local old_pos_x, old_pos_y = cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y
@@ -1190,7 +1203,7 @@ function imgui.OnDrawFrame()
 						end)
 					end
 					imgui.SameLine()
-					if imgui.Button(u8'Сбросить чат',imgui.ImVec2(125, 24)) then array.adminchat = {} end
+					if imgui.Button(u8'Сбросить чат',imgui.ImVec2(125, 24)) then array.adminchat, array.adminchat_minimal= {}, {} end
 					imgui.EndPopup()
 				end
 				if imadd.ToggleButton("##render/admins", array.checkbox.check_render_admins) then
@@ -1285,7 +1298,7 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.SetCursorPosX(250)
 				if imadd.ToggleButton("##renderEars", array.checkbox.check_render_ears) then
-					if array.checkbox.check_render_ears.v then array.ears = {} end
+					if array.checkbox.check_render_ears.v then array.ears = {} array.ears_minimal = {} end
 					array.checkbox.check_render_ears.v = not array.checkbox.check_render_ears.v
 					sampProcessChatInput('/ears')
 				end
@@ -1307,12 +1320,13 @@ function imgui.OnDrawFrame()
 						save()
 						if #array.ears > cfg.settings.strok_ears then
 							array.ears = {}
+							array.ears_minimal = {}
 						end
 					end
 					if imgui.Button(u8'Изменить позицию',imgui.ImVec2(140,24)) then
 						if array.checkbox.check_render_ears.v then
 							lua_thread.create(function()
-								if #array.ears > 1 then array.ears[#array.ears] = 'Тестовое сообщение для видимости новой позиции.' end 
+								if #array.ears < 1 then array.ears[#array.ears] = 'Тестовое сообщение для видимости новой позиции.' array.ears_minimal[#array.ears_minimal] = 'Тестовое сообщение для видимости новой позиции.' end 
 								sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
 								sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
 								local old_pos_x, old_pos_y = cfg.settings.position_ears_x, cfg.settings.position_ears_y
@@ -2993,8 +3007,16 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		return false
 	elseif text:match('%[A%] NEARBY CHAT: .+') or text:match('%[A%] SMS: .+') then
 		array.checkbox.check_render_ears.v = true
-		local text = string.gsub(text, 'NEARBY CHAT:', '{87CEEB}AT-NEAR:{FFFFFF}')
-		local text = string.gsub(text, 'SMS:', '{4682B4}AT-SMS:{FFFFFF}')
+		local sokr_text = string.gsub( string.sub( string.gsub (string.gsub(string.gsub(string.gsub(text, 'NEARBY CHAT: ', '{87CEEB}'), 'SMS: ','{4682B4}'), ' отправил ', ''), ' игрока ', ''), 5), ' |(.+)%((%d+)%)', '')
+		if #sokr_text > 40 then sokr_text = string.sub(sokr_text, 1, 40).."..." end
+		if #array.ears == cfg.settings.strok_ears then
+			for i = 0, #array.ears_minimal do
+				if i ~= #array.ears_minimal then array.ears_minimal[i] = array.ears_minimal[i + 1]
+				else array.ears_minimal[#array.ears_minimal] = sokr_text end
+			end
+		else array.ears_minimal[#array.ears_minimal + 1] = sokr_text end
+		local text = string.gsub(text, 'NEARBY CHAT:', os.date("[%H:%M:%S] ")..'{87CEEB}AT-NEAR:{FFFFFF}')
+		local text = string.gsub(text, 'SMS:', os.date("[%H:%M:%S] ")..'{4682B4}AT-SMS:{FFFFFF}')
 		local text = string.gsub(text, ' отправил ', '')
 		local text = string.gsub(text, ' игроку ', '->')
 		local text = string.sub(text, 5) -- удаляем [A]
@@ -3052,7 +3074,16 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		end
 		if cfg.settings.admin_chat then
 			local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.+)')
-			local messange = (string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
+			local messange = os.date("[%H:%M:%S] ")..(string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
+			if #admtext > 40 then admtext = string.sub(admtext, 1, 40).."..." end
+			local messange_min = (string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..admlvl..']: '.. admtext)
+			if #array.adminchat == cfg.settings.strok_admin_chat then
+				for i = 0, #array.adminchat_minimal do
+					if i ~= #array.adminchat_minimal then array.adminchat_minimal[i] = array.adminchat_minimal[i+1]
+					else array.adminchat_minimal[#array.adminchat_minimal] = messange_min end
+				end
+			else array.adminchat_minimal[#array.adminchat_minimal + 1] = messange_min end
+
 			if #array.adminchat == cfg.settings.strok_admin_chat then
 				for i = 0, #array.adminchat do
 					if i ~= #array.adminchat then array.adminchat[i] = array.adminchat[i+1]
