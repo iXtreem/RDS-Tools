@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.3   			 							-- Версия скрипта
+local version = 7.31   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в реконе
@@ -351,9 +351,9 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/nmb"] 	= 		'/ban _ 3 Неадекватное поведение',
 		["/ch"]		= 		'/iban _ 7 читерский скрипт/ПО',
 		["/obh"] 	= 		'/iban _ 7 Обход прошлого бана',
-		["/bosk [ФД!]"] =   '/siban _ 999 Оскорбление проекта',
-		["/rk [ФД!]"] 	= 	'/siban _ 999 Реклама',
-		["/obm [ФД!]"] 	= 	'/siban _ 30 Обман/Развод',
+		["/bosk"] =   '/siban _ 999 Оскорбление проекта',
+		["/rk"] 	= 	'/siban _ 999 Реклама',
+		["/obm"] 	= 	'/siban _ 30 Обман/Развод',
 	},
 	kick = {
 		["/kk3"] 	= 		'/ban _ 7 Смените ник 3/3.',
@@ -487,7 +487,7 @@ function main()
 			local mouseX, mouseY = getCursorPos() 
 			for i = 1, #array.adminchat do
 				local coordinateX, coordinateY = cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15)
-				if sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20) then
+				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or isKeyDown(strToIdKeys(cfg.settings.key_automute)) then
 					renderFontDrawText(font_adminchat, array.adminchat[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_adminchat, array.adminchat_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -495,7 +495,7 @@ function main()
 			end
 			for i = 1, #array.ears do
 				local coordinateX, coordinateY = cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15)
-				if sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20) then
+				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or isKeyDown(strToIdKeys(cfg.settings.key_automute)) then
 					renderFontDrawText(font_earschat, array.ears[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_earschat, array.ears_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -3075,7 +3075,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		if cfg.settings.admin_chat then
 			local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.+)')
 			local messange = os.date("[%H:%M:%S] ")..(string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
-			if #admtext > 40 then admtext = string.sub(admtext, 1, 40).."..." end
+			if #admtext > 65 then admtext = string.sub(admtext, 1, 65).."..." end
 			local messange_min = (string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..admlvl..']: '.. admtext)
 			if #array.adminchat == cfg.settings.strok_admin_chat then
 				for i = 0, #array.adminchat_minimal do
