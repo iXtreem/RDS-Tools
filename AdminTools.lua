@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.31   			 							-- Версия скрипта
+local version = 7.32   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в реконе
@@ -75,7 +75,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		active_chat = true,
 		auto_cc     = false,
 		option_automute = 0,
-		key_automute = "Enter",
+		key_automute = "Insert",
 		sek_automute = 8,
 		sokr_nick = "",
 		nodialog = true,
@@ -3061,6 +3061,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 								if (find_admin_form.sub(find_admin_form, 2)):find('//') then array.admin_form.styleform = true end
 								array.admin_form.sett = true
 								wait_accept_form()
+								text = text .. " (Игрок: " ..array.admin_form.nickid..")"
 								break
 							else
 								array.admin_form = {}
