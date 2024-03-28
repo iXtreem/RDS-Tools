@@ -2930,7 +2930,7 @@ function imgui.OnDrawFrame()
 			if string.rlower(check_chat[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
 				imgui.Text((string.gsub(u8(check_chat[i]), '{%w%w%w%w%w%w}', '')))
 				if imgui.IsItemClicked(0) then
-					if getCurrentLanguageName() == '00000419' then 
+					if getCurrentLanguageName() ~= '00000419' then 
 						sampAddChatMessage(tag ..'Измените раскладку клавиатуры на русский язык для одинаковой кодировки', -1)
 					else
 						sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) 
@@ -3061,7 +3061,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 								if (find_admin_form.sub(find_admin_form, 2)):find('//') then array.admin_form.styleform = true end
 								array.admin_form.sett = true
 								wait_accept_form()
-								text = text .. " (Игрок: " ..array.admin_form.nickid..")"
+								text = text .. " (" ..array.admin_form.nickid..")"
 								break
 							else
 								array.admin_form = {}
