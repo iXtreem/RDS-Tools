@@ -134,12 +134,14 @@ local start_mp = false -- защита от удваивания функции
 local menu = 'open mp'
 local option_komnata = imgui.ImInt(0)
 local option_inter = imgui.ImInt(0)
-local option_color = imgui.ImInt(10) -- цвет по умолчанию
+local option_color = imgui.ImInt(math.random(0,17)) -- цвет по умолчанию
 local text_buffer = imgui.ImBuffer(256)
 local text_myprize = imgui.ImBuffer(256)
 local MyTextMP = imgui.ImBuffer(8192)
 local MyTextMP_start = imgui.ImBuffer(8192)
+MyTextMP_start.v = u8"/mess _ Приз данного мероприятия составляет *\n/mess _ ================| Правила мероприятия |================\n/mess _ Запрещено: выход из строя, покупка оружия, дм, /jp, /passive, /fly\n/mess _ В том числе любая другая помеха игрокам.\n/mess _ После телепорта сразу встаем в строй."
 local MyTextMP_end = imgui.ImBuffer(8192)
+MyTextMP_end.v = u8"/mess _ Мероприятие было окончено. Подводим итоги..."
 local colors = {
     [0] = u8'Белый',
     [1] = u8'Черный',
@@ -508,8 +510,8 @@ function imgui.OnDrawFrame()
                 imgui.PushItemWidth(127)
                 imgui.InputText('##mympname', MyTextMP)
                 imgui.PopItemWidth()
-                if imgui.Button(u8'Начало сбора', imgui.ImVec2(150,24)) then imgui.OpenPopup('start_text') end imgui.SameLine()
-                if imgui.Button(u8'Конец сбора', imgui.ImVec2(150,24)) then imgui.OpenPopup('end_text') end
+                if imgui.Button(u8'Текст начала', imgui.ImVec2(150,24)) then imgui.OpenPopup('start_text') end imgui.SameLine()
+                if imgui.Button(u8'Текст конца', imgui.ImVec2(150,24)) then imgui.OpenPopup('end_text') end
                 if imgui.BeginPopup('start_text') then
                     imgui.Text(u8'Можете использовать команду wait(1) что означает задержка 1 секунда')
                     imgui.InputTextMultiline("##start_text", MyTextMP_start, imgui.ImVec2(500, 300))
@@ -522,16 +524,17 @@ function imgui.OnDrawFrame()
                 end
                 imgui.Text(u8'Вам нужна комната?') imgui.SameLine()
                 imgui.PushItemWidth(150)
-                imgui.Combo('##komnata', option_komnata, {u8'Моя позиция',u8'Русская рулетка', u8'Король дигла', u8'Корабль', u8'Спортзал', u8'Fall Guys'}, 5)
+                imgui.Combo('##komnata', option_komnata, {u8'Моя позиция',u8'Русская рулетка', u8'Король дигла', u8'Корабль', u8'Спортзал', u8'Fall Guys', u8'Падающие плиты'}, 6)
                 imgui.PopItemWidth()
                 if imgui.Button(u8'Начать сбор', imgui.ImVec2(300,24)) and #(MyTextMP.v) > 3 then
                     menu = 'закрыть мп'
                     if option_komnata.v == 0 then komnata_mymp = false
-                    elseif option_komnata.v == 1 then komnata_mymp = 8  --Русская рулетка
+                    elseif option_komnata.v == 1 then komnata_mymp = 10  --Русская рулетка
                     elseif option_komnata.v == 2 then komnata_mymp = 4  --Король дигла
-                    elseif option_komnata.v == 3 then komnata_mymp = 5  --Корабль
-                    elseif option_komnata.v == 4 then komnata_mymp = 7  --Спортзал
-                    elseif option_komnata.v == 5 then komnata_mymp = 11 end --фалл гейс
+                    elseif option_komnata.v == 3 then komnata_mymp = 7  --Корабль
+                    elseif option_komnata.v == 4 then komnata_mymp = 9  --Спортзал
+                    elseif option_komnata.v == 5 then komnata_mymp = 11 -- fall guys
+                    elseif option_komnata.v == 6 then komnata_mymp = 12 end -- падающие плиты
                     sbor_mp(u8:decode(MyTextMP.v), komnata, option_color.v, 0)
                 end
                 if imgui.Button(u8'Сохранить данное мероприятие', imgui.ImVec2(300,24)) then
@@ -551,13 +554,13 @@ function imgui.OnDrawFrame()
                 imgui.CenterText(u8'Сохраненные мероприятия')
                 for k,v in pairs(cfg.MyMP) do
                     if imgui.Button(u8(k), imgui.ImVec2(270,24)) then
-                        local action_mp = textSplit(v, '@')
+                        local action_mp = textSplit(v, '\n')
                         if action_mp[1] ~= '-' then
-                            MyTextMP_start.v = string.gsub(u8(action_mp[1]), '\\n', '\n')
+                            MyTextMP_start.v = string.gsub(u8(action_mp[1]), '\n', '\\n')
                         end
                         option_komnata.v = u8(action_mp[2])
                         if action_mp[3] ~= '-' then
-                            MyTextMP_end.v = string.gsub(u8(action_mp[3]), '\\n', '\n')
+                            MyTextMP_end.v = string.gsub(u8(action_mp[3]), '\n', '\\n')
                         end
                         MyTextMP.v = u8(k)
                     end
@@ -823,7 +826,7 @@ function save()
     inicfg.save(cfg,'AT//AT_MP.ini')
 end
 function radius()
-    local font_watermark = renderCreateFont("Javanese Text", 12, font.BOLD + font.BORDER + font.SHADOW)
+    local font_watermark = renderCreateFont("Javanese Text", 13, font.BOLD + font.BORDER + font.SHADOW)
     while true do
         wait(2)
         renderFontDrawText(font_watermark, 'Игроков в радиусе: ' .. #(playersToStreamZone()) -1 , sh*0.5, sw*0.5, 0xCCFFFFFF)
@@ -834,9 +837,9 @@ sampRegisterChatCommand('state', function()
     imgui.Process = windows.static_window_state.v
 end)
 sampRegisterChatCommand('mp', function()
-    if menu == 'open mp' then
+    if menu == 'open mp' and not sampIsDialogActive() then
+        sampSendChat('/mp')
         windows.secondary_window_state.v = true
         imgui.Process = true
     end
-    sampSendChat('/mp')
 end)
