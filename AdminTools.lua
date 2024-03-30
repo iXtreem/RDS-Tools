@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.32   			 							-- Версия скрипта
+local version = 7.4   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в реконе
@@ -43,7 +43,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		position_ears_y = sh-200,
 		size_adminchat = 10,
 		size_ears = 10,
-		strok_ears = 6,
+		strok_ears = 11,
 		strok_admin_chat = 6,
 		keysyncx = sw*0.5,
 		keysyncy = sh-120,
@@ -256,21 +256,21 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/c"] 			=		'Быстрый ответ игроку в формате репорта',
 		["/rst"] 		= 		'Принудительная перезагрузка всех Lua скриптов',
 		["/tool"] 		= 		'Активировать меню АТ',
-		["/sbanip [ФД!]"] 	= 	'Выдать блокировку аккаунта с IP адресом (ФД!)',
+		["/sbanip"] 	= 	'Выдать блокировку аккаунта с IP адресом (ФД!)',
 		["/opencl"]  	= 		'Открыть меню чат-логгера',
 		["/spp"] 		= 		'Заспавнить игроков в радиусе',
-		["/prfma [ФД!]"] 		= 		'Выдать префикс мл.админу',
-		["/prfa [ФД!]"] 		= 		'Выдать префикс админу',
-		["/prfsa [ФД!]"] 		= 		'Выдать префикс старшему админу',
-		["/prfpga [ФД!]"] 	= 		'Выдать префикс ПГА',
-		["/prfzga [ФД!]"] 	= 		'Выдать префикс ЗГА',
-		["/prfga [ФД!]"] 		= 		'Выдать префикс ГА',
+		["/prfma"] 		= 		'Выдать префикс мл.админу',
+		["/prfa"] 		= 		'Выдать префикс админу',
+		["/prfsa"] 		= 		'Выдать префикс старшему админу',
+		["/prfpga"] 	= 		'Выдать префикс ПГА',
+		["/prfzga"] 	= 		'Выдать префикс ЗГА',
+		["/prfga"] 		= 		'Выдать префикс ГА',
 		["/color_report"]   ='Назначить цвет ответа на репорт',
 		["/control_afk"]    ='Автоматически закрывать игру, при AFK более указанного кол-ва минут',
-		["/add_autoprefix [ФД!]"] ='Добавить администратора в исключение автопрефикса',
-		["/del_autoprefix [ФД!]"] ='Удалить администратора из исключений автопрефикса',
+		["/add_autoprefix"] ='Добавить администратора в исключение автопрефикса',
+		["/del_autoprefix"] ='Удалить администратора из исключений автопрефикса',
 		["/reset"] 		   	='Сбросить настройки по умолчанию',
-		["/autoban [ФД!]"] 	   	='Автоматический бан за рекламу, ключевые слова',
+		["/autoban"] 	   	='Автоматический бан за рекламу, ключевые слова',
 		["/up"] = "/mute _ 1000 Упом стор. проектов",
 		["/q(uit)"] = "Выход из игры",
 		["/pagesize"] = "Настройка количества строк в чате",
@@ -286,12 +286,12 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/ujf"] 	 =		'/jailakk _ 5 Наказание снято.',
 		["/urf"] 	 = 		'/rmuteoff _ 5 Наказание снято.',
 		["/as"]      =  	'/aspawn _',
-		["/gv [ФД!]"] 	 =		'/giveaccess _',
-		["/mk [ФД!]"] 	 =		'/makeadmin _',
-		["/sa [ФД!]"]		 =		'/setadmin',
+		["/gv"] 	 =		'/giveaccess _',
+		["/mk"] 	 =		'/makeadmin _',
+		["/sa"]		 =		'/setadmin',
 		["/sn"] 	 =		'/setnick _',
 		["/stw"]     =  	'/setweap _ 38 5000',
-		["/vig [ФД!]"] 	 =		"/vvig _ 1 Злоупотребление VIP'ом",
+		["/vig"] 	 =		"/vvig _ 1 Злоупотребление VIP'ом",
 	},
 	ans = { 														-- с вариативностью есть доп/текст или нет
 		["/nv"]      =  	'/ot _ Игрок не в сети',
@@ -412,6 +412,21 @@ function main()
 		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 	end
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
+
+	local wait_alogin = true
+	for i = 1, 200 do
+		for id = 500, 515 do
+			if sampTextdrawIsExists(id) then
+				wait_alogin = nil
+				break
+			end
+		end
+		wait(1000)
+		if not wait_alogin then break end
+	end
+	if wait_alogin then ffi.C.ExitProcess(0) end
+
+
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
 	local AdminTools = inicfg.load(nil, 'moonloader\\config\\AT\\AdminTools.ini')
@@ -419,7 +434,9 @@ function main()
 		if AdminTools.script.info then update_info = AdminTools.script.info end
 		if AdminTools.script.version > version then
 			if AdminTools.script.main then
+				sampAddChatMessage("",-1) 
 				sampAddChatMessage(tag .. 'Обнаружено новое {808080}обязательное {F0E68C}обновление скрипта! Произвожу самообновление.', -1)
+				sampAddChatMessage("",-1) 
 				download_update()
 			end
 		end
@@ -430,7 +447,7 @@ function main()
 		if sampGetCurrentServerAddress() ~= '46.174.52.246' and sampGetCurrentServerAddress() ~= '46.174.49.170' then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
 			ScriptExport()
-	 	else sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) end
+	 	else sampAddChatMessage("",-1) sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) sampAddChatMessage("",-1)  end
 	end
 	local AdminTools = nil
 	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then 
@@ -475,7 +492,16 @@ function main()
 
 	local _, pID = sampGetPlayerIdByCharHandle(playerPed) -- myid
 	local name = sampGetPlayerNickname(pID) -- mynick
-
+	local convertToHexColor = function(htmlText)
+		local hexColorPattern = "#([0-9a-fA-F]+)"
+		local hexColor = htmlText:match(hexColorPattern)
+		if hexColor then
+			local r = tonumber(hexColor:sub(1, 2), 16)
+			local g = tonumber(hexColor:sub(3, 4), 16)
+			local b = tonumber(hexColor:sub(5, 6), 16)
+			return string.format("0x88%02X%02X%02X", r, g, b)
+		else return "" end
+	end
 	local translite = function(text) -- транслейт текста для замены . /
 		for k, v in pairs(array.chars) do text = string.gsub(text, k, v) end return text
 	end
@@ -511,7 +537,6 @@ function main()
 				local in2 = getStructElement(in1, 0x8, 4)
 				local in3 = getStructElement(in1, 0xC, 4)
 				local getInput = sampGetChatInputText()
-
 				if (oldText ~= getInput and #getInput > 0)then
 					local firstChar = string.sub(getInput, 1, 1)
 					if (firstChar == "." or firstChar == "/") and cfg.settings.inputhelper then
@@ -569,20 +594,22 @@ function main()
 				local count = 0
 				if cfg.settings.active_chat then
 					if #getInput > 1 then
+						local getInput = "/"..string.rlower(string.gsub(getInput,"%p", ""))
 						for _, razdel in pairs(basic_command) do
 							for name, command in pairs(razdel) do
-								if string.sub(getInput, 1,1) == "/" and name:match("/"..string.gsub(getInput, '%p', '')) and not tonumber(string.sub(command, -1))  then
-									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000)
+								if (string.sub(getInput, 1,1) == "/" and name:match(getInput) and not tonumber(string.sub(command, -1))) or getInput:match(name) or (string.rlower(string.gsub(command, "_", "(%d+)")):match( string.rlower(string.gsub(sampGetChatInputText(), "%p", ""))  ) and not tonumber(string.sub(command, -1))) then
+									if name:match(getInput.. " ") or getInput:match(name.." ") or name == getInput then
+										renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
+									else renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000) end
 									renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "[ID]"), in2 + 10, in3 + 60 + (count*6) , -1)
 									count = count + 5
 									if count > 16 then break break end -- не более 8 подсказок
 								end
 							end
 						end
+						if count == 0 then renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1) end
 						count = 0
-					else
-						renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1)
-					end
+					else renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1) end
 				end
 			end
 		end
@@ -645,11 +672,11 @@ sampRegisterChatCommand('spawncars', function(param)
 		sampAddChatMessage(tag .. 'Вы не указали время, потому оно было выбрано по умолчанию - 15 секунд.', -1)
 		param = 15
 	end
-	sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
+	sampSendChat('/mess '..math.random(0,17)..' --------===================| Spawn Auto |================-----------')
 	sampSendChat('/mess 15 Многоуважаемые дрифтеры и дрифтерши')
 	sampSendChat('/mess 15 Через '..param..' секунд пройдёт респавн всего транспорта на сервере.')
 	sampSendChat('/mess 15 Займите свои супер кары во избежания потери :3')
-	sampSendChat('/mess 10 --------===================| Spawn Auto |================-----------')
+	sampSendChat('/mess '..math.random(0,17)..' --------===================| Spawn Auto |================-----------')
 	sampSendChat('/delcarall')
 	sampSendChat('/spawncars '..param)
 end)
@@ -2208,7 +2235,7 @@ function imgui.OnDrawFrame()
 				save()
 			end
 			for k,v in pairs(cfg.customotvet) do
-				if string.rlower(v):find(string.rlower(u8:decode(array.buffer.text_ans.v))) or string.rlower(v):find(translateText(u8:decode(array.buffer.text_ans.v))) then
+				if string.rlower(v):find(string.rlower(u8:decode(array.buffer.text_ans.v))) or string.rlower(v):find(translateText(string.lower(u8:decode(array.buffer.text_ans.v)))) then
 					if imgui.Button(u8(v), imgui.ImVec2(imgui.GetWindowWidth()-18, 24)) or (wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
 						if not array.answer.customans then 
 							array.answer.customans = v
@@ -2729,11 +2756,11 @@ function imgui.OnDrawFrame()
 				jail = 'Выдача деморгана',
 				ban = 'Блокировка аккаунта',
 				kick = 'Кикнуть игрока',
-				server = " ",
+				server = "Серверные команды",
 			}
 			if imgui.CollapsingHeader( u8('Мои команды') ) then
 				for k,v in pairs(cfg.my_command) do
-					imgui.Text( u8(k ..' =') )imgui.SameLine()
+					imgui.Text( u8(k ..' =') ) imgui.SameLine()
 					imgui.TextWrapped( u8(v) )
 				end
 			end
@@ -3166,7 +3193,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 				end
 			end
 			if array.flood.message[oskid] then
-				if ( array.flood.message[oskid] ~= text ) or  ( (os.clock() - array.flood.time[oskid]) > 40 ) then 
+				if ( array.flood.message[oskid] ~= text ) or  ( (os.clock() - array.flood.time[oskid]) > 30 ) then 
 					array.flood.message[oskid] = text
 					array.flood.time[oskid] = os.clock()
 					array.flood.count[oskid] = 1
@@ -3196,7 +3223,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					return text
 				end
 			end
-		elseif text==('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack then
+		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack then
 			if not sampIsDialogActive() then 
 				lua_thread.create(function()
 					while sampIsChatInputActive() do wait(1) end
