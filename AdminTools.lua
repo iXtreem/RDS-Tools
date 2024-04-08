@@ -5,12 +5,12 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.4   			 							-- Версия скрипта
+local version = 7.5   			 							-- Версия скрипта
 
 
-local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в реконе
+local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
 
-for i = 186, 250 do -- генератор предположительных ID текстдравов
+for i = 186, 250 do -- генератор ID текстдравов попадающих под удаление из рекона, можно изменить вручную
 	table.insert(DELETE_TEXTDRAW_RECON, i, #DELETE_TEXTDRAW_RECON+1)
 end
 
@@ -23,9 +23,9 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		notify_report = false,
 		automute = false,
 		smart_automute = false,
-		render_admins_positionX = 230,
-		render_admins_positionY = sh-100,
-		render_admins = false,
+		render_admins_positionX = sw-300,
+		render_admins_positionY = sh-150,
+		render_admins = true,
 		mytextreport = '|| Приятной игры на RDS <3',
 		position_recon_menu_x = sw - 260,
 		position_recon_menu_y = 0,
@@ -33,7 +33,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		wallhack = true,
 		answer_player_report = false,
 		admin_chat = true,
-		position_adminchat_x = -2,
+		position_adminchat_x = -5,
 		position_adminchat_y = sh*0.5-100,
 		custom_answer_save = false,
 		find_form = false,
@@ -67,7 +67,6 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		weapon_hack = false,
 		autoaccept_form = false,
 		bloknotik = '',
-		autoupdate = true,
 		chat_log = true,
 		control_afk = false,
 		vision_form = true,
@@ -82,6 +81,11 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		custom_addtext_report = "",
 		addBeginText = true,
 		atr = false,
+		timetext = true,
+		customtimetext = "",
+		timetext_razmer = 14,
+		timetext_pos_x = sw*0.5-100,
+		timetext_pos_y = sh-20,
 	},
 	customotvet = {},
 	myflood = {},
@@ -107,7 +111,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 }, 'AT//AT_main.ini')
 inicfg.save(cfg, 'AT//AT_main.ini')
 style(cfg.settings.style)
-
+import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
 ------=================== ImGui окна ===================----------------------
 
 local array = {
@@ -168,6 +172,7 @@ local array = {
 		auto_cc					   = imgui.ImBool(cfg.settings.auto_cc),
 	 	option_automute 		   = imgui.ImInt(cfg.settings.option_automute),
 		sek_automute 			   = imgui.ImInt(cfg.settings.sek_automute),
+		razmer_text				   = imgui.ImInt(cfg.settings.timetext_razmer),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -193,6 +198,7 @@ local array = {
 		new_word 		 	= imgui.ImBuffer(4096),
 		sokr_nick			= imgui.ImBuffer(cfg.settings.sokr_nick, 256),
 		custom_addtext_report = imgui.ImBuffer(cfg.settings.custom_addtext_report, 256),
+		customtimetext 		  = imgui.ImBuffer( u8(cfg.settings.customtimetext), 1024),
 	},
 	chatlog_1 		= {}, 											-- чат-лог1
 	chatlog_2 		= {}, 											-- чат-лог2
@@ -242,6 +248,7 @@ local control_player_recon = 0											-- Игрок в реконе
 local font_adminchat = renderCreateFont("Arial", cfg.settings.size_adminchat, font.BOLD + font.BORDER + font.SHADOW) -- шрифт админ чата
 local font_earschat  = renderCreateFont("Arial", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)	   -- шрифт ears чата
 local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW) -- шрифт открытого чата
+local font_timetext  = renderCreateFont("Arial", cfg.settings.timetext_razmer, font.BOLD + font.BORDER + font.SHADOW) -- время снизу
 
 
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
@@ -256,7 +263,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/c"] 			=		'Быстрый ответ игроку в формате репорта',
 		["/rst"] 		= 		'Принудительная перезагрузка всех Lua скриптов',
 		["/tool"] 		= 		'Активировать меню АТ',
-		["/sbanip"] 	= 	'Выдать блокировку аккаунта с IP адресом (ФД!)',
+		["/sbanip"] 	= 		'Выдать блокировку аккаунта с IP адресом (ФД!)',
 		["/opencl"]  	= 		'Открыть меню чат-логгера',
 		["/spp"] 		= 		'Заспавнить игроков в радиусе',
 		["/prfma"] 		= 		'Выдать префикс мл.админу',
@@ -265,18 +272,18 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/prfpga"] 	= 		'Выдать префикс ПГА',
 		["/prfzga"] 	= 		'Выдать префикс ЗГА',
 		["/prfga"] 		= 		'Выдать префикс ГА',
-		["/color_report"]   ='Назначить цвет ответа на репорт',
-		["/control_afk"]    ='Автоматически закрывать игру, при AFK более указанного кол-ва минут',
-		["/add_autoprefix"] ='Добавить администратора в исключение автопрефикса',
-		["/del_autoprefix"] ='Удалить администратора из исключений автопрефикса',
-		["/reset"] 		   	='Сбросить настройки по умолчанию',
-		["/autoban"] 	   	='Автоматический бан за рекламу, ключевые слова',
-		["/up"] = "/mute _ 1000 Упом стор. проектов",
-		["/q(uit)"] = "Выход из игры",
-		["/pagesize"] = "Настройка количества строк в чате",
-		["/fontsize"] = "Настройка размера чата",
-		["/headmove"] = "Настройка вращения головы персонажа",
-		["/timestamp"] = "Время в чате"
+		["/color_report"]='Назначить цвет ответа на репорт',
+		["/control_afk"] ='Автоматически закрывать игру, при AFK более указанного кол-ва минут',
+		["/add_autoprefix"]='Добавить администратора в исключение автопрефикса',
+		["/del_autoprefix"]='Удалить администратора из исключений автопрефикса',
+		["/reset"] 		='Сбросить настройки по умолчанию',
+		["/autoban"] 	='Автоматический бан за рекламу, ключевые слова',
+		["/up"]	 		= "/mute _ 1000 Упом стор. проектов",
+		["/q(uit)"] 	= "Выход из игры",
+		["/pagesize"] 	= "Настройка количества строк в чате",
+		["/fontsize"] 	= "Настройка размера чата",
+		["/headmove"] 	= "Настройка вращения головы персонажа",
+		["/timestamp"]	= "Время в чате"
 	},
 	help = {
 		["/uu"]      =  	'/unmute _',
@@ -321,9 +328,9 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	},
 	rmute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
 		["/oft"] 	= 		'/rmute _ 120 оффтоп в репорт',		--[[x10]]["/oft2"]='/rmute _ 240 оффтоп в репорт x2',["/oft3"]='/rmute _ 360 оффтоп в репорт x3',["/oft4"]='/rmute _ 480 оффтоп в репорт х4',["/oft5"]='/rmute _ 600 оффтоп в репорт х5',["/oft6"]='/rmute _ 720 оффтоп в репорт x6',["/oft7"]='/rmute _ 840 оффтоп в репорт х7',["/oft8"]='/rmute _ 960 оффтоп в репорт х8',["/oft9"]='/rmute _ 1080 оффтоп в репорт х9',["/oft10"]='/rmute _ 1200 оффтоп в репорт х10',
-		["/cp"] 		= 		'/rmute _ 120 caps in /report',		--[[x10]]["/cp2"]='/rmute _ 240 Caps in /report x2',["/cp3"]='/rmute _ 360 Caps in /report x3',["/cp4"]='/rmute _ 480 Caps in /report x4',["/cp5"]='/rmute _ 600 Caps in /report x5',["/cp6"]='/rmute _ 720 Caps in /report x6',["/cp7"]='/rmute _ 840 Caps in /report x7',["/cp8"]='/rmute _ 960 Caps in /report x8',["/cp9"]='/rmute _ 1080 Caps in /report x9',["/cp10"]='/rmute _ 1200 Caps in /report x10',
-		["/rpo"]		=		'/rmute _ 120 Попрошайка в /report',--[[x10]]["/rpo2"]='/rmute _ 240 Попрошайка в /report x2',["/rpo3"]='/rmute _ 360 Попрошайка в /report x3',["/rpo4"]='/rmute _ 480 Попрошайка в /report x4',["/rpo5"]='/rmute _ 600 Попрошайка в /report x5',["/rpo6"]='/rmute _ 720 Попрошайка в /report x6',["/rpo7"]='/rmute _ 840 Попрошайка в /report x7',["/rpo8"]='/rmute _ 960 Попрошайка в /report x8',["/rpo9"]='/rmute _ 1080 Попрошайка в /report x9',["/rpo10"]='/rmute _ 1200 Попрошайка в /report x10',
-		["/rm"] 		= 		'/rmute _ 300 мат в /report',		--[[x10]]["/rm2"]='/rmute _ 600 мат в /report x2',["/rm3"]='/rmute _ 900 мат в /report x3',["/rm4"]='/rmute _ 600 мат в /report x4',["/rm5"]='/rmute _ 600 мат в /report x5',["/rm6"]='/rmute _ 600 мат в /report x6',["/rm7"]='/rmute _ 600 мат в /report x7',["/rm8"]='/rmute _ 600 мат в /report x8',["/rm9"]='/rmute _ 600 мат в /report x9',["/rm10"]='/rmute _ 600 мат в /report x10',
+		["/cp"] 	= 		'/rmute _ 120 caps in /report',		--[[x10]]["/cp2"]='/rmute _ 240 Caps in /report x2',["/cp3"]='/rmute _ 360 Caps in /report x3',["/cp4"]='/rmute _ 480 Caps in /report x4',["/cp5"]='/rmute _ 600 Caps in /report x5',["/cp6"]='/rmute _ 720 Caps in /report x6',["/cp7"]='/rmute _ 840 Caps in /report x7',["/cp8"]='/rmute _ 960 Caps in /report x8',["/cp9"]='/rmute _ 1080 Caps in /report x9',["/cp10"]='/rmute _ 1200 Caps in /report x10',
+		["/rpo"]	=		'/rmute _ 120 Попрошайка в /report',--[[x10]]["/rpo2"]='/rmute _ 240 Попрошайка в /report x2',["/rpo3"]='/rmute _ 360 Попрошайка в /report x3',["/rpo4"]='/rmute _ 480 Попрошайка в /report x4',["/rpo5"]='/rmute _ 600 Попрошайка в /report x5',["/rpo6"]='/rmute _ 720 Попрошайка в /report x6',["/rpo7"]='/rmute _ 840 Попрошайка в /report x7',["/rpo8"]='/rmute _ 960 Попрошайка в /report x8',["/rpo9"]='/rmute _ 1080 Попрошайка в /report x9',["/rpo10"]='/rmute _ 1200 Попрошайка в /report x10',
+		["/rm"] 	= 		'/rmute _ 300 мат в /report',		--[[x10]]["/rm2"]='/rmute _ 600 мат в /report x2',["/rm3"]='/rmute _ 900 мат в /report x3',["/rm4"]='/rmute _ 600 мат в /report x4',["/rm5"]='/rmute _ 600 мат в /report x5',["/rm6"]='/rmute _ 600 мат в /report x6',["/rm7"]='/rmute _ 600 мат в /report x7',["/rm8"]='/rmute _ 600 мат в /report x8',["/rm9"]='/rmute _ 600 мат в /report x9',["/rm10"]='/rmute _ 600 мат в /report x10',
 		["/rok"] 	= 		'/rmute _ 400 Оскорбление в /report',--[[x10]]["/rok2"]='/rmute _ 800 Оскорбление в /report x2',["/rok3"]='/rmute _ 1200 Оскорбление в /report x3',["/rok4"]='/rmute _ 1600 Оскорбление в /report x4',["/rok5"]='/rmute _ 2000 Оскорбление в /report x5',["/rok6"]='/rmute _ 2400 Оскорбление в /report x6',["/rok7"]='/rmute _ 2800 Оскорбление в /report x7',["/rok8"]='/rmute _ 3200 Оскорбление в /report x8',["/rok9"]='/rmute _ 3600 Оскорбление в /report x9',["/rok10"]='/rmute _ 4000 Оскорбление в /report x10',
 		["/roa"] 	= 		'/rmute _ 2500 Оскорблeние администрации',
 		["/ror"] 	= 		'/rmute _ 5000 Оскорблeние/Упоминание родных',
@@ -351,9 +358,9 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/nmb"] 	= 		'/ban _ 3 Неадекватное поведение',
 		["/ch"]		= 		'/iban _ 7 читерский скрипт/ПО',
 		["/obh"] 	= 		'/iban _ 7 Обход прошлого бана',
-		["/bosk"] =   '/siban _ 999 Оскорбление проекта',
-		["/rk"] 	= 	'/siban _ 999 Реклама',
-		["/obm"] 	= 	'/siban _ 30 Обман/Развод',
+		["/bosk"]   =   	'/siban _ 999 Оскорбление проекта',
+		["/rk"] 	= 		'/siban _ 999 Реклама',
+		["/obm"] 	= 		'/siban _ 30 Обман/Развод',
 	},
 	kick = {
 		["/kk3"] 	= 		'/ban _ 7 Смените ник 3/3.',
@@ -364,12 +371,12 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	},
 	server = {},
 }
-
-
-
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
 	while not isSampAvailable() do wait(1000) end
+	print('Скрипт подгружен, ожидаю входа в админ-права...')
+	print('Если вход в админ-права не будет выполнен в течение 4 минут - игра автоматически закроется.')
+	print('Если скрипт не подгрузился даже после входа в систему - обратитесь к разработчику!')
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -380,7 +387,7 @@ function main()
 				if attributes.mode == "directory" then
 					local nestedFiles = scanDirectory(fullPath)
 					for _, nestedFile in ipairs(nestedFiles) do table.insert(array.files_chatlogs, nestedFile) end
-				else table.insert(array.files_chatlogs, file) end
+				else table.insert(array.files_chatlogs, file ) end
 			end
 		end
 		return array.files_chatlogs
@@ -395,27 +402,38 @@ function main()
 		file:close()
 		print('Создан новый chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 	end
-	for k, v in ipairs(scanDirectory('moonloader\\config\\chatlog\\')) do
-		local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
-		if data3 and data2 and data3 then
-			if tonumber(daysPassed(data3,data2,data1)) < 3 then
-				local file = io.open('moonloader\\config\\chatlog\\'..v,'r')
-				for line in file:lines() do
-					if #line > 3 then
-						if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = encrypt(line, -3)
-						elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = encrypt(line, -3)
-						elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = encrypt(line, -3) end
+	sampRegisterChatCommand('opencl', function()
+		for k, v in ipairs(scanDirectory('moonloader\\config\\chatlog\\')) do
+			local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
+			if data3 and data2 and data3 then
+				if tonumber(daysPassed(data3,data2,data1)) < 3 then
+					local file = io.open('moonloader\\config\\chatlog\\'..v,'r')
+					for line in file:lines() do
+						if #line > 3 then
+							if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = encrypt(line, -3)
+								array.checkbox.option_find_log.v = 0
+							elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = encrypt(line, -3)
+								array.checkbox.option_find_log.v = 1
+							elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = encrypt(line, -3)
+								array.checkbox.option_find_log.v = 2
+							end
+						end
 					end
-				end
-				file:close()
-			else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
-		else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
-	end
+					file:close()
+				else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
+			else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
+		end
+		array.windows.menu_chatlogger.v = not array.windows.menu_chatlogger.v
+		imgui.Process = array.windows.menu_chatlogger.v
+	end)
+	func_inputhelper = lua_thread.create_suspended(input_helper)
+	func_timetext    = lua_thread.create_suspended(time_text)
+	if cfg.settings.inputhelper then func_inputhelper:run() end
+	if cfg.settings.timetext then func_timetext:run() end
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
-
 	local wait_alogin = true
 	for i = 1, 200 do
-		for id = 500, 515 do
+		for id = 500, 515 do -- [[ ID TEXDRAW FROM ALOGIN TABLE ID CHEATERS ]] --
 			if sampTextdrawIsExists(id) then
 				wait_alogin = nil
 				break
@@ -426,7 +444,6 @@ function main()
 	end
 	if wait_alogin then ffi.C.ExitProcess(0) end
 
-
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
 	local AdminTools = inicfg.load(nil, 'moonloader\\config\\AT\\AdminTools.ini')
@@ -435,9 +452,14 @@ function main()
 		if AdminTools.script.version > version then
 			if AdminTools.script.main then
 				sampAddChatMessage("",-1) 
-				sampAddChatMessage(tag .. 'Обнаружено новое {808080}обязательное {F0E68C}обновление скрипта! Произвожу самообновление.', -1)
+				sampAddChatMessage(tag .. 'Обнаружено новое {FF0000}обязательное {F0E68C}обновление скрипта! Произвожу само-обновление!', -1)
 				sampAddChatMessage("",-1) 
-				download_update()
+				wait(5000)
+				sampProcessChatInput('/update')
+			else
+				sampAddChatMessage("",-1) 
+				sampAddChatMessage(tag .. 'Обнаружено новое обновление скрипта [version '..AdminTools.script.version..']! Команда /update обновляет скрипт.', -1)
+				sampAddChatMessage("",-1)
 			end
 		end
 		if cfg.settings.versionFS and cfg.settings.versionMP then
@@ -449,7 +471,8 @@ function main()
 			ScriptExport()
 	 	else sampAddChatMessage("",-1) sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) sampAddChatMessage("",-1)  end
 	end
-	local AdminTools = nil
+	local AdminTools = nil 
+	local dlstatus = nil
 	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then 
 		sampProcessChatInput('/reset')
 	end
@@ -470,7 +493,7 @@ function main()
 	local AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', "r")
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
 	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
-	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
+
 	func = lua_thread.create_suspended(autoonline)
 	func1 = lua_thread.create_suspended(wallhack)
 	funcadm = lua_thread.create_suspended(render_admins)
@@ -489,23 +512,6 @@ function main()
 	if cfg.settings.autoonline then func:run() end
 
 	local font_watermark = renderCreateFont("Arial", 8, font.BOLD + font.BORDER + font.SHADOW) -- шрифт текста о АТ снизуу
-
-	local _, pID = sampGetPlayerIdByCharHandle(playerPed) -- myid
-	local name = sampGetPlayerNickname(pID) -- mynick
-	local convertToHexColor = function(htmlText)
-		local hexColorPattern = "#([0-9a-fA-F]+)"
-		local hexColor = htmlText:match(hexColorPattern)
-		if hexColor then
-			local r = tonumber(hexColor:sub(1, 2), 16)
-			local g = tonumber(hexColor:sub(3, 4), 16)
-			local b = tonumber(hexColor:sub(5, 6), 16)
-			return string.format("0x88%02X%02X%02X", r, g, b)
-		else return "" end
-	end
-	local translite = function(text) -- транслейт текста для замены . /
-		for k, v in pairs(array.chars) do text = string.gsub(text, k, v) end return text
-	end
-	local user32 = ffi.load("user32") -- caps chat
 	while true do
 
 		if not AFK then
@@ -527,111 +533,34 @@ function main()
 					renderFontDrawText(font_earschat, array.ears_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				end
 			end
-
 			--Название проги в углу экрана
-			renderFontDrawText(font_watermark, tag..'{808080}version['..version..']', 10, sh-20, 0xCCFFFFFF)
-			-- автозамена . /
-			if sampIsChatInputActive() then
-				local in1 = sampGetInputInfoPtr() -- координаты под чатом
-				local in1 = getStructElement(in1, 0x8, 4)
-				local in2 = getStructElement(in1, 0x8, 4)
-				local in3 = getStructElement(in1, 0xC, 4)
-				local getInput = sampGetChatInputText()
-				if (oldText ~= getInput and #getInput > 0)then
-					local firstChar = string.sub(getInput, 1, 1)
-					if (firstChar == "." or firstChar == "/") and cfg.settings.inputhelper then
-						local cmd, text = string.match(getInput, "^([^ ]+)(.*)")
-						local nText = "/" .. translite(string.sub(cmd, 2)) .. text
-						local chatInfoPtr = sampGetInputInfoPtr()
-						local chatBoxInfo = getStructElement(chatInfoPtr, 0x8, 4)
-						local lastPos = mem.getint8(chatBoxInfo + 0x11E)
-						sampSetChatInputText(nText)
-						mem.setint8(chatBoxInfo + 0x11E, lastPos)
-						mem.setint8(chatBoxInfo + 0x119, lastPos)
-						oldText = nText
-						while string.sub(sampGetChatInputText(), 1, 5) == '/mess' do wait(0)
-							local s = ""
-							local color = {
-								'{FFFFFF}Белый',
-								'{000000}Черный',
-								'{008000}Темно-зеленый',
-								'{80FF00}Светло-зеленый',
-								'{FF0000}Красный',
-								'{0000FF}Темно-синий',
-								'{FDFF00}Желтый',
-								'{FF9000}Золотой',
-								'{B313E7}Фиолетовый',
-								'{49E789}Бирюзовый',
-								'{139BEC}Синий',
-								'{2C9197}Сине-зеленый',
-								'{DDB201}Желтый',
-								'{B8B6B6}Серый',
-								'{FFEE8A}Бежевый',
-								'{FF9DB6}Розовый',
-								'{BE8A01}Коричневый',
-								'{E6284E}Светлокрасный',
-							}
-							for k,v in pairs(color) do
-								s = s ..k-1 .. ' - ' .. v .. "\n{FFFFFF}"
-							end --  in2 + 5, in3 + 60
-	
-							renderFontDrawText(font_chat, s, in2 + 5, in3 + 50, -1)
-						end
-					end
-				end
-				-- подсказки под чатом
-
-				local ping = sampGetPlayerPing(pID) -- ping
-				local caps = (user32).GetKeyState(0x14) -- Код клавиши CapsLock
-	
-				if caps == 1 or caps == 3 then caps = 'ON'
-				else caps = 'OFF' end
-	
-				if getCurrentLanguageName() == '00000419' then raskl = 'RU'
-				else raskl = 'EN' end
-	
-				local text = ("Ваш ник: "..cfg.settings.color_chat..name.."["..pID.."]{ffffff}, Ваш пинг: "..cfg.settings.color_chat..ping.."{ffffff}, Раскладка: "..cfg.settings.color_chat..raskl.."{ffffff}, Capslock: "..cfg.settings.color_chat..caps)
-				local count = 0
-				if cfg.settings.active_chat then
-					if #getInput > 1 then
-						local getInput = "/"..string.rlower(string.gsub(getInput,"%p", ""))
-						for _, razdel in pairs(basic_command) do
-							for name, command in pairs(razdel) do
-								if (string.sub(getInput, 1,1) == "/" and name:match(getInput) and not tonumber(string.sub(command, -1))) or getInput:match(name) or (string.rlower(string.gsub(command, "_", "(%d+)")):match( string.rlower(string.gsub(sampGetChatInputText(), "%p", ""))  ) and not tonumber(string.sub(command, -1))) then
-									if name:match(getInput.. " ") or getInput:match(name.." ") or name == getInput then
-										renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
-									else renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000) end
-									renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "[ID]"), in2 + 10, in3 + 60 + (count*6) , -1)
-									count = count + 5
-									if count > 16 then break break end -- не более 8 подсказок
-								end
-							end
-						end
-						if count == 0 then renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1) end
-						count = 0
-					else renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1) end
-				end
-			end
+			renderFontDrawText(font_watermark, tag..'{808080}version['..version..']', 11, sh-20, 0xCCFFFFFF)
 		end
 		wait(1) -- задержка
 	end
 end
 --------============= Инициализируем команды, указанные выше ===========================---------------------------
-for k,v in pairs(basic_command.ans) do   																 sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then for k,v in pairs(textSplit(v, '\n')) do sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+for k,v in pairs(basic_command.ans) do   sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then for k,v in pairs(textSplit(v, '\n')) do sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+
 for k,v in pairs(basic_command.mute) do 
 	sampRegisterChatCommand(string.sub(k.."f",2), function(param) if #param ~= 0 then sampSendChat(string.gsub(	string.gsub(v, '/mute', '/muteoff'), '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end)
 	sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
+
+for k,v in pairs(basic_command.jail) do 
+	sampRegisterChatCommand(string.sub(k.."f",2), function(param) if #param ~= 0 then sampSendChat(string.gsub(	string.gsub(v, '/jail', '/jailakk'), '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end)
+	sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end) end
+
 for k,v in pairs(basic_command.rmute) do 
-	sampRegisterChatCommand(string.sub(k.."f",2), function(param) if #param ~= 0 then sampSendChat(string.gsub(	string.gsub(v, '/rmute', '/muteoff'), '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end)
+	sampRegisterChatCommand(string.sub(k.."f",2), function(param) if #param ~= 0 then sampSendChat(string.gsub(	string.gsub(v, '/rmute', '/rmuteoff'), '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end)
 	sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.jail) do
-	sampRegisterChatCommand(string.sub(k.."f",2), function(param) if #param ~= 0 then sampSendChat(string.gsub(	string.gsub(v, '/jail', '/jailoff'), '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end)
-	sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.kick) do 																	sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+
+for k,v in pairs(basic_command.kick) do sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+
 for k,v in pairs(basic_command.ban) do
 	sampRegisterChatCommand(string.sub(k.."f",2), function(param) if #param ~= 0 then sampSendChat(string.gsub(	string.gsub (string.gsub(v , '/siban', '/banoff') ,'/iban', '/banoff'), '_', param) ) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1)  end end)
-	 sampRegisterChatCommand(string.sub(k,2), function(param)  if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-for k,v in pairs(basic_command.help) do 																	sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+	sampRegisterChatCommand(string.sub(k,2), function(param)  if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
+
+for k,v in pairs(basic_command.help) do sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 
 
 for k,v in pairs(cfg.my_command) do
@@ -658,7 +587,7 @@ for k,v in pairs(cfg.my_command) do
 		end) 
 	end) 
 end
--- Команда or (оск/упом родни) содержит название переменной, потому создается отдельно
+
 sampRegisterChatCommand('prfma', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Мл.Администратор ' .. cfg.settings.prefixma) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
 sampRegisterChatCommand('prfa', function(param) if #param ~= 0 then   sampSendChat('/prefix '  .. param .. ' Администратор ' .. cfg.settings.prefixa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
 sampRegisterChatCommand('prfsa', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Ст.Администратор ' .. cfg.settings.prefixsa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
@@ -837,10 +766,6 @@ sampRegisterChatCommand('tool', function()
 		end)
 	end
 end)
-sampRegisterChatCommand('opencl', function()
-	array.windows.menu_chatlogger.v = not array.windows.menu_chatlogger.v
-	imgui.Process = array.windows.menu_chatlogger.v
-end)
 sampRegisterChatCommand('spp', function()
 	lua_thread.create(function() 
 		for _, id in pairs(playersToStreamZone()) do 
@@ -883,7 +808,6 @@ sampRegisterChatCommand('reset', function()
 		sampAddChatMessage(tag ..'Выполняется перезагрузка..', -1)
 		reloadScripts()
 	end)
-	
 end)
 sampRegisterChatCommand('tr', function()
 	if cfg.settings.atr then
@@ -983,7 +907,8 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.SetCursorPosX(250)
 				if imadd.ToggleButton("##inputhelper", array.checkbox.inputhelper) then
-					cfg.settings.inputhelper = not cfg.settings.inputhelper
+					if cfg.settings.input_helper then func_inputhelper:terminate() else func_inputhelper:run() end
+					cfg.settings.inputhelper = not cfg.settings.inputhelperc
 					save()
 				end
 				imgui.SameLine()
@@ -1370,6 +1295,69 @@ function imgui.OnDrawFrame()
 					if imgui.Button(u8'Сбросить чат',imgui.ImVec2(125, 24)) then array.ears = "" end
 					imgui.EndPopup()
 				end
+				if imadd.ToggleButton("##timetext", imgui.ImBool(cfg.settings.timetext)) then
+					if cfg.settings.timetext then func_timetext:terminate() else func_timetext:run() end
+					cfg.settings.timetext = not cfg.settings.timetext
+					save()
+				end
+				imgui.SameLine()
+				imgui.Text(u8'Нижний текст') 
+				imgui.SameLine()
+				imgui.SetCursorPosX(190)
+				if imgui.Button(fa.ICON_COG..'##5s', imgui.ImVec2(21,21)) and cfg.settings.timetext then imgui.OpenPopup('text') end
+				if imgui.BeginPopup('text') then
+					imgui.Text(u8'Текст вместо времени по умолчанию:')
+					if imgui.InputText("##text", array.buffer.customtimetext) then
+						cfg.settings.customtimetext = u8:decode(array.buffer.customtimetext.v)
+						save()
+						func_timetext:terminate()
+						func_timetext:run()
+					end
+					if imgui.SliderInt('##Slider5', array.checkbox.razmer_text, 8, 18) then
+						cfg.settings.timetext_razmer = array.checkbox.razmer_text.v
+						save()
+						font_timetext = renderCreateFont("Arial", cfg.settings.timetext_razmer, font.BOLD + font.BORDER + font.SHADOW) -- время снизу
+					end
+					if imgui.Button(u8'Изменить месторасположение', imgui.ImVec2(272,24)) then
+						lua_thread.create(function()
+							sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
+							sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
+							local old_pos_x, old_pos_y = cfg.settings.timetext_pos_x, cfg.settings.timetext_pos_y
+							while true do
+								showCursor(true,true)
+								cfg.settings.timetext_pos_x, cfg.settings.timetext_pos_y = getCursorPos()
+								if wasKeyPressed(VK_RETURN) then save() break end
+								if wasKeyPressed(VK_ESCAPE) then cfg.settings.timetext_pos_x = old_pos_x cfg.settings.timetext_pos_y = old_pos_y break end
+								wait(1)
+							end
+							showCursor(false,false)
+						end)
+						array.windows.menu_tools.v = false
+					end
+					if imgui.Button(u8'Добавить цвет', imgui.ImVec2(272,24)) then
+						if not html_color then
+							html_color = {}
+							local file_color = io.open('moonloader\\' .. "\\resource\\skin\\color.txt","r")
+							if file_color then for line in file_color:lines() do html_color[#html_color + 1] = u8:decode(line);end file_color:close() end
+						end
+						imgui.OpenPopup('color_text')
+					end
+					if imgui.BeginPopup('color_text') then
+						for i = 1, 256 do 
+							imgui.TextColoredRGB(u8(html_color[i]))
+							if imgui.IsItemClicked(0) then
+								local color = '{'..string.sub(string.sub(html_color[i], 1, 7), 2)..'}'
+								cfg.settings.customtimetext = cfg.settings.customtimetext .. color
+								array.buffer.customtimetext.v = u8(cfg.settings.customtimetext)
+								save()				
+								sampAddChatMessage(tag .. color ..'Добавлен цвет', -1)
+							end
+							if i%8~=0 then imgui.SameLine() end 
+						end
+						imgui.EndPopup()
+					end
+					imgui.EndPopup()
+				end
 				if array.checkbox.vision_form.v then
 					if imgui.Button(u8'Авто-отправка форм для младших администраторов', imgui.ImVec2(419, 24)) then imgui.OpenPopup('autoform') end
 					imgui.SameLine()
@@ -1456,7 +1444,7 @@ function imgui.OnDrawFrame()
 					showCursor(true,false)
 				end
 				imgui.SameLine()
-				if imgui.Button(u8'Чат-логгер', imgui.ImVec2(228, 24)) then array.windows.menu_chatlogger.v = true array.windows.menu_tools.v = false end
+				if imgui.Button(u8'Чат-логгер', imgui.ImVec2(228, 24)) then sampProcessChatInput('/opencl') end
 				if not array.checkbox.vision_form.v then
 					if imgui.Button(u8'Автоматическая отправка форм', imgui.ImVec2(485, 24)) then imgui.OpenPopup('autoform') end
 					vision_form()
@@ -2339,7 +2327,7 @@ function imgui.OnDrawFrame()
 			cfg.settings.custom_answer_save = not cfg.settings.custom_answer_save
 			save()
 		end
-		imgui.Tooltip(u8'Добавляет ваш текст к ответу\n'..u8:decode(array.buffer.custom_addtext_report.v..array.buffer.text_ans.v).. '\nНе сработает, если кол-во символов в ответе превысит максимум')
+		imgui.Tooltip(u8'Добавляет ваш текст к ответу\n'..u8(u8:decode(array.buffer.custom_addtext_report.v..array.buffer.text_ans.v)).. '\nНе сработает, если кол-во символов в ответе превысит максимум')
 		imgui.SameLine()
 		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта ' .. fa.ICON_DATABASE)
 		imgui.PopFont()
@@ -2760,7 +2748,8 @@ function imgui.OnDrawFrame()
 			}
 			if imgui.CollapsingHeader( u8('Мои команды') ) then
 				for k,v in pairs(cfg.my_command) do
-					imgui.Text( u8(k ..' =') ) imgui.SameLine()
+					local v = string.gsub( v, '_', '[ID]')
+					imgui.Text( u8('/'..k ..' =') ) imgui.SameLine()
 					imgui.TextWrapped( u8(v) )
 				end
 			end
@@ -2768,6 +2757,7 @@ function imgui.OnDrawFrame()
 				if imgui.CollapsingHeader( u8(command[name]) ) then
 					for k,v in pairs(basic_command[name]) do
 						if not tonumber( string.sub(k, -1) ) then 
+							local v = string.gsub( v, '_', '[ID]')
 							imgui.TextWrapped(u8(k ..' = '.. string.gsub(v, '\n', '\n		') ))
 						end
 					end
@@ -2972,21 +2962,21 @@ function imgui.OnDrawFrame()
 end
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' then
-		if ( command:match('mute (.+) (.+) (.+)') or command:match('muteakk (.+) (.+) (.+)') or command:match('muteoff (.+) (.+) (.+)')) and cfg.settings.forma_na_mute then
-			printStyledString('send forms ...', 1000, 4)
-			if cfg.settings.add_mynick_in_form then
-				if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
-				else
-					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
-				end
-			else SendChat('/a ' .. command) end
-			return false
-		elseif command:match('ban (%d+) (%d+) .+') or command:match('banoff (%d+) (%d+) .+') or command:match('banakk (%d+) (%d+) .+') then
-			if command:match('off') or command:match('akk') then
-				sampAddChatMessage(tag .. '====== Подсказка ======')
-				sampAddChatMessage(tag .. '/sbanip блокирует аккаунт игрока в оффлайне вместе с IP адресом. Но работает только у зга +', -1)
+		if ( command:match('mute (.+) (.+) (.+)') or command:match('muteakk (.+) (.+) (.+)') or command:match('muteoff (.+) (.+) (.+)')) then
+			back_punishment(6)
+			if cfg.settings.forma_na_mute then
+				printStyledString('send forms ...', 1000, 4)
+				if cfg.settings.add_mynick_in_form then
+					if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+					else
+						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					end
+				else SendChat('/a ' .. command) end
+				return false
 			end
+		elseif command:match('ban (%d+) (%d+) .+') or command:match('banoff (%d+) (%d+) .+') or command:match('banakk (%d+) (%d+) .+') then
+			back_punishment(15)
 			if cfg.settings.forma_na_ban then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
@@ -2998,16 +2988,19 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				else SendChat('/a ' .. command) end
 				return false
 			end
-		elseif (command:match('/jail (%d+) (%d+) .+') or command:match('/jailakk (%d+) (%d+) .+') or command:match('/jailoff (%d+) (%d+) .+')) and cfg.settings.forma_na_jail then
-			printStyledString('send forms ...', 1000, 4)
-			if cfg.settings.add_mynick_in_form then
-				if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
-				else
-					local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
-					SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
-				end
-			else SendChat('/a ' .. command) end
-			return false
+		elseif (command:match('/jail (%d+) (%d+) .+') or command:match('/jailakk (%d+) (%d+) .+') or command:match('/jailoff (%d+) (%d+) .+')) then
+			back_punishment(6)
+			if cfg.settings.forma_na_jail then
+				printStyledString('send forms ...', 1000, 4)
+				if cfg.settings.add_mynick_in_form then
+					if #array.buffer.sokr_nick.v > 0 then SendChat('/a ' .. command .. ' // ' .. array.buffer.sokr_nick.v)
+					else
+						local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+						SendChat('/a ' .. command .. ' // ' .. sampGetPlayerNickname(myid))
+					end
+				else SendChat('/a ' .. command) end
+				return false
+			end
 		elseif command:match('/kick (%d+) (.+)') and cfg.settings.forma_na_kick then
 			if sampIsPlayerConnected(command:match('(%d+)')) then
 				printStyledString('send forms ...', 1000, 4)
@@ -3034,7 +3027,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		return false
 	elseif text:match('%[A%] NEARBY CHAT: .+') or text:match('%[A%] SMS: .+') then
 		array.checkbox.check_render_ears.v = true
-		local sokr_text = string.gsub( string.sub( string.gsub (string.gsub(string.gsub(string.gsub(text, 'NEARBY CHAT: ', '{87CEEB}'), 'SMS: ','{4682B4}'), ' отправил ', ''), ' игрока ', ''), 5), ' |(.+)%((%d+)%)', '')
+		local sokr_text = string.gsub( string.sub( string.gsub (string.gsub(string.gsub(string.gsub(text, 'NEARBY CHAT: ', '{87CEEB}'), 'SMS: ','{48D1CC}'), ' отправил ', ''), ' игрока ', ''), 5), ' |(.+)%((%d+)%)', '')
 		if #sokr_text > 40 then sokr_text = string.sub(sokr_text, 1, 40).."..." end
 		if #array.ears == cfg.settings.strok_ears then
 			for i = 0, #array.ears_minimal do
@@ -3102,9 +3095,9 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		end
 		if cfg.settings.admin_chat then
 			local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.+)')
-			local messange = os.date("[%H:%M:%S] ")..(string.sub(prefix, 2) .. ' ' .. admlvl .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
-			if #admtext > 65 then admtext = string.sub(admtext, 1, 65).."..." end
-			local messange_min = (string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..admlvl..']: '.. admtext)
+			local messange = os.date("[%H:%M:%S] ")..'{C0C0C0}[A-'..admlvl..'] '..(string.sub(prefix, 2) .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
+			if #admtext > 35 then admtext = string.sub(admtext, 1, 35).."..." end
+			local messange_min = '{C0C0C0}[A-'..admlvl..'] '..(string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..idadm..']: '.. admtext)
 			if #array.adminchat == cfg.settings.strok_admin_chat then
 				for i = 0, #array.adminchat_minimal do
 					if i ~= #array.adminchat_minimal then array.adminchat_minimal[i] = array.adminchat_minimal[i+1]
@@ -3122,26 +3115,31 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		end
 	elseif not AFK then
 		if cfg.settings.automute and (text:match("%((%d+)%): (.+)") or text:match("%[(%d+)%]: (.+)")) 			and not (text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") or text:match('написал %[(%d+)%]:') or text:match('ответил (.+)%[(%d+)%]: ')) then
+			if text:match('Жалоба %#(%d+) %|') then 
+				report = true
+				oskid = text:match('%[(%d+)%]')
+			end
 			local text = text:rlower() .. ' '
 			local report = false
-			if text:match('жалоба') then report = true end
-			if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
-			else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
+			if not oskid then
+				if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
+				else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
+			end
 			local text = string.gsub(text, '{%w%w%w%w%w%w}', '')
 			if cfg.settings.smart_automute then
-				for i = 1, #cfg.spisokoskrod do
+				for i = 1, #cfg.spisokoskrod do -- МАССИВ НАЧИНАЕТСЯ С 1
 					if text:match(' '.. cfg.spisokoskrod[i]) then
 						automute(cfg.spisokoskrod[i], oskid, text, '5000 Оскорбление родни', report)
 						return false
 					end
 				end
-				for i = 1, #cfg.spisokrz do
+				for i = 1, #cfg.spisokrz do -- МАССИВ НАЧИНАЕТСЯ С 1
 					if text:match(' '..cfg.spisokrz[i]) then
 						automute(cfg.spisokrz[i], oskid, text, '5000 Розжиг Межнац.Розни',report)
 						return false
 					end
 				end
-				for i = 1, #cfg.spisokproject do
+				for i = 1, #cfg.spisokproject do -- МАССИВ НАЧИНАЕТСЯ С 1
 					if text:match(' ' .. cfg.spisokproject[i]) then
 						automute(cfg.spisokproject[i], oskid, text, '1000 Упом.стор.проектов',report)
 						lua_thread.create(function()
@@ -3198,12 +3196,12 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					array.flood.time[oskid] = os.clock()
 					array.flood.count[oskid] = 1
 				else
-					if array.flood.count[oskid] == 3 and cfg.settings.smart_automute then -- если 4 сообщения то мут
+					if array.flood.count[oskid] == 3 and cfg.settings.smart_automute then -- если 4 сообщения то мут, счетчик от 0
 						array.flood.message[oskid] = nil
 						lua_thread.create(function()
 							while sampIsDialogActive() do wait(0) end
 							sampAddChatMessage(tag .. 'Обнаружен флуд в чате! Нарушитель ' .. sampGetPlayerNickname(oskid)..'['..oskid..']', -1)
-							sampAddChatMessage(tag .. 'Отправил 4 сообщения за ' .. math.ceil(os.clock() - array.flood.time[oskid]) .. '/40 сек.', 0xA9A9A9)
+							sampAddChatMessage(tag .. 'Отправил 4 сообщения за ' .. math.ceil(os.clock() - array.flood.time[oskid]) .. '/30 сек.', 0xA9A9A9)
 							sampAddChatMessage('{CD853F}Flood {ffffff}- '..sampGetPlayerNickname(oskid)..'['..oskid..']: '..text, -1)
 							sampSendChat('/mute ' .. oskid .. ' 120 Флуд/Cпам')
 						end)
@@ -3218,6 +3216,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 				if text:match(v) then
 					lua_thread.create(function()
 						while sampIsDialogActive() do wait(0) end
+						sampAddChatMessage(tag .. 'Запретное слово: ' .. v,-1)
 						sampProcessChatInput('/rk ' ..oskid)
 					end)
 					return text
@@ -3236,8 +3235,14 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 end
 function automute(array, oskid, text, nakaz, report)
 	local colorc = '{00BFFF}'
-	if report then command = '/rmute ' rcommand = 'REPORT'
-	else command = '/mute ' rcommand = 'CHAT' end
+	if report then 
+		command = '/rmute ' 
+		rcommand = 'REPORT'
+	else 
+		command = '/mute ' 
+		rcommand = 'CHAT' 
+	end
+	local text = string.gsub(text, array, '{F08080}'..array.."{ffffff}")
 	if cfg.settings.option_automute == 1 then
 		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 		sampAddChatMessage(colorc..'['..rcommand..']{D3D3D3} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. colorc..' ['..rcommand..']', -1)
@@ -3247,7 +3252,7 @@ function automute(array, oskid, text, nakaz, report)
 		lua_thread.create(function()
 			local nakaz_name = string.gsub(nakaz, textSplit(nakaz, ' ')[1]..' ', '')
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
-			sampAddChatMessage('Выдать мут по причине: "' ..nakaz_name ..'"? Клавиша '..cfg.settings.key_automute ..' для подтверждения',-1)
+			sampAddChatMessage('{E6E6FA}Выдать мут по причине: "{90EE90}' ..nakaz_name ..'{E6E6FA}"? Клавиша {cccccc}'..cfg.settings.key_automute ..'{E6E6FA} для подтверждения',-1)
 			sampAddChatMessage('{00BFFF}['..rcommand..'] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}['..rcommand..']', -1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			local count = cfg.settings.sek_automute * 100
@@ -3255,15 +3260,28 @@ function automute(array, oskid, text, nakaz, report)
 			while count ~= 0 do
 				wait(1)
 				if wasKeyPressed(strToIdKeys(cfg.settings.key_automute)) and not sampIsDialogActive() and not sampIsChatInputActive() then
-					if sampIsPlayerConnected(oskid) then
-						sampSendChat(command..oskid..' '..nakaz)
-					else
-						sampAddChatMessage(tag .. 'Игрок не в сети.', -1)
-					end
+					if sampIsPlayerConnected(oskid) then sampSendChat(command..oskid..' '..nakaz)
+					else sampAddChatMessage(tag .. 'Игрок не в сети.', -1) end
 					break
 				end
 				count = count - 1
 				if count%100==0 then time = time-1 end
+			end
+		end)
+		lua_thread.create(function()
+			newCount = true
+			wait(3)
+			newCount = false
+			local cnt = os.clock() 
+			local count = 10 + 1
+			local maxBack_count = count - 1
+			while true do wait(1)
+				if (os.clock()-cnt > count) or newCount then break
+				else
+					local back_count = math.floor( os.clock()-cnt )
+					if back_count == count then break end
+					renderFontDrawText(font_adminchat, 'Время на действие: ' .. back_count .. '/'..maxBack_count..' сек.', sw-400, 10, 0xCCFFFFFF)
+				end
 			end
 		end)
 	end
@@ -3717,6 +3735,136 @@ function binder_key()
 			end
 			AFK = true
 		else AFK = false end
+	end
+end
+function back_punishment(count)
+	lua_thread.create(function()
+		newCount = true
+		wait(3)
+		newCount = false
+		local maxBack_count = count
+		local cnt = os.clock() 
+		local count = count + 1
+		while true do wait(1)
+			if (os.clock()-cnt > count) or newCount then break
+			else
+				local back_count = math.floor( os.clock()-cnt )
+				if back_count == count then break end
+				if not AFK then renderFontDrawText(font_adminchat, 'До выдачи следующего наказания: ' .. back_count .. '/'..maxBack_count..' сек.', sw-400, 10, 0xCCFFFFFF) end
+			end
+		end
+	end)
+end
+function input_helper()
+	local _, pID = sampGetPlayerIdByCharHandle(playerPed) -- myid
+	local name = sampGetPlayerNickname(pID) -- mynick
+	local convertToHexColor = function(htmlText)
+		local hexColorPattern = "#([0-9a-fA-F]+)"
+		local hexColor = htmlText:match(hexColorPattern)
+		if hexColor then
+			local r = tonumber(hexColor:sub(1, 2), 16)
+			local g = tonumber(hexColor:sub(3, 4), 16)
+			local b = tonumber(hexColor:sub(5, 6), 16)
+			return string.format("0x88%02X%02X%02X", r, g, b)
+		else return "" end
+	end
+	local translite = function(text) -- транслейт текста для замены . /
+		for k, v in pairs(array.chars) do text = string.gsub(text, k, v) end return text
+	end
+	local user32 = ffi.load("user32") -- caps chat
+	while true do wait(1)
+		if sampIsChatInputActive() then
+			local in1 = sampGetInputInfoPtr() -- координаты под чатом
+			local in1 = getStructElement(in1, 0x8, 4)
+			local in2 = getStructElement(in1, 0x8, 4)
+			local in3 = getStructElement(in1, 0xC, 4)
+			local getInput = sampGetChatInputText()
+			if (oldText ~= getInput and #getInput > 0)then
+				local firstChar = string.sub(getInput, 1, 1)
+				if (firstChar == "." or firstChar == "/") then
+					local cmd, text = string.match(getInput, "^([^ ]+)(.*)")
+					local nText = "/" .. translite(string.sub(cmd, 2)) .. text
+					local chatInfoPtr = sampGetInputInfoPtr()
+					local chatBoxInfo = getStructElement(chatInfoPtr, 0x8, 4)
+					local lastPos = mem.getint8(chatBoxInfo + 0x11E)
+					sampSetChatInputText(nText)
+					mem.setint8(chatBoxInfo + 0x11E, lastPos)
+					mem.setint8(chatBoxInfo + 0x119, lastPos)
+					oldText = nText
+					while string.sub(sampGetChatInputText(), 1, 5) == '/mess' do wait(0)
+						local s = ""
+						local color = {
+							'{FFFFFF}Белый',
+							'{000000}Черный',
+							'{008000}Темно-зеленый',
+							'{80FF00}Светло-зеленый',
+							'{FF0000}Красный',
+							'{0000FF}Темно-синий',
+							'{FDFF00}Желтый',
+							'{FF9000}Золотой',
+							'{B313E7}Фиолетовый',
+							'{49E789}Бирюзовый',
+							'{139BEC}Синий',
+							'{2C9197}Сине-зеленый',
+							'{DDB201}Желтый',
+							'{B8B6B6}Серый',
+							'{FFEE8A}Бежевый',
+							'{FF9DB6}Розовый',
+							'{BE8A01}Коричневый',
+							'{E6284E}Светлокрасный',
+						}
+						for k,v in pairs(color) do
+							s = s ..k-1 .. ' - ' .. v .. "\n{FFFFFF}"
+						end --  in2 + 5, in3 + 60
+
+						renderFontDrawText(font_chat, s, in2 + 5, in3 + 50, -1)
+					end
+				end
+			end
+			-- подсказки под чатом
+
+			local ping = sampGetPlayerPing(pID) -- ping
+			local caps = (user32).GetKeyState(0x14) -- Код клавиши CapsLock
+
+			if caps == 1 or caps == 3 then caps = 'ON'
+			else caps = 'OFF' end
+
+			if getCurrentLanguageName() == '00000419' then raskl = 'RU'
+			else raskl = 'EN' end
+
+			local text = ("Ваш ник: "..cfg.settings.color_chat..name.."["..pID.."]{ffffff}, Ваш пинг: "..cfg.settings.color_chat..ping.."{ffffff}, Раскладка: "..cfg.settings.color_chat..raskl.."{ffffff}, Capslock: "..cfg.settings.color_chat..caps)
+			local count = 0
+			if cfg.settings.active_chat then
+				if #getInput > 1 then
+					local getInput = "/"..string.rlower(string.gsub(getInput,"%p", ""))
+					for _, razdel in pairs(basic_command) do
+						for name, command in pairs(razdel) do
+							if (string.sub(getInput, 1,1) == "/" and name:match(getInput) and not tonumber(string.sub(command, -1))) or getInput:match(name) or (string.rlower(string.gsub(command, "_", "(%d+)")):match( string.rlower(string.gsub(sampGetChatInputText(), "%p", ""))  ) and not tonumber(string.sub(command, -1))) then
+								if name:match(getInput.. " ") or getInput:match(name.." ") or name == getInput then
+									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
+								else renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000) end
+								renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "[ID]"), in2 + 10, in3 + 60 + (count*6) , -1)
+								count = count + 5
+								if count > 16 then break break end -- не более 8 подсказок
+							end
+						end
+					end
+					if count == 0 then renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1) end
+					count = 0
+				else renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1) end
+			end
+		end
+	end
+end
+function time_text()
+	if #(cfg.settings.customtimetext) ~= 0 then
+		while true do wait(1) if not AFK then
+			renderFontDrawText(font_timetext, cfg.settings.customtimetext, cfg.settings.timetext_pos_x, cfg.settings.timetext_pos_y, 0xCCFFFFFF)
+		end end
+	else
+		while true do wait(1) if not AFK then
+			renderFontDrawText(font_timetext, os.date("%x %X"), cfg.settings.timetext_pos_x, cfg.settings.timetext_pos_y, 0xCCFFFFFF)
+		end end
 	end
 end
 --============= Wallhack ==============--
