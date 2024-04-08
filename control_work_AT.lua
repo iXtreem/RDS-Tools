@@ -15,7 +15,7 @@ function onSystemMessage(msg, type, script)
         if msg:find(scripts[i]..'%.lua?:%d+:') then
             lua_thread.create(function()
                 while sampIsDialogActive() do wait(200) end
-                sampShowDialog(252, '{FFFFFF}Кажется, что-то пошло не так ...', 'В скрипте {7B68EE}' .. scripts[i] .. ' {ffffff}произошла ошибка, вследствии чего все скрипты будут перезагружены.\nКод ошибки:\n\n'..msg, 'reload', 'send report', 0)
+                sampShowDialog(252, '{FFFFFF}Кажется, что-то пошло не так ...', 'В скрипте {7B68EE}' .. scripts[i] .. ' {ffffff}произошла ошибка, вследствии чего все скрипты будут перезагружены.\nКод ошибки:\n\n'..msg..'\n\nНажмите Enter, чтобы отправить отчет об ошибке, или Escape для иного выбора', 'reload', 'send report', 0)
                 while sampIsDialogActive(252) do wait(500) end
                 local _, button, _, _ = sampHasDialogRespond(252)
                 if button == 0 then
@@ -37,7 +37,6 @@ function onSystemMessage(msg, type, script)
                       
                         vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
                         vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua'.. '\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
-
                         sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
                     end
                     if button ~= 3 then
@@ -47,6 +46,14 @@ function onSystemMessage(msg, type, script)
                         sampAddChatMessage('Автоматическая перезагрузка не была выполнена, но вы можете сделать ее вручную, командой /rst', -1)
                     end
                 else
+                    local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+                    local nick = sampGetPlayerNickname(id)
+                    local data = (os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year .. ' '..os.date("*t").hour..':'..os.date("*t").min ..':'..os.date("*t").sec)
+
+                    local add_text = 'Отсутствуют.'
+                    vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
+                    vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua'.. '\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
+                    sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
                     wait(2000)
                     reloadScripts()
                 end
