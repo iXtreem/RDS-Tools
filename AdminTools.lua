@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.5   			 							-- Версия скрипта
+local version = 7.51   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -374,9 +374,11 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
 	while not isSampAvailable() do wait(1000) end
+
 	print('Скрипт подгружен, ожидаю входа в админ-права...')
 	print('Если вход в админ-права не будет выполнен в течение 4 минут - игра автоматически закроется.')
 	print('Если скрипт не подгрузился даже после входа в систему - обратитесь к разработчику!')
+
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -511,6 +513,18 @@ function main()
 	if cfg.settings.wallhack then on_wallhack() func1:run() end
 	if cfg.settings.autoonline then func:run() end
 
+
+	local check_key = function()
+		lua_thread.create(function()
+			if isKeyJustPressed(strToIdKeys(cfg.settings.key_automute)) and not sampIsChatInputActive() and not sampIsDialogActive() then -- Проверка нажатия кнопки и не открыт-ли чат или диалог
+				wait(2000) -- Ожидаем 2 секунды
+				if isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not sampIsChatInputActive() and not sampIsDialogActive() then -- Проверяем, нажата ли кнопка
+					return true
+				end
+			end
+		end)
+	end
+
 	local font_watermark = renderCreateFont("Arial", 8, font.BOLD + font.BORDER + font.SHADOW) -- шрифт текста о АТ снизуу
 	while true do
 
@@ -519,7 +533,7 @@ function main()
 			local mouseX, mouseY = getCursorPos() 
 			for i = 1, #array.adminchat do
 				local coordinateX, coordinateY = cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15)
-				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or isKeyDown(strToIdKeys(cfg.settings.key_automute)) then
+				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+400)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 					renderFontDrawText(font_adminchat, array.adminchat[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_adminchat, array.adminchat_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -527,7 +541,7 @@ function main()
 			end
 			for i = 1, #array.ears do
 				local coordinateX, coordinateY = cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15)
-				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or isKeyDown(strToIdKeys(cfg.settings.key_automute)) then
+				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 					renderFontDrawText(font_earschat, array.ears[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_earschat, array.ears_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -3027,7 +3041,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		return false
 	elseif text:match('%[A%] NEARBY CHAT: .+') or text:match('%[A%] SMS: .+') then
 		array.checkbox.check_render_ears.v = true
-		local sokr_text = string.gsub( string.sub( string.gsub (string.gsub(string.gsub(string.gsub(text, 'NEARBY CHAT: ', '{87CEEB}'), 'SMS: ','{48D1CC}'), ' отправил ', ''), ' игрока ', ''), 5), ' |(.+)%((%d+)%)', '')
+		local sokr_text = string.gsub( string.sub( string.gsub (string.gsub(string.gsub(string.gsub(text, 'NEARBY CHAT: ', '{87CEEB}'), 'SMS: ','{9ACD32}'), ' отправил ', ''), ' игрока ', ''), 5), ' |(.+)%((%d+)%)', '')
 		if #sokr_text > 40 then sokr_text = string.sub(sokr_text, 1, 40).."..." end
 		if #array.ears == cfg.settings.strok_ears then
 			for i = 0, #array.ears_minimal do
@@ -3096,7 +3110,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		if cfg.settings.admin_chat then
 			local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.+)')
 			local messange = os.date("[%H:%M:%S] ")..'{C0C0C0}[A-'..admlvl..'] '..(string.sub(prefix, 2) .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
-			if #admtext > 35 then admtext = string.sub(admtext, 1, 35).."..." end
+			if #admtext > 50 then admtext = string.sub(admtext, 1, 50).."..." end
 			local messange_min = '{C0C0C0}[A-'..admlvl..'] '..(string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..idadm..']: '.. admtext)
 			if #array.adminchat == cfg.settings.strok_admin_chat then
 				for i = 0, #array.adminchat_minimal do
@@ -3118,13 +3132,12 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 			if text:match('Жалоба %#(%d+) %|') then 
 				report = true
 				oskid = text:match('%[(%d+)%]')
-			end
-			local text = text:rlower() .. ' '
-			local report = false
-			if not oskid then
+			else 
 				if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
 				else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
 			end
+			local text = text:rlower() .. ' '
+			local report = false
 			local text = string.gsub(text, '{%w%w%w%w%w%w}', '')
 			if cfg.settings.smart_automute then
 				for i = 1, #cfg.spisokoskrod do -- МАССИВ НАЧИНАЕТСЯ С 1
@@ -3242,6 +3255,7 @@ function automute(array, oskid, text, nakaz, report)
 		command = '/mute ' 
 		rcommand = 'CHAT' 
 	end
+	if string.sub(array,-1 ) == 's' then array = string.sub(array,1,-3) end
 	local text = string.gsub(text, array, '{F08080}'..array.."{ffffff}")
 	if cfg.settings.option_automute == 1 then
 		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
@@ -3252,7 +3266,7 @@ function automute(array, oskid, text, nakaz, report)
 		lua_thread.create(function()
 			local nakaz_name = string.gsub(nakaz, textSplit(nakaz, ' ')[1]..' ', '')
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
-			sampAddChatMessage('{E6E6FA}Выдать мут по причине: "{90EE90}' ..nakaz_name ..'{E6E6FA}"? Клавиша {cccccc}'..cfg.settings.key_automute ..'{E6E6FA} для подтверждения',-1)
+			sampAddChatMessage('{E6E6FA}Выдать мут по причине: "{90EE90}' ..nakaz_name ..'{E6E6FA}"? Клавиша {A9A9A9}'..cfg.settings.key_automute ..'{E6E6FA} для подтверждения',-1)
 			sampAddChatMessage('{00BFFF}['..rcommand..'] {FFF0F5}'..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text..' {00BFFF}['..rcommand..']', -1)
 			sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 			local count = cfg.settings.sek_automute * 100
@@ -3264,24 +3278,9 @@ function automute(array, oskid, text, nakaz, report)
 					else sampAddChatMessage(tag .. 'Игрок не в сети.', -1) end
 					break
 				end
+				renderFontDrawText(font_adminchat, 'Время на действие: ' .. time ..' сек.', sw-400, 10, 0xCCFFFFFF)
 				count = count - 1
 				if count%100==0 then time = time-1 end
-			end
-		end)
-		lua_thread.create(function()
-			newCount = true
-			wait(3)
-			newCount = false
-			local cnt = os.clock() 
-			local count = 10 + 1
-			local maxBack_count = count - 1
-			while true do wait(1)
-				if (os.clock()-cnt > count) or newCount then break
-				else
-					local back_count = math.floor( os.clock()-cnt )
-					if back_count == count then break end
-					renderFontDrawText(font_adminchat, 'Время на действие: ' .. back_count .. '/'..maxBack_count..' сек.', sw-400, 10, 0xCCFFFFFF)
-				end
 			end
 		end)
 	end
@@ -3346,7 +3345,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 end
 
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- Работа с открытими ДИАЛОГАМИ
-	closeDialog = function(id)
+	local closeDialog = function(id)
 		if cfg.settings.nodialog then 
 			return true
 		else
