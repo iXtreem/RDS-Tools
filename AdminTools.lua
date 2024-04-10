@@ -3,9 +3,9 @@ require 'lib.moonloader'									-- Считываем библиотеки Moonloader
 import("\\resource\\AT_FastSpawn.lua")  					-- подгрузка быстрого спавна
 require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
-script_author 'Neon4ik' 									-- Псевдоним разработчика
+script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.6   			 							-- Версия скрипта
+local version = 7.7   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -289,7 +289,8 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/pagesize"] 	= "Настройка количества строк в чате",
 		["/fontsize"] 	= "Настройка размера чата",
 		["/headmove"] 	= "Настройка вращения головы персонажа",
-		["/timestamp"]	= "Время в чате"
+		["/timestamp"]	= "Время в чате",
+		["/alogin"] 	= "Авторизация в админ-права",
 	},
 	help = {
 		["/uu"]      =  	'/unmute _',
@@ -572,7 +573,7 @@ for k,v in pairs(basic_command.help) do sampRegisterChatCommand(string.sub(k,2),
 
 for k,v in pairs(cfg.my_command) do
 	local v = string.gsub(v, '\\n','\n')
-	basic_command.prochee[k] = v
+	basic_command.prochee['/'..k] = v
 	sampRegisterChatCommand(k, function(param) 
 		lua_thread.create(function() 
 			for a,b in pairs(textSplit(string.gsub(v, '_', param), '\n')) do
@@ -980,16 +981,6 @@ function imgui.OnDrawFrame()
 							end
 							cfg_mp = nil
 							save()
-						end
-						if cfg.settings.option_automute == 0 then
-							imgui.Text(u8('Активация: '.. cfg.settings.key_automute))
-							imgui.Text(u8'Кол-во секунд на ответ: ') imgui.SameLine()
-							if imgui.SliderInt('##Slid', array.checkbox.sek_automute, 5, 15) then
-								cfg.settings.sek_automute = array.checkbox.sek_automute.v
-								save()
-							end
-							if getDownKeysText() and not getDownKeysText():find('+') then imgui.Text(u8'Зажата клавиша: ' .. getDownKeysText())
-							else imgui.Text(u8'Нет зажатой клавиши') end
 						end
 					end
 					imgui.EndPopup()
@@ -2674,7 +2665,7 @@ function imgui.OnDrawFrame()
 			array.windows.answer_player_report.v = false
 		end
 		if (wasKeyPressed(VK_RBUTTON) or wasKeyPressed(VK_F)) and not (sampIsChatInputActive() or sampIsDialogActive()) then
-			if isCursorActive() then showCursor(false,false)
+			if sampIsCursorActive() then showCursor(false,false)
 			else showCursor(true,false) end
 		end
 		imgui.CenterText(u8'Нажми нужную клавишу, либо курсором')
@@ -3733,7 +3724,7 @@ function wait_accept_form()
 		while true do
 			wait(2)
 			if array.admin_form.bool and array.admin_form.timer and array.admin_form.sett then
-				timer = os.clock() - array.admin_form.timer
+				local timer = os.clock() - array.admin_form.timer
 				renderFontDrawText(fonts, '{FFFFFF}Обнаружена форма от администратора.\nНажми U, чтобы принять или J - чтобы отклонить\nВремени на раздумья 5 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
 				if timer>5 then break end
 			end
@@ -3842,7 +3833,8 @@ function input_helper()
 	local translite = function(text) -- транслейт текста для замены . /
 		for k, v in pairs(array.chars) do text = string.gsub(text, k, v) end return text
 	end
-	local user32 = ffi.load("user32") -- caps chat
+	local user32 = ffi.load("user32") -- caps chat\
+	local names_command = {["mute"]=true, ["rmute"]=true, ["ban"]=true, ["jail"]=true,}
 	while true do wait(1)
 		if sampIsChatInputActive() then
 			local in1 = sampGetInputInfoPtr() -- координаты под чатом
@@ -3886,7 +3878,7 @@ function input_helper()
 						}
 						for k,v in pairs(color) do
 							s = s ..k-1 .. ' - ' .. v .. "\n{FFFFFF}"
-						end --  in2 + 5, in3 + 60
+						end 
 
 						renderFontDrawText(font_chat, s, in2 + 5, in3 + 50, -1)
 					end
@@ -3906,17 +3898,22 @@ function input_helper()
 			local text = ("Ваш ник: "..cfg.settings.color_chat..name.."["..pID.."]{ffffff}, Ваш пинг: "..cfg.settings.color_chat..ping.."{ffffff}, Раскладка: "..cfg.settings.color_chat..raskl.."{ffffff}, Capslock: "..cfg.settings.color_chat..caps)
 			local count = 0
 			if cfg.settings.active_chat then
+				local mouseX, mouseY = getCursorPos()
 				if #getInput > 1 then
 					local getInput = "/"..string.rlower(string.gsub(getInput,"%p", ""))
-					for _, razdel in pairs(basic_command) do
+					for name_razdel, razdel in pairs(basic_command) do
 						for name, command in pairs(razdel) do
 							if (string.sub(getInput, 1,1) == "/" and name:match(getInput) and not tonumber(string.sub(command, -1))) or getInput:match(name) or (string.rlower(string.gsub(command, "_", "(%d+)")):match( string.rlower(string.gsub(sampGetChatInputText(), "%p", ""))  ) and not tonumber(string.sub(command, -1))) then
 								if name:match(getInput.. " ") or getInput:match(name.." ") or name == getInput then
 									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
 								else renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000) end
+								if (sampIsCursorActive() and mouseX < in2+705  and mouseY > in3 + 55 + (count*6) and mouseY<(in3 + 90 + (count*6))) and wasKeyPressed(VK_LBUTTON) then sampSetChatInputText(name..' ') lua_thread.create(function() wait(150) sampSetChatInputEnabled(true) end)  end
+								if names_command[name_razdel] then
+									renderFontDrawText(font_chat, "{A9A9A9}-f", 720, in3 + 60 + (count*6) , -1)
+								end
 								renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "ID"), in2 + 10, in3 + 60 + (count*6) , -1)
 								count = count + 5
-								if count > 16 then break break end -- не более 8 подсказок
+								if count > 16 then break break end
 							end
 						end
 					end
