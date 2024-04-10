@@ -4,7 +4,6 @@ function recode(u8) return encoding.UTF8:decode(u8) end -- дешифровка при автооо
 imgui 	= require 'imgui' 					-- Визуализация скрипта, окно программы
 sampev		 	= require 'lib.samp.events'			-- Считывание текста из чата
 imadd 			= require 'imgui_addons' 			-- Замена имгуи CheckBox'a
-mimgui 			= require 'mimgui'					-- Мимгуи для работы keysyns
 inicfg 			= require 'inicfg'					-- Сохранение/загрузка конфигов
 encoding 			= require 'encoding'				-- Дешифровка на русский язык
 encoding.default 		= 'CP1251' 
