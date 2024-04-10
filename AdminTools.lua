@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.51   			 							-- Версия скрипта
+local version = 7.6   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -81,11 +81,15 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		custom_addtext_report = "",
 		addBeginText = true,
 		atr = false,
-		timetext = true,
+		timetext = false,
 		customtimetext = "",
 		timetext_razmer = 14,
 		timetext_pos_x = sw*0.5-100,
 		timetext_pos_y = sh-20,
+		save_radar = false,
+		time_nakazanie = true,
+		time_nakazanie_posx = sw-400,
+		time_nakazanie_posy = 10,
 	},
 	customotvet = {},
 	myflood = {},
@@ -173,6 +177,8 @@ local array = {
 	 	option_automute 		   = imgui.ImInt(cfg.settings.option_automute),
 		sek_automute 			   = imgui.ImInt(cfg.settings.sek_automute),
 		razmer_text				   = imgui.ImInt(cfg.settings.timetext_razmer),
+		radar 					   = imgui.ImBool(cfg.settings.save_radar),
+		time_nakazanie 			   = imgui.ImBool(cfg.settings.time_nakazanie),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -373,12 +379,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 }
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
-	while not isSampAvailable() do wait(1000) end
-
-	print('Скрипт подгружен, ожидаю входа в админ-права...')
-	print('Если вход в админ-права не будет выполнен в течение 4 минут - игра автоматически закроется.')
-	print('Если скрипт не подгрузился даже после входа в систему - обратитесь к разработчику!')
-
+	while not isSampAvailable() do wait(3000) end
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -428,11 +429,11 @@ function main()
 		array.windows.menu_chatlogger.v = not array.windows.menu_chatlogger.v
 		imgui.Process = array.windows.menu_chatlogger.v
 	end)
+	while not sampIsLocalPlayerSpawned() do wait(1000) end
 	func_inputhelper = lua_thread.create_suspended(input_helper)
 	func_timetext    = lua_thread.create_suspended(time_text)
 	if cfg.settings.inputhelper then func_inputhelper:run() end
 	if cfg.settings.timetext then func_timetext:run() end
-	while not sampIsLocalPlayerSpawned() do wait(1000) end
 	local wait_alogin = true
 	for i = 1, 200 do
 		for id = 500, 515 do -- [[ ID TEXDRAW FROM ALOGIN TABLE ID CHEATERS ]] --
@@ -445,7 +446,6 @@ function main()
 		if not wait_alogin then break end
 	end
 	if wait_alogin then ffi.C.ExitProcess(0) end
-
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminTools.ini", 'moonloader//config//AT//AdminTools.ini', function(id, status) end)
 	local AdminTools = inicfg.load(nil, 'moonloader\\config\\AT\\AdminTools.ini')
@@ -468,7 +468,7 @@ function main()
 			if AdminTools.script.versionMP > cfg.settings.versionMP then update = true end
 			if AdminTools.script.versionFS > cfg.settings.versionFS then update = true end
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
-		if sampGetCurrentServerAddress() ~= '46.174.52.246' and sampGetCurrentServerAddress() ~= '46.174.49.170' then
+		if sampGetCurrentServerAddress() ~= '46.174.52.246' --[[ 01 SERVER ]] and sampGetCurrentServerAddress() ~= '46.174.49.170' --[[ 02 SERVER ]] then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
 			ScriptExport()
 	 	else sampAddChatMessage("",-1) sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) sampAddChatMessage("",-1)  end
@@ -512,20 +512,14 @@ function main()
 	end
 	if cfg.settings.wallhack then on_wallhack() func1:run() end
 	if cfg.settings.autoonline then func:run() end
+	if cfg.settings.save_radar then mem.write(sampGetBase() + 643864, 37008, 2, true) end
 
+	mem.write(0x747FB6, 0x1, 1, true) -- [[ AntiAFK Script in GameOver ]]
+	mem.write(0x74805A, 0x1, 1, true)
+	mem.fill(0x74542B, 0x90, 8, true)
+	mem.fill(0x53EA88, 0x90, 6, true)
 
-	local check_key = function()
-		lua_thread.create(function()
-			if isKeyJustPressed(strToIdKeys(cfg.settings.key_automute)) and not sampIsChatInputActive() and not sampIsDialogActive() then -- Проверка нажатия кнопки и не открыт-ли чат или диалог
-				wait(2000) -- Ожидаем 2 секунды
-				if isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not sampIsChatInputActive() and not sampIsDialogActive() then -- Проверяем, нажата ли кнопка
-					return true
-				end
-			end
-		end)
-	end
-
-	local font_watermark = renderCreateFont("Arial", 8, font.BOLD + font.BORDER + font.SHADOW) -- шрифт текста о АТ снизуу
+	local font_watermark = renderCreateFont("Arial", 9, font.BOLD + font.BORDER + font.SHADOW) -- шрифт текста о АТ снизуу
 	while true do
 
 		if not AFK then
@@ -547,9 +541,8 @@ function main()
 					renderFontDrawText(font_earschat, array.ears_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				end
 			end
-			--Название проги в углу экрана
-			renderFontDrawText(font_watermark, tag..'{808080}version['..version..']', 11, sh-20, 0xCCFFFFFF)
 		end
+		renderFontDrawText(font_watermark, tag..'{808080}version[ {228B22}FINAL {808080}]', 10, sh-20, 0xCCFFFFFF)
 		wait(1) -- задержка
 	end
 end
@@ -615,11 +608,13 @@ sampRegisterChatCommand('spawncars', function(param)
 		sampAddChatMessage(tag .. 'Вы не указали время, потому оно было выбрано по умолчанию - 15 секунд.', -1)
 		param = 15
 	end
-	sampSendChat('/mess '..math.random(0,17)..' --------===================| Spawn Auto |================-----------')
-	sampSendChat('/mess 15 Многоуважаемые дрифтеры и дрифтерши')
-	sampSendChat('/mess 15 Через '..param..' секунд пройдёт респавн всего транспорта на сервере.')
-	sampSendChat('/mess 15 Займите свои супер кары во избежания потери :3')
-	sampSendChat('/mess '..math.random(0,17)..' --------===================| Spawn Auto |================-----------')
+	local random = math.random(2,17)
+	local random_2 = math.random(9,15)
+	sampSendChat('/mess '..random..' --------===================| Spawn Auto |================-----------')
+	sampSendChat('/mess '..random_2..' Многоуважаемые дрифтеры и дрифтерши')
+	sampSendChat('/mess '..random_2..' Через '..param..' секунд пройдёт респавн всего транспорта на сервере.')
+	sampSendChat('/mess '..random_2..' Займите свои супер кары во избежания потери :3')
+	sampSendChat('/mess '..random..' --------===================| Spawn Auto |================-----------')
 	sampSendChat('/delcarall')
 	sampSendChat('/spawncars '..param)
 end)
@@ -754,19 +749,51 @@ sampRegisterChatCommand('up', function(param)
 		end)
 	end
 end)
+sampRegisterChatCommand('autoban', function(param)
+	local param1 = textSplit(param, ' ')
+	if not param1[1] then param1[1] = "4" end
+	local param1 = param1[1]
+	local param2 = string.gsub(param, param1..' ', '')
+	if param1 == "0" then
+		local text = false
+		for k,v in pairs(cfg.auto_ban) do
+			if tostring(v) == param2 then
+				text = k
+			end
+		end
+		if text then
+			sampAddChatMessage(tag ..'Текст ' ..param2..' было удалено из списка', -1)
+			table.remove( cfg.auto_ban,k )
+		else
+			sampAddChatMessage(tag ..'Данный текст не найден в списке', -1)
+		end
+	elseif param1 == "1" then
+		sampAddChatMessage(tag ..'Текст ' ..param2..' было добавлено для поиска в чате и автоматической блокировки за рекламу', -1)
+		table.insert( cfg.auto_ban, tostring(param2) )
+	elseif param1 == '2' then
+		sampAddChatMessage(tag ..'Словарь: ', -1)
+		for k,v in pairs(cfg.auto_ban) do
+			sampAddChatMessage(v,-1)
+		end
+	else
+		sampAddChatMessage(tag ..'/autoban [0-2] text',-1)
+		sampAddChatMessage(tag ..'0 - удалить слово, 1 - добавить, 2 - список', -1)
+	end
+	save()
+end)
 sampRegisterChatCommand('wh' , function()
 	if not cfg.settings.wallhack then
 		cfg.settings.wallhack = true
 		save()
 		array.checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		on_wallhack()
-		sampAddChatMessage(tag ..'WallHack ON', -1)
+		sampAddChatMessage(tag ..'Функция WallHack успешно активирована', -1)
 	else
 		cfg.settings.wallhack = false
 		save()
 		array.checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		off_wallhack()
-		sampAddChatMessage(tag ..'WallHack OFF', -1)
+		sampAddChatMessage(tag ..'Функция WallHack была деактивированаF', -1)
 	end
 end)
 sampRegisterChatCommand('tool', function()
@@ -842,38 +869,6 @@ sampRegisterChatCommand('ears', function()
 		array.checkbox.check_render_ears.v = true
 		print('Сканирование ЛС успешно активировано.', -1)
 	end
-end)
-sampRegisterChatCommand('autoban', function(param)
-	local param1 = textSplit(param, ' ')
-	if not param1[1] then param1[1] = "4" end
-	local param1 = param1[1]
-	local param2 = string.gsub(param, param1..' ', '')
-	if param1 == "0" then
-		local text = false
-		for k,v in pairs(cfg.auto_ban) do
-			if tostring(v) == param2 then
-				text = k
-			end
-		end
-		if text then
-			sampAddChatMessage(tag ..'Текст ' ..param2..' было удалено из списка', -1)
-			table.remove( cfg.auto_ban,k )
-		else
-			sampAddChatMessage(tag ..'Данный текст не найден в списке', -1)
-		end
-	elseif param1 == "1" then
-		sampAddChatMessage(tag ..'Текст ' ..param2..' было добавлено для поиска в чате и автоматической блокировки за рекламу', -1)
-		table.insert( cfg.auto_ban, tostring(param2) )
-	elseif param1 == '2' then
-		sampAddChatMessage(tag ..'Словарь: ', -1)
-		for k,v in pairs(cfg.auto_ban) do
-			sampAddChatMessage(v,-1)
-		end
-	else
-		sampAddChatMessage(tag ..'/autoban [0-2] text',-1)
-		sampAddChatMessage(tag ..'0 - удалить слово, 1 - добавить, 2 - список', -1)
-	end
-	save()
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
@@ -1221,22 +1216,29 @@ function imgui.OnDrawFrame()
 				imgui.Text(u8'Кастом рекон меню')
 				imgui.SameLine()
 				imgui.SetCursorPosX(435)
-				if imgui.Button(fa.ICON_ARROWS..'##5') then
-					if cfg.settings.on_custom_recon_menu then
-						if array.windows.recon_menu.v then
-							lua_thread.create(function()
-								sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
-								sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
-								local old_pos_x, old_pos_y = cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y
-								while true do
-									cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y = getCursorPos()
-									if wasKeyPressed(VK_RETURN) then save() break end
-									if wasKeyPressed(VK_ESCAPE) then cfg.settings.position_recon_menu_x = old_pos_x cfg.settings.position_recon_menu_y = old_pos_y break end
-									wait(1)
-								end
-							end)
-						else sampAddChatMessage(tag .. 'Данная опция доступна только в реконе.', -1) end
-					else sampAddChatMessage(tag ..'Функция выключена, включите её и задайте позицию', -1) end
+				if imgui.Button(fa.ICON_COG..'##5') then imgui.OpenPopup('settings_recon') end
+				if imgui.BeginPopup('settings_recon') then
+					imgui.Text(u8'Сохранять радар в реконе') 
+					imgui.SameLine()
+					if imadd.ToggleButton("##radar", array.checkbox.radar) then
+						cfg.settings.save_radar = not cfg.settings.save_radar
+						save()
+					end
+					imgui.Tooltip(u8'Внесенные изменения требуют перегрузку игры')
+					if imgui.Button(u8'Настроить позицию') then
+						lua_thread.create(function()
+							sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
+							sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
+							local old_pos_x, old_pos_y = cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y
+							while true do
+								cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y = getCursorPos()
+								if wasKeyPressed(VK_RETURN) then save() break end
+								if wasKeyPressed(VK_ESCAPE) then cfg.settings.position_recon_menu_x = old_pos_x cfg.settings.position_recon_menu_y = old_pos_y break end
+								wait(1)
+							end
+						end)
+					end
+					imgui.EndPopup()
 				end
 				if imadd.ToggleButton("##virtualkey", array.checkbox.check_keysync) then
 					cfg.settings.keysync = not cfg.settings.keysync
@@ -1372,6 +1374,33 @@ function imgui.OnDrawFrame()
 					end
 					imgui.EndPopup()
 				end
+				imgui.SameLine()
+				imgui.SetCursorPosX(250)
+				if imadd.ToggleButton('##timenakaz', array.checkbox.time_nakazanie) then
+					cfg.settings.time_nakazanie = not cfg.settings.time_nakazanie
+					save()
+				end
+				imgui.SameLine()
+				imgui.Text(u8'Время наказаний')
+				imgui.SameLine()
+				imgui.SetCursorPosX(435)
+				if imgui.Button(fa.ICON_ARROWS..'##2235') then
+					lua_thread.create(function()
+						sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
+						sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
+						local old_pos_x, old_pos_y = cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy
+						while true do
+							showCursor(true,true)
+							cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy = getCursorPos()
+							if wasKeyPressed(VK_RETURN) then save() break end
+							if wasKeyPressed(VK_ESCAPE) then cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy = old_pos_y break end
+							wait(1)
+							renderFontDrawText(font_adminchat, 'До выдачи следующего наказания: 0/6 сек.', cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy, 0xCCFFFFFF)
+						end
+						showCursor(false,false)
+					end)
+					array.windows.menu_tools.v = false
+				end
 				if array.checkbox.vision_form.v then
 					if imgui.Button(u8'Авто-отправка форм для младших администраторов', imgui.ImVec2(419, 24)) then imgui.OpenPopup('autoform') end
 					imgui.SameLine()
@@ -1382,19 +1411,9 @@ function imgui.OnDrawFrame()
 					imgui.Tooltip(u8'Нажми, если у тебя есть все доступы\nКнопка будет отображена на второй странице')
 					vision_form()
 				end
-				imgui.SetCursorPosY(400)
+				imgui.SetCursorPosY(470)
 				imgui.Separator()
-				imgui.Text(u8'Разработчик скрипта - N.E.O.N')
-				imgui.Text(u8'Обратная связь:')
-				imgui.SameLine()
-				if imgui.Link("https://vk.com/alexandrkob", u8"Нажми, чтобы открыть ссылку в браузере") then
-					os.execute(('explorer.exe "%s"'):format("https://vk.com/alexandrkob"))
-				end
-				imgui.Text(u8'Группа VK:')
-				imgui.SameLine()
-				if imgui.Link("https://vk.com/club222702914", u8"Нажми, чтобы открыть ссылку в браузере") then
-					os.execute(('explorer.exe "%s"'):format("https://vk.com/club222702914"))
-				end
+				imgui.CenterText(u8'Конечный продукт для Администрации RDS '..fa.ICON_SPACE_SHUTTLE)
 			elseif menu == 'Дополнительные функции' then -- мульти выбор
 				imgui.SetCursorPosX(8)
 				if imgui.NewInputText('##doptextcomыmand', array.buffer.custom_addtext_report, 485, u8'Дополнительный текст в начале ответа', 2) then
@@ -2334,14 +2353,14 @@ function imgui.OnDrawFrame()
 			cfg.settings.add_answer_report = not cfg.settings.add_answer_report
 			save()
 		end
-		imgui.Tooltip(u8'Добавляет ваш текст к ответу\n'..u8:decode(array.buffer.text_ans.v)..u8(cfg.settings.mytextreport) .. u8'\nНе сработает, если кол-во символов в ответе превысит максимум\nЕсли функция включена и текст не указан - берет из словаря.')
+		imgui.Tooltip(u8'Добавляет текст к началу вашего ответа\nНе сработает, если кол-во символов в ответе превысит максимум\nЕсли функция включена и текст не указан - берет из словаря.')
 		imgui.SameLine()
 		imgui.Text(u8'Добавить текст в конце ответа  ' .. fa.ICON_COMMENTING_O)
 		if imadd.ToggleButton('##saveans', array.checkbox.check_save_answer) then
 			cfg.settings.custom_answer_save = not cfg.settings.custom_answer_save
 			save()
 		end
-		imgui.Tooltip(u8'Добавляет ваш текст к ответу\n'..u8(u8:decode(array.buffer.custom_addtext_report.v..array.buffer.text_ans.v)).. '\nНе сработает, если кол-во символов в ответе превысит максимум')
+		imgui.Tooltip(u8'Добавляет текст к концу вашего ответу\nНе сработает, если кол-во символов в ответе превысит максимум\nТекст на данный момент:\n' .. u8(cfg.settings.mytextreport))
 		imgui.SameLine()
 		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта ' .. fa.ICON_DATABASE)
 		imgui.PopFont()
@@ -2661,7 +2680,7 @@ function imgui.OnDrawFrame()
 		imgui.CenterText(u8'Нажми нужную клавишу, либо курсором')
 		imgui.CenterText(u8'Активация курсора: ПКМ или F')
 		imgui.CenterText(u8'Меню активно 5 секунд.')
-		if isPauseMenuActive() then array.windows.answer_player_report.v = false end
+		if wasKeyPressed(VK_ESCAPE) then copies_player_recon = nil  array.windows.answer_player_report.v = false end
 		imgui.End()
 	end
 	if array.windows.render_admins.v then -- рендер админов
@@ -2973,6 +2992,46 @@ function imgui.OnDrawFrame()
  		imgui.PopFont()
 		imgui.End()
 	end
+	if target ~= -1 and not AFK then
+		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.keysyncx, cfg.settings.keysyncy), imgui.Cond.Always, imgui.ImVec2(0.5, 0.5))
+		imgui.Begin('##keysync', nil, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
+		if doesCharExist(target) then
+			local plState = (isCharOnFoot(target) and "onfoot" or "vehicle")
+			imgui.SetCursorPosX(8)  						
+				
+			KeyCap("TAB", (array.keys[plState]["TAB"] ~= nil), imgui.ImVec2(40, 30)); imgui.SameLine()
+			KeyCap("Q", (array.keys[plState]["Q"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			KeyCap("W", (array.keys[plState]["W"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			KeyCap("E", (array.keys[plState]["E"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			KeyCap("R", (array.keys[plState]["R"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+
+
+			KeyCap("RM", (array.keys[plState]["RKM"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			KeyCap("LM", (array.keys[plState]["LKM"] ~= nil), imgui.ImVec2(30, 30))					
+
+
+			KeyCap("Shift", (array.keys[plState]["Shift"] ~= nil), imgui.ImVec2(40, 30)); imgui.SameLine()
+			KeyCap("A", (array.keys[plState]["A"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			KeyCap("S", (array.keys[plState]["S"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			KeyCap("D", (array.keys[plState]["D"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			KeyCap("C", (array.keys[plState]["C"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			
+			KeyCap("Enter", (array.keys[plState]["Enter"] ~= nil), imgui.ImVec2(67, 30))
+
+			KeyCap("Ctrl", (array.keys[plState]["Ctrl"] ~= nil), imgui.ImVec2(40, 30)); imgui.SameLine()
+			KeyCap("Alt", (array.keys[plState]["Alt"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
+			KeyCap("Space", (array.keys[plState]["Space"] ~= nil), imgui.ImVec2(182, 30))
+			if not array.windows.recon_menu.v then
+				array.windows.menu_in_recon.v = false
+				keysync('off')
+			end
+		else
+			imgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон, R - обновить в ручную.\nНачинаю процесс автоматического обновления рекона...")
+			auto_update_recon()
+			if not array.windows.recon_menu.v then keysync('off') end
+		end
+		imgui.End()
+	end
 end
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' then
@@ -3099,7 +3158,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 								break
 							else
 								array.admin_form = {}
-								sampAddChatMessage(tag .. 'ID не обнаружен, либо находится вне сети.', -1)
+								text = text .. " (Не в сети)"
 								break
 							end
 						else break end
@@ -3110,7 +3169,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		if cfg.settings.admin_chat then
 			local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.+)')
 			local messange = os.date("[%H:%M:%S] ")..'{C0C0C0}[A-'..admlvl..'] '..(string.sub(prefix, 2) .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
-			if #admtext > 50 then admtext = string.sub(admtext, 1, 50).."..." end
+			if #admtext > 60 then admtext = string.sub(admtext, 1, 60).."..." end
 			local messange_min = '{C0C0C0}[A-'..admlvl..'] '..(string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..idadm..']: '.. admtext)
 			if #array.adminchat == cfg.settings.strok_admin_chat then
 				for i = 0, #array.adminchat_minimal do
@@ -3235,7 +3294,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					return text
 				end
 			end
-		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ%: {ffffff}Weapon hack %[code%: 015%]%.') and cfg.settings.weapon_hack then
+		elseif text == ('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ: {ffffff}Weapon hack %[code: 015%]%.') and cfg.settings.weapon_hack then
 			if not sampIsDialogActive() then 
 				lua_thread.create(function()
 					while sampIsChatInputActive() do wait(1) end
@@ -3496,7 +3555,19 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			_, myid = sampGetPlayerIdByCharHandle(PLAYER_PED) 									--4
 		end																			--4
 		lua_thread.create(function()
-			if cfg.settings.on_custom_answer then 
+			if cfg.settings.on_custom_answer then
+
+				for i = 1, 512 do  -- [[[ FIX BUG INPUT TEXT IMGUI  ]]]
+					imgui:GetIO().KeysDown[i] = false
+				end
+				for i = 1, 5 do
+					imgui:GetIO().MouseDown[i] = false
+				end
+				imgui:GetIO().KeyCtrl = false
+				imgui:GetIO().KeyShift = false
+				imgui:GetIO().KeyAlt = false
+				imgui:GetIO().KeySuper = false  
+
 				array.windows.fast_report.v,imgui.Process=true,true
 				wait(500)
 				array.answer = {}
@@ -3737,6 +3808,7 @@ function binder_key()
 	end
 end
 function back_punishment(count)
+	if not cfg.settings.time_nakazanie then return end
 	lua_thread.create(function()
 		newCount = true
 		wait(3)
@@ -3749,7 +3821,7 @@ function back_punishment(count)
 			else
 				local back_count = math.floor( os.clock()-cnt )
 				if back_count == count then break end
-				if not AFK then renderFontDrawText(font_adminchat, 'До выдачи следующего наказания: ' .. back_count .. '/'..maxBack_count..' сек.', sw-400, 10, 0xCCFFFFFF) end
+				if not AFK then renderFontDrawText(font_adminchat, 'До выдачи следующего наказания: ' .. back_count .. '/'..maxBack_count..' сек.', cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy, 0xCCFFFFFF) end
 			end
 		end
 	end)
@@ -3842,7 +3914,7 @@ function input_helper()
 								if name:match(getInput.. " ") or getInput:match(name.." ") or name == getInput then
 									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
 								else renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000) end
-								renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "[ID]"), in2 + 10, in3 + 60 + (count*6) , -1)
+								renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "ID"), in2 + 10, in3 + 60 + (count*6) , -1)
 								count = count + 5
 								if count > 16 then break break end -- не более 8 подсказок
 							end
@@ -3997,63 +4069,6 @@ function sampev.onVehicleSync(playerId, vehicleId, data)
 	end
 end
 
-mimgui.OnInitialize(function()
-	sW, sH = getScreenResolution()
-	u32 = mimgui.ColorConvertFloat4ToU32
-	mimgui.SwitchContext()
-	mimgui.GetStyle().WindowPadding = mimgui.ImVec2(10, 10)
-	mimgui.GetStyle().ItemSpacing = mimgui.ImVec2(5, 5)
-	mimgui.GetStyle().WindowRounding = 5.0
-	mimgui.GetStyle().Colors[mimgui.Col.WindowBg] = mimgui.ImVec4(0.16, 0.16, 0.22, 0.50)
-end)
-mimgui.OnFrame(
-    function() return target ~= -1 end,
-    function(self)
-    	self.HideCursor = true
-		mimgui.SetNextWindowPos(mimgui.ImVec2(cfg.settings.keysyncx, cfg.settings.keysyncy), mimgui.Cond.Always, mimgui.ImVec2(0.5, 0.5))
-		mimgui.Begin("##KEYS", nil, mimgui.WindowFlags.NoTitleBar + mimgui.WindowFlags.AlwaysAutoResize)
-			if doesCharExist(target) then
-				local plState = (isCharOnFoot(target) and "onfoot" or "vehicle")
-				mimgui.BeginGroup()
-					mimgui.SetCursorPosX(10 - 5 + 5)  						
-					
-					KeyCap("TAB", (array.keys[plState]["TAB"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
-					KeyCap("Q", (array.keys[plState]["Q"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("W", (array.keys[plState]["W"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("E", (array.keys[plState]["E"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("R", (array.keys[plState]["R"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-
-
-					KeyCap("RM", (array.keys[plState]["RKM"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("LM", (array.keys[plState]["LKM"] ~= nil), mimgui.ImVec2(30, 30))					
-
-
-					KeyCap("Shift", (array.keys[plState]["Shift"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
-					KeyCap("A", (array.keys[plState]["A"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("S", (array.keys[plState]["S"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("D", (array.keys[plState]["D"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("C", (array.keys[plState]["C"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					
-					KeyCap("Enter", (array.keys[plState]["Enter"] ~= nil), mimgui.ImVec2(65, 30))
-
-					KeyCap("Ctrl", (array.keys[plState]["Ctrl"] ~= nil), mimgui.ImVec2(40, 30)); mimgui.SameLine()
-					KeyCap("Alt", (array.keys[plState]["Alt"] ~= nil), mimgui.ImVec2(30, 30)); mimgui.SameLine()
-					KeyCap("Space", (array.keys[plState]["Space"] ~= nil), mimgui.ImVec2(170, 30))
-
-				mimgui.EndGroup()
-
-				if not array.windows.recon_menu.v then
-					array.windows.menu_in_recon.v = false
-					keysync('off')
-				end
-			else
-				mimgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон, R - обновить в ручную.\nНачинаю процесс автоматического обновления рекона...")
-				auto_update_recon()
-				if not array.windows.recon_menu.v then keysync('off') end
-			end
-		mimgui.End()
-    end
-)
 function auto_update_recon()
 	if not start_update_recon then
 		start_update_recon = true
@@ -4069,11 +4084,12 @@ function auto_update_recon()
 	end
 end 
 function KeyCap(keyName, isPressed, size)
-	local DL = mimgui.GetWindowDrawList()
-	local p = mimgui.GetCursorScreenPos()
+	local u32 = imgui.ColorConvertFloat4ToU32
+	local DL = imgui.GetWindowDrawList()
+	local p = imgui.GetCursorScreenPos()
 	local colors = {
-		[true] = mimgui.ImVec4(0.60, 0.60, 1.00, 1.00),
-		[false] = mimgui.ImVec4(0.60, 0.60, 1.00, 0.10)
+		[true] = imgui.ImVec4(0.60, 0.60, 1.00, 1.00),
+		[false] = imgui.ImVec4(0.60, 0.60, 1.00, 0.10)
 	}
 	if KEYCAP == nil then KEYCAP = {} end
 	if KEYCAP[keyName] == nil then
@@ -4089,15 +4105,14 @@ function KeyCap(keyName, isPressed, size)
 		K.timer = os.clock()
 	end
 	local rounding = 3.0
-	local A = mimgui.ImVec2(p.x, p.y)
-	local B = mimgui.ImVec2(p.x + size.x, p.y + size.y)
+	local A = imgui.ImVec2(p.x, p.y)
+	local B = imgui.ImVec2(p.x + size.x, p.y + size.y)
 	if K.timer ~= nil then
 		K.color = bringVec4To(colors[not isPressed], colors[isPressed], K.timer, 0.1)
 	end
-	local ts = mimgui.CalcTextSize(keyName)
-	local text_pos = mimgui.ImVec2(p.x + (size.x / 2) - (ts.x / 2), p.y + (size.y / 2) - (ts.y / 2))
-
-	mimgui.Dummy(size)
+	local ts = imgui.CalcTextSize(keyName)
+	local text_pos = imgui.ImVec2(p.x + (size.x / 2) - (ts.x / 2), p.y + (size.y / 2) - (ts.y / 2))
+	imgui.Dummy(size)
 	DL:AddRectFilled(A, B, u32(K.color), rounding)
 	DL:AddRect(A, B, u32(colors[true]), rounding, _, 1)
 	DL:AddText(text_pos, 0xFFFFFFFF, keyName)
@@ -4106,7 +4121,7 @@ function bringVec4To(from, dest, start_time, duration)
     local timer = os.clock() - start_time
     if timer >= 0.00 and timer <= duration then
         local count = timer / (duration / 100)
-        return mimgui.ImVec4(
+        return imgui.ImVec4(
             from.x + (count * (dest.x - from.x) / 100),
             from.y + (count * (dest.y - from.y) / 100),
             from.z + (count * (dest.z - from.z) / 100),
