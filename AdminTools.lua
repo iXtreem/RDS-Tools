@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.7   			 							-- Версия скрипта
+local version = 7.8   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -543,7 +543,7 @@ function main()
 				end
 			end
 		end
-		renderFontDrawText(font_watermark, tag..'{808080}version[ {228B22}FINAL {808080}]', 10, sh-20, 0xCCFFFFFF)
+		renderFontDrawText(font_watermark, tag..'{808080}version['..version..']', 10, sh-20, 0xCCFFFFFF)
 		wait(1) -- задержка
 	end
 end
@@ -3179,7 +3179,8 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		end
 	elseif not AFK then
 		if cfg.settings.automute and (text:match("%((%d+)%): (.+)") or text:match("%[(%d+)%]: (.+)")) 			and not (text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") or text:match('написал %[(%d+)%]:') or text:match('ответил (.+)%[(%d+)%]: ')) then
-			if text:match('Жалоба %#(%d+) %|') then 
+			local report = false
+			if text:match('Жалоба (.+) %| {AFAFAF}(.+)%[(%d+)%]: {ffffff}.+') then 
 				report = true
 				oskid = text:match('%[(%d+)%]')
 			else 
@@ -3187,7 +3188,6 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 				else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
 			end
 			local text = text:rlower() .. ' '
-			local report = false
 			local text = string.gsub(text, '{%w%w%w%w%w%w}', '')
 			if cfg.settings.smart_automute then
 				for i = 1, #cfg.spisokoskrod do -- МАССИВ НАЧИНАЕТСЯ С 1
@@ -3907,7 +3907,14 @@ function input_helper()
 								if name:match(getInput.. " ") or getInput:match(name.." ") or name == getInput then
 									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
 								else renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000) end
-								if (sampIsCursorActive() and mouseX < in2+705  and mouseY > in3 + 55 + (count*6) and mouseY<(in3 + 90 + (count*6))) and wasKeyPressed(VK_LBUTTON) then sampSetChatInputText(name..' ') lua_thread.create(function() wait(150) sampSetChatInputEnabled(true) end)  end
+								if (sampIsCursorActive() and mouseX < in2+705  and mouseY > in3 + 55 + (count*6) and mouseY<(in3 + 90 + (count*6))) and wasKeyPressed(VK_LBUTTON) then 
+									sampSetChatInputText(name..' ') 
+									lua_thread.create(function() 
+										for i = 1, 100 do wait(1) 
+											sampSetChatInputEnabled(true)
+										end
+									end)  
+								end
 								if names_command[name_razdel] then
 									renderFontDrawText(font_chat, "{A9A9A9}-f", 720, in3 + 60 + (count*6) , -1)
 								end
