@@ -879,10 +879,10 @@ sampRegisterChatCommand('backnick', function(param)
 		sampAddChatMessage('Ник прошлого игрока, вышедшего из сети: {A9A9A9}' .. array.flood.nick[param]..'{FFFFFF}. Был скопирован в буфер обмена (ctrl + c, ctrl + v)', -1)
 		setClipboardText(array.flood.nick[param])
 		lua_thread.create(function()
+			sampSetChatInputText(sampGetChatInputText() .. ' ' .. array.flood.nick[param])
 			for i = 1,100 do
 				wait(1)
 				sampSetChatInputEnabled(true)
-				sampSetChatInputText(sampGetChatInputText() .. ' ' .. array.flood.nick[param])
 			end
 		end)
 	else sampAddChatMessage(tag .. 'Увы, игрока вышедшего из сети под данным ID не обнаружено.', -1) end
