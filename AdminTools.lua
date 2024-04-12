@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.9   			 							-- Версия скрипта
+local version = 7.91   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -472,7 +472,7 @@ function main()
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
 		if sampGetCurrentServerAddress() ~= '46.174.52.246' --[[ 01 SERVER ]] and sampGetCurrentServerAddress() ~= '46.174.49.170' --[[ 02 SERVER ]] then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-			--ScriptExport()
+			ScriptExport()
 	 	else sampAddChatMessage("",-1) sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) sampAddChatMessage("",-1)  end
 	end
 	local AdminTools = nil 
@@ -3303,7 +3303,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					return text
 				end
 			end
-		elseif text == ('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ: {ffffff}Weapon hack %[code: 015%]%.') and cfg.settings.weapon_hack then
+		elseif text:match('%<AC%-WARNING%> {ffffff}(.+)%[(%d+)%]{82b76b} подозревается в использовании чит%-программ: {ffffff}Weapon hack %[code: 015%]%.') and cfg.settings.weapon_hack then
 			if not sampIsDialogActive() then 
 				lua_thread.create(function()
 					while sampIsChatInputActive() do wait(1) end
