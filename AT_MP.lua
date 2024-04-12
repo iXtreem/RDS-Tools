@@ -543,7 +543,7 @@ function imgui.OnDrawFrame()
                         if #(MyTextMP_start.v) > 3 then
                             text_mp = text_mp .. string.gsub(u8:decode(MyTextMP_start.v), '\n', '\\n')
                         else text_mp = text_mp .. '-' end
-                        text_mp = text_mp .. '@'..option_komnata.v..'@'
+                        local text_mp = text_mp .. '@'..option_komnata.v..'@'
                         if #(MyTextMP_end.v) > 3 then
                             text_mp = text_mp .. string.gsub(u8:decode(MyTextMP_end.v), '\n', '\\n')
                         else text_mp = text_mp .. '-' end
@@ -554,11 +554,11 @@ function imgui.OnDrawFrame()
                 imgui.CenterText(u8'Сохраненные мероприятия')
                 for k,v in pairs(cfg.MyMP) do
                     if imgui.Button(u8(k), imgui.ImVec2(270,24)) then
-                        local action_mp = textSplit(v, '\n')
+                        local action_mp = textSplit(v, '@')
                         if action_mp[1] ~= '-' then
                             MyTextMP_start.v = string.gsub(u8(action_mp[1]), '\n', '\\n')
                         end
-                        option_komnata.v = u8(action_mp[2])
+                        option_komnata.v = action_mp[2]
                         if action_mp[3] ~= '-' then
                             MyTextMP_end.v = string.gsub(u8(action_mp[3]), '\n', '\\n')
                         end
