@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.8   			 							-- Версия скрипта
+local version = 7.9   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -221,7 +221,7 @@ local array = {
 	ears_minimal 	= {},											-- Сокращенный EARS
 	inforeport 		= {},											-- Вся информация о игроке в реконе хранится тут
 	pravila 		= {},											-- Правила/команды хранятся тут /ahelp
-	flood = { --[[сборник ID]]message = {},--[[Сообщение]]time = {},--[[время отправки]]count = {}--[[кол-во повторных сообщений]]},
+	flood = { --[[сборник ID]]message = {},--[[Сообщение]]time = {},--[[время отправки]]count = {},--[[кол-во повторных сообщений]] nick = {} --[[ник-нейм запоминаем]]},
 	name_car = {'Landstalker','Bravura','Buffalo','Linerunner','Perrenial','Sentinel','Dumper','Firetruck','Trashmaster','Stretch','Manana','Infernus','Voodoo','Pony','Mule','Cheetah','Ambulance','Leviathan','Moonbeam','Esperanto','Taxi','Washington','Bobcat','Mr Whoopee','BF Injection','Hunter','Premier','Enforcer','Securicar','Banshee','Predator','Bus','Rhino','Barracks','Hotknife','Trailer','Previon','Coach','Cabbie','Stallion','Rumpo','RC Bandit','Romero','Packer','Monster','Admiral','Squalo','Seasparrow','Pizzaboy','Tram','Trailer2','Turismo','Speeder','Reefer','Tropic','Flatbed','Yankee','Caddy','Solair','BerkleysRCVan','Skimmer','PCJ-600','Faggio','Freeway','RC Baron','RC Raider','Glendale','Oceanic','Sanchez','Sparrow','Patriot','Quad','Coastguard','Dinghy','Hermes','Sabre','Rustler','ZR-350','Walton','Regina','Comet','BMX','Burrito','Camper','Marquis','Baggage','Dozer','Maverick','News Chopper','Rancher','FBI Rancher','Virgo','Greenwood','Jetmax','Hotring','Sandking','Blista Compact','Police Maverick','Boxville','Benson','Mesa','RC Goblin','Hotring Racer A','Hotring Racer B','Bloodring Banger','Rancher','Super GT','Elegant','Journey','Bike','Mountain Bike','Beagle','Cropdust','Stunt','Tanker','Roadtrain','Nebula','Majestic','Buccaneer','Shamal','Hydra','FCR-900','NRG-500','HPV1000','Cement Truck','Tow Truck','Fortune','Cadrona','FBI Truck','Willard','Forklift','Tractor','Combine','Feltzer','Remington','Slamvan','Blade','Freight','Streak','Vortex','Vincent','Bullet','Clover','Sadler','Firetruck LA','Hustler','Intruder','Primo','Cargobob','Tampa',	'Sunrise','Merit','Utility','Nevada','Yosemite','Windsor','Monster A','Monster B','Uranus','Jester',	'Sultan',	'Stratum','Elegy','Raindance','RC Tiger',	'Flash',	'Tahoma','Savanna','Bandito','Freight Flat','Streak Carriage','Kart','Mower','Duneride','Sweeper','Broadway','Tornado','AT-400','DFT-30','Huntley','Stafford','BF-400','Newsvan','Tug','Trailer3','Emperor','Wayfarer','Euros','Hotdog','Club','Freight Carriage','Trailer4','Andromada','Dodo','RC Cam','Launch','Police Car (LSPD)','Police Car (SFPD)','Police Car (LVPD)','Police Ranger','Picador','S.W.A.T. Van','Alpha','Phoenix','Glendale','Sadler','Luggage Trailer A','Luggage Trailer B','Stair Trailer','Boxville','Farm Plow','Utility Trailer'},
 	--AutoMute
 	mat 				= {},										-- автомут на мат
@@ -291,6 +291,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/headmove"] 	= "Настройка вращения головы персонажа",
 		["/timestamp"]	= "Время в чате",
 		["/alogin"] 	= "Авторизация в админ-права",
+		["/backnick"] 	= "Вывести в чат ID вышедшего из игры нарушителя"
 	},
 	help = {
 		["/uu"]      =  	'/unmute _',
@@ -471,7 +472,7 @@ function main()
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
 		if sampGetCurrentServerAddress() ~= '46.174.52.246' --[[ 01 SERVER ]] and sampGetCurrentServerAddress() ~= '46.174.49.170' --[[ 02 SERVER ]] then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-			ScriptExport()
+			--ScriptExport()
 	 	else sampAddChatMessage("",-1) sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) sampAddChatMessage("",-1)  end
 	end
 	local AdminTools = nil 
@@ -870,6 +871,21 @@ sampRegisterChatCommand('ears', function()
 		array.checkbox.check_render_ears.v = true
 		print('Сканирование ЛС успешно активировано.', -1)
 	end
+end)
+sampRegisterChatCommand('backnick', function(param)
+	if not tonumber(param) then sampAddChatMessage(tag .. 'Укажите ID игрока который потенциально вышел из сети недавно', -1) return end
+	if not array.flood.nick[param] then sampAddChatMessage(tag .. 'Игрок под данным ID не был зафиксирован в чате.', -1) return end
+	if not sampIsPlayerConnected(param) then
+		sampAddChatMessage('Ник прошлого игрока, вышедшего из сети: {A9A9A9}' .. array.flood.nick[param]..'{FFFFFF}. Был скопирован в буфер обмена (ctrl + c, ctrl + v)', -1)
+		setClipboardText(array.flood.nick[param])
+		lua_thread.create(function()
+			for i = 1,100 do
+				wait(1)
+				sampSetChatInputEnabled(true)
+				sampSetChatInputText(sampGetChatInputText() .. ' ' .. array.flood.nick[param])
+			end
+		end)
+	else sampAddChatMessage(tag .. 'Увы, игрока вышедшего из сети под данным ID не обнаружено.', -1) end
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
@@ -3258,6 +3274,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					array.flood.message[oskid] = text
 					array.flood.time[oskid] = os.clock()
 					array.flood.count[oskid] = 1
+					array.flood.nick[oskid] = sampGetPlayerNickname(oskid)
 				else
 					if array.flood.count[oskid] == 3 and cfg.settings.smart_automute then -- если 4 сообщения то мут, счетчик от 0
 						array.flood.message[oskid] = nil
@@ -3274,6 +3291,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 				array.flood.message[oskid] = text
 				array.flood.time[oskid] = os.clock()
 				array.flood.count[oskid] = 1
+				array.flood.nick[oskid] = sampGetPlayerNickname(oskid)
 			end
 			for k,v in pairs(cfg.auto_ban) do
 				if text:match(v) then
@@ -3470,7 +3488,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		sampSendDialogResponse(1098, 1, math.floor(sampGetPlayerCount(false) / 10) - 1)
 		if closeDialog(dialogID) then return false end
 	elseif cfg.settings.weapon_hack and button1 == 'Готово' and button2 ~= 'Закрыть' then
-		dxutSetDialogVisible(dialogId, true)
 		lua_thread.create(function()
 			local text = textSplit(text, '\n')
 			for i = 1, #text - 1 do
@@ -3762,6 +3779,20 @@ function binder_key()
 	while true do
 		if not (sampIsChatInputActive() or sampIsDialogActive() or array.windows.fast_report.v or array.windows.answer_player_report.v or AFK) then
 			if wasKeyPressed(strToIdKeys(cfg.settings.open_tool)) then  -- кнопка активации окна
+
+
+				for i = 1, 512 do  -- [[[ FIX BUG INPUT TEXT IMGUI  ]]]
+					imgui:GetIO().KeysDown[i] = false
+				end
+				for i = 1, 5 do
+					imgui:GetIO().MouseDown[i] = false
+				end
+				imgui:GetIO().KeyCtrl = false
+				imgui:GetIO().KeyShift = false
+				imgui:GetIO().KeyAlt = false
+				imgui:GetIO().KeySuper = false  
+
+
 				imgui.Process = true
 				array.windows.menu_tools.v = not array.windows.menu_tools.v
 				if array.windows.recon_menu.v then 	-- активация курсора если рекон меню активно
