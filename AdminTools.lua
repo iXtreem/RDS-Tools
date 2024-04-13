@@ -455,15 +455,11 @@ function main()
 		if AdminTools.script.info then update_info = AdminTools.script.info end
 		if AdminTools.script.version > version then
 			if AdminTools.script.main then
-				sampAddChatMessage("",-1) 
 				sampAddChatMessage(tag .. 'Обнаружено новое {FF0000}обязательное {F0E68C}обновление скрипта! Произвожу само-обновление!', -1)
-				sampAddChatMessage("",-1) 
 				wait(5000)
 				download_update()
 			else
-				sampAddChatMessage("",-1) 
-				sampAddChatMessage(tag .. 'Обнаружено новое обновление скрипта [version '..AdminTools.script.version..']! Команда /update обновляет скрипт.', -1)
-				sampAddChatMessage("",-1)
+				sampAddChatMessage(tag .. 'Обнаружено новое обновление скрипта version['..AdminTools.script.version..']! Команда /update обновляет скрипт.', -1)
 			end
 		end
 		if cfg.settings.versionFS and cfg.settings.versionMP then
