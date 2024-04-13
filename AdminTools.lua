@@ -3704,7 +3704,7 @@ function log(text, color) -- записываем лог
 		local data_today = os.date("*t") -- узнаем дату сегодня
 		local log = ('moonloader\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 		local file = io.open(log,"a")
-		file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(text, 3)..'\n') 
+		file:write('['..data_today.hour..':'..data_today.min ..':'..data_today.sec..'] ' .. encrypt(string.gsub(text, '{}', ''), 3)..'\n') 
 		file:close()
 	end
 end
