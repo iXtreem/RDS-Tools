@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.91   			 							-- Версия скрипта
+local version = 7.92   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -291,7 +291,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/headmove"] 	= "Настройка вращения головы персонажа",
 		["/timestamp"]	= "Время в чате",
 		["/alogin"] 	= "Авторизация в админ-права",
-		["/backnick"] 	= "Вывести в чат ID вышедшего из игры нарушителя"
+		["/bk"] 	= "Вывести в чат ID вышедшего из игры нарушителя"
 	},
 	help = {
 		["/uu"]      =  	'/unmute _',
@@ -459,7 +459,7 @@ function main()
 				sampAddChatMessage(tag .. 'Обнаружено новое {FF0000}обязательное {F0E68C}обновление скрипта! Произвожу само-обновление!', -1)
 				sampAddChatMessage("",-1) 
 				wait(5000)
-				sampProcessChatInput('/update')
+				download_update()
 			else
 				sampAddChatMessage("",-1) 
 				sampAddChatMessage(tag .. 'Обнаружено новое обновление скрипта [version '..AdminTools.script.version..']! Команда /update обновляет скрипт.', -1)
@@ -872,15 +872,16 @@ sampRegisterChatCommand('ears', function()
 		print('Сканирование ЛС успешно активировано.', -1)
 	end
 end)
-sampRegisterChatCommand('backnick', function(param)
+sampRegisterChatCommand('bk', function(param)
 	if not tonumber(param) then sampAddChatMessage(tag .. 'Укажите ID игрока который потенциально вышел из сети недавно', -1) return end
 	if not array.flood.nick[param] then sampAddChatMessage(tag .. 'Игрок под данным ID не был зафиксирован в чате.', -1) return end
-	if not sampIsPlayerConnected(param) then
+	if not sampIsPlayerConnected(param) or array.flood.nick[param] ~= sampIsPlayerConnected(param) then
 		sampAddChatMessage('Ник прошлого игрока, вышедшего из сети: {A9A9A9}' .. array.flood.nick[param]..'{FFFFFF}. Был скопирован в буфер обмена (ctrl + c, ctrl + v)', -1)
 		setClipboardText(array.flood.nick[param])
 		lua_thread.create(function()
+			wait(50)
 			sampSetChatInputText(sampGetChatInputText() .. ' ' .. array.flood.nick[param])
-			for i = 1,100 do
+			for i = 1,50 do
 				wait(1)
 				sampSetChatInputEnabled(true)
 			end
@@ -4026,6 +4027,7 @@ function off_wallhack() -- Выключение WallHack (свойства)
 end
 
 function download_update()
+	if update_info then sampShowDialog(9999, "Информация об обновлении",string.gsub(u8:decode(update_info), '\\n', '\n'), "Спасибо", nil, 0) end
 	local dlstatus = require('moonloader').download_status
 	imgui.Process = false
 	showCursor(false,false)
