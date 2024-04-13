@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.92   			 							-- Версия скрипта
+local version = 7.93   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -2982,7 +2982,7 @@ function imgui.OnDrawFrame()
 		end
 		for i = chat[1], chat[2] do
 			if string.rlower(check_chat[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
-				imgui.Text((string.gsub(u8(check_chat[i]), '{%w%w%w%w%w%w}', '')))
+				imgui.TextColoredRGB(check_chat[i])
 				if imgui.IsItemClicked(0) then
 					if getCurrentLanguageName() ~= '00000419' then 
 						sampAddChatMessage(tag ..'Измените раскладку клавиатуры на русский язык для одинаковой кодировки', -1)
@@ -3094,7 +3094,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 	end
 end
 function sampev.onServerMessage(color,text) -- Получение сообщений из чата
-	log(text)
+	log( '{'..('%x'):format(color):sub(9, 14)..'}'..text)
 	if cfg.settings.render_admins and (text:match('Время администратирования за сегодня:') or text:match('Ваша репутация:') or text:match('Всего администрации в сети:')) then
 		return false
 	elseif text:match("(.+)%((%d+)%) пытался написать в чат: .+") then
@@ -3699,7 +3699,7 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 	end
 end
 
-function log(text) -- записываем лог
+function log(text, color) -- записываем лог
 	if cfg.settings.chat_log and not AFK then
 		local data_today = os.date("*t") -- узнаем дату сегодня
 		local log = ('moonloader\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
