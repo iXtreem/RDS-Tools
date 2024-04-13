@@ -791,7 +791,7 @@ sampRegisterChatCommand('wh' , function()
 		save()
 		array.checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		off_wallhack()
-		sampAddChatMessage(tag ..'Функция WallHack была деактивированаF', -1)
+		sampAddChatMessage(tag ..'Функция WallHack была деактивирована', -1)
 	end
 end)
 sampRegisterChatCommand('tool', function()
