@@ -701,6 +701,7 @@ function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт
                 sampSendChat('/mp')
                 while not sampIsDialogActive(5343) do wait(100) end
             end -- если диалог закрыт открываем снова
+            wait(500)
             if komnata then
                 sampSendDialogResponse(5343, 1, komnata) -- тп в комнату
                 wait(2000)  -- ждем 2 секунды пока прогрузит интерьер
@@ -713,17 +714,23 @@ function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт
             sampSendDialogResponse(16068, 1, 1, inter) -- установить интерьер
             sampSendDialogResponse(16066, 1, 0) -- установить координаты
             sampSendDialogResponse(16066, 0, 0) -- закрываем окно
+            wait(500)
             while not sampIsDialogActive(5343) do wait(200) end -- подстраховка от медленного интернета, ждем когда по€витс€ диалог
             while sampIsDialogActive() do sampCloseCurrentDialogWithButton(0) wait(200) end
+            wait(500)
             sampSendChat('/mess '..color.. ' Ќачинаетс€ меропри€тие '..name..' успей прин€ть участие')
+            wait(500)
             sampSendChat('/mp')
+            wait(500)
             sampSendDialogResponse(5343, 1, 0) -- ќткрываем ввод названи€ мп
             sampSendDialogResponse(5344, 1, 1, name) -- название мп
+            wait(500)
             while not sampIsDialogActive(5343) do wait(200) end
             while sampIsDialogActive() do sampCloseCurrentDialogWithButton(0) wait(200) end
             if #MyTextMP.v == 0 then 
                 for k,v in pairs(textSplit(string.gsub(cfg.AT_MP.text, '_', color),'@')) do
-                    if v:find('*') then 
+                    while sampIsDialogActive() do wait(0) end
+                    if v:find('*') then
                         if #(u8:decode(text_myprize.v)) > 0 then sampSendChat(string.gsub(u8:decode(v), '*', u8:decode(text_myprize.v)))
                         else sampAddChatMessage(tag .. 'ѕриз не указан.', -1) end
                     else sampSendChat(u8:decode(v)) end
@@ -733,6 +740,7 @@ function sbor_mp(name, komnata, color, inter) -- название мп, выбранный телепорт
                     MyTextMP_start.v = u8:decode(MyTextMP_start.v)
                     if MyTextMP_start.v:match('\n') then
                         for a,b in pairs(textSplit(MyTextMP_start.v, '\n')) do
+                            while sampIsDialogActive() do wait(0) end
                             if b:match('wait(%(%d+)%)') then
                                 wait(tonumber(b:match('%d+') .. '000'))
                             else sampSendChat(b) end
