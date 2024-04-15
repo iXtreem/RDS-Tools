@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.93   			 							-- Версия скрипта
+local version = 7.94   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -428,6 +428,16 @@ function main()
 				else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
 			else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
 		end
+		for i = 1, 512 do  -- [[[ FIX BUG INPUT TEXT IMGUI  ]]]
+			imgui:GetIO().KeysDown[i] = false
+		end
+		for i = 1, 5 do
+			imgui:GetIO().MouseDown[i] = false
+		end
+		imgui:GetIO().KeyCtrl = false
+		imgui:GetIO().KeyShift = false
+		imgui:GetIO().KeyAlt = false
+		imgui:GetIO().KeySuper = false  
 		array.windows.menu_chatlogger.v = not array.windows.menu_chatlogger.v
 		imgui.Process = array.windows.menu_chatlogger.v
 	end)
@@ -525,7 +535,7 @@ function main()
 			local mouseX, mouseY = getCursorPos() 
 			for i = 1, #array.adminchat do
 				local coordinateX, coordinateY = cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15)
-				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+400)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
+				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+400)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and sampIsCursorActive() and not (sampIsChatInputActive() or sampIsDialogActive())) then
 					renderFontDrawText(font_adminchat, array.adminchat[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_adminchat, array.adminchat_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -533,7 +543,7 @@ function main()
 			end
 			for i = 1, #array.ears do
 				local coordinateX, coordinateY = cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15)
-				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
+				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and sampIsCursorActive() and not (sampIsChatInputActive() or sampIsDialogActive())) then
 					renderFontDrawText(font_earschat, array.ears[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_earschat, array.ears_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -894,6 +904,8 @@ function imgui.OnDrawFrame()
 	if array.windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
 		array.windows.render_admins.v = false
 		imgui.ShowCursor = true
+		if wasKeyPressed(VK_ESCAPE) then array.windows.menu_tools.v = false end
+		if wasKeyPressed(VK_SCROLL) then sampAddChatMessage ('dawad') end
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(500, 500), imgui.Cond.FirstUseEver)
 		imgui.Begin('xX     Admin Tools [AT]     Xx', array.windows.menu_tools, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -1743,7 +1755,7 @@ function imgui.OnDrawFrame()
 				imgui.SetCursorPosX(50)
 				if imgui.Button(u8'Группа/Форум', imgui.ImVec2(130, 25)) then
 					sampSendChat('/mess 11 --------===================| Сторонние площадки |================-----------')
-					sampSendChat('/mess 7 У нашего проекта имеется группа vk.сom/teamadmrds ...')
+					sampSendChat('/mess 7 У нашего проекта имеется группа vk сom/teamadmrds ...')
 					sampSendChat('/mess 7 ... и даже форум, на котором игроки могут оставить жалобу на администрацию или игроков.')
 					sampSendChat('/mess 7 Следи за новостями и будь вкурсе событий.')
 					sampSendChat('/mess 11 --------===================| Сторонние площадки |================-----------')
@@ -3196,6 +3208,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 			if text:match('Жалоба (.+) %| {AFAFAF}(.+)%[(%d+)%]: {ffffff}.+') then 
 				report = true
 				oskid = text:match('%[(%d+)%]')
+				text = string.gsub(text,'Жалоба (.+) %| ', '')
 			else 
 				if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
 				else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
@@ -3503,11 +3516,10 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			wait(0)
 			sampCloseCurrentDialogWithButton(0)
 			if player_cheater then
-				local player = tonumber(sampGetPlayerIdByNickname(title))
 				player_cheater = nil
 				while sampIsDialogActive() do wait(0) end
-				if sampIsPlayerConnected(player) then
-					sampSendChat('/iban '..player..' 7 Чит на оружие')
+				if sampGetPlayerIdByNickname(title) and sampIsPlayerConnected(tonumber(sampGetPlayerIdByNickname(title))) then
+					sampSendChat('/iban '..sampGetPlayerIdByNickname(title)..' 7 Чит на оружие')
 				else 
 					sampSendChat('/banoff '..title..' 7 Чит на оружие')
 				end
@@ -3601,7 +3613,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			elseif array.answer.peredamrep then peremrep = ('Передам ваш репорт.')
 			elseif array.answer.rabotay then peremrep = ('Начал(а) работу по вашей жалобе.')
 			elseif array.answer.customans then peremrep = array.answer.customans
-			elseif array.answer.uto4 then peremrep = ('Обратитесь с данной проблемой на форум https://forumrds.ru')
+			elseif array.answer.uto4 then peremrep = ('Обратитесь на форум по ссылке https://forumrds.ru')
 			elseif #(array.buffer.text_ans.v) ~= 0 and #array.answer == 0 then
 				if array.checkbox.button_enter_in_report.v and (not array.answer.moiotvet) and (#(array.buffer.text_ans.v) > 5) then
 					for k,v in pairs(cfg.customotvet) do
