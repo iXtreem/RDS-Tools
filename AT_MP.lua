@@ -414,7 +414,7 @@ function imgui.OnDrawFrame()
         imgui.BeginGroup()
             if menu == 'open mp' then
                 imgui.CenterText(u8'Помочь провести мероприятие?')
-                if imgui.Button(u8'Да', imgui.ImVec2(125, 25)) then menu = 'Приветствие' func5:run() end imgui.SameLine()
+                if imgui.Button(u8'Да', imgui.ImVec2(125, 25)) then menu = 'Приветствие' func5:run() sampAddChatMessage(tag .. 'Удостоверьтесь, что телепорт на мероприятие закрыто!!!', -1) end imgui.SameLine()
                 if imgui.Button(u8'Нет', imgui.ImVec2(125, 25)) or wasKeyPressed(VK_ESCAPE) then windows.secondary_window_state.v = false end
             end
             if menu == 'Приветствие' then
