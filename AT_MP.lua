@@ -711,7 +711,7 @@ function imgui.OnDrawFrame()
         if menu ~= 'open mp' then
             if menu ~= 'Приветствие' then
                 imgui.PushFont(fontsize)
-                if imgui.Button(u8'Завершить мероприятие досрочно', imgui.ImVec2(300,24)) then thisScript():reload() showCursor(false,false) end
+                if imgui.Button(u8'Завершить мероприятие досрочно', imgui.ImVec2(300,24)) and sampIsCursorActive() then thisScript():reload() showCursor(false,false) end
                 imgui.PopFont()
             end
             imgui.Checkbox(u8'передвижение окна', checkbox.check_11)
