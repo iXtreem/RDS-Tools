@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 7.94   			 							-- Версия скрипта
+local version = 8   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -127,7 +127,6 @@ local array = {
 		answer_player_report= imgui.ImBool(false),
 		custom_ans 			= imgui.ImBool(false),
 		render_admins		= imgui.ImBool(false),
-		new_flood_mess 		= imgui.ImBool(false),
 		pravila 			= imgui.ImBool(false),
 		menu_chatlogger 	= imgui.ImBool(false),
 	},
@@ -291,7 +290,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/headmove"] 	= "Настройка вращения головы персонажа",
 		["/timestamp"]	= "Время в чате",
 		["/alogin"] 	= "Авторизация в админ-права",
-		["/bk"] 		= "Укажите ID, чтобы вывести в чат ник вышедшего из игры нарушителя"
+		["/bk"] 		= "Укажите ID, чтобы вывести в чат ник вышедшего из игры нарушителя",
 	},
 	help = {
 		["/uu"]      =  	'/unmute _',
@@ -414,12 +413,13 @@ function main()
 				if tonumber(daysPassed(data3,data2,data1)) < 3 then
 					local file = io.open('moonloader\\config\\chatlog\\'..v,'r')
 					for line in file:lines() do
-						if #line > 3 then
-							if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = encrypt(line, -3)
+						local line = encrypt(line, -3)
+						if not (line:match('Время администратирования за сегодня:') or line:match('Ваша репутация:') or line:match('Всего администрации в сети:')) then
+							if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = line
 								array.checkbox.option_find_log.v = 0
-							elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = encrypt(line, -3)
+							elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = line
 								array.checkbox.option_find_log.v = 1
-							elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = encrypt(line, -3)
+							elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = line
 								array.checkbox.option_find_log.v = 2
 							end
 						end
@@ -478,7 +478,7 @@ function main()
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
 		if sampGetCurrentServerAddress() ~= '46.174.52.246' --[[ 01 SERVER ]] and sampGetCurrentServerAddress() ~= '46.174.49.170' --[[ 02 SERVER ]] then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-			ScriptExport()
+			--ScriptExport()
 	 	else sampAddChatMessage("",-1) sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) sampAddChatMessage("",-1)  end
 	end
 	local AdminTools = nil 
@@ -535,7 +535,7 @@ function main()
 			local mouseX, mouseY = getCursorPos() 
 			for i = 1, #array.adminchat do
 				local coordinateX, coordinateY = cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15)
-				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+400)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and sampIsCursorActive() and not (sampIsChatInputActive() or sampIsDialogActive())) then
+				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+400)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 					renderFontDrawText(font_adminchat, array.adminchat[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_adminchat, array.adminchat_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -543,7 +543,7 @@ function main()
 			end
 			for i = 1, #array.ears do
 				local coordinateX, coordinateY = cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15)
-				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and sampIsCursorActive() and not (sampIsChatInputActive() or sampIsDialogActive())) then
+				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 					renderFontDrawText(font_earschat, array.ears[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_earschat, array.ears_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -805,6 +805,16 @@ sampRegisterChatCommand('wh' , function()
 	end
 end)
 sampRegisterChatCommand('tool', function()
+	for i = 1, 512 do  -- [[[ FIX BUG INPUT TEXT IMGUI  ]]]
+		imgui:GetIO().KeysDown[i] = false
+	end
+	for i = 1, 5 do
+		imgui:GetIO().MouseDown[i] = false
+	end
+	imgui:GetIO().KeyCtrl = false
+	imgui:GetIO().KeyShift = false
+	imgui:GetIO().KeyAlt = false
+	imgui:GetIO().KeySuper = false  
 	imgui.Process = true
 	array.windows.menu_tools.v = not array.windows.menu_tools.v
 	if array.windows.recon_menu.v then 	-- активация курсора если рекон меню активно
@@ -886,7 +896,7 @@ sampRegisterChatCommand('bk', function(param)
 		setClipboardText(array.flood.nick[param])
 		lua_thread.create(function()
 			wait(50)
-			sampSetChatInputText(sampGetChatInputText() .. ' ' .. array.flood.nick[param])
+			sampSetChatInputText(array.flood.nick[param])
 			for i = 1,50 do
 				wait(1)
 				sampSetChatInputEnabled(true)
@@ -1650,7 +1660,55 @@ function imgui.OnDrawFrame()
 			elseif menu == 'Флуды' then -- флуды
 				imgui.SetCursorPosX(50)
 				if imgui.Button(u8'Мои флуды', imgui.ImVec2(410, 25)) then
-					array.windows.new_flood_mess.v = not array.windows.new_flood_mess.v 
+					imgui.OpenPopup('myflood')
+				end
+				if imgui.BeginPopup('myflood') then
+					if imgui.Button(u8'Скрипт сам допишет /mess\nВам лишь надо указать цвет.', imgui.ImVec2(250,32)) then sampAddChatMessage(tag .. 'Открыт диалог с цветами',-1) sampSendChat('/mcolors') end
+					imgui.Text(u8'Название: ')
+					imgui.PushItemWidth(250)
+					imgui.InputText('##title_flood_mess', array.buffer.title_flood_mess)
+					imgui.PopItemWidth()
+					imgui.Text(u8'Текст: ')
+					imgui.InputTextMultiline("##5", array.buffer.new_flood_mess, imgui.ImVec2(250, 100))
+					if imgui.Button(u8'Сохранить', imgui.ImVec2(250, 24)) then
+						if #(u8:decode(array.buffer.new_flood_mess.v)) > 3 and #(u8:decode(array.buffer.title_flood_mess.v)) ~= 0 then
+							if array.buffer.new_flood_mess.v ~= 0 then
+								if tonumber(string.sub(array.buffer.new_flood_mess.v, 1, 1)) then
+									cfg.myflood[u8:decode(array.buffer.title_flood_mess.v)] = string.gsub(u8:decode(array.buffer.new_flood_mess.v), '\n', '\\n')
+									save()
+									array.buffer.title_flood_mess.v = ''
+									array.buffer.new_flood_mess.v = ''
+								else sampAddChatMessage(tag .. 'Цвет не указан', -1) end
+							else sampAddChatMessage(tag .. 'Вы не указали номер цвета', -1) end
+						else sampAddChatMessage(tag .. 'Что вы собрались сохранять?', -1) end
+					end
+					for k,v in pairs(cfg.myflood) do
+						if imgui.Button(u8(k), imgui.ImVec2(225, 24)) then
+							local v = textSplit(v, '\\n')
+							for _,v in pairs(v) do
+								sampSendChat('/mess ' .. v)
+							end
+						end
+						imgui.SameLine()
+						imgui.SetCursorPosX(235)
+						imgui.PushFont(fontsize)
+						if imgui.Button(fa.ICON_COG ..'##'..k, imgui.ImVec2(24,24)) then
+							imgui.OpenPopup("settings")
+						end
+						if imgui.BeginPopup('settings') then
+							if imgui.Button(fa.ICON_PENCIL) then
+								array.buffer.title_flood_mess.v = u8(k)
+								array.buffer.new_flood_mess.v = (string.gsub(u8(v), '\\n', '\n'))
+							end
+							if imgui.Button(fa.ICON_BAN) then
+								cfg.myflood[k] = nil
+								save()
+							end
+							imgui.EndPopup()
+						end
+						imgui.PopFont()
+					end
+					imgui.EndPopup()
 				end
 				imgui.CenterText(u8'Флуды /gw')
 				imgui.SetCursorPosX(50)
@@ -2272,7 +2330,7 @@ function imgui.OnDrawFrame()
 				save()
 			end
 			for k,v in pairs(cfg.customotvet) do
-				if string.rlower(v):find(string.rlower(u8:decode(array.buffer.text_ans.v))) or string.rlower(v):find(translateText(string.lower(u8:decode(array.buffer.text_ans.v)))) then
+				if string.rlower(v):find(string.rlower(u8:decode(array.buffer.text_ans.v))) or string.rlower(v):find(translateText(string.rlower(u8:decode(array.buffer.text_ans.v)))) then
 					if imgui.Button(u8(v), imgui.ImVec2(imgui.GetWindowWidth()-18, 24)) or (wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
 						if not array.answer.customans then 
 							array.answer.customans = v
@@ -2442,14 +2500,51 @@ function imgui.OnDrawFrame()
 				end
 			end
 		imgui.EndGroup()
+
+		imgui.BeginGroup()
+			imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.keysyncx, cfg.settings.keysyncy), imgui.Cond.Always, imgui.ImVec2(0.5, 0.5))
+			imgui.Begin('##keysync', nil, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
+			if doesCharExist(target) then
+				local plState = (isCharOnFoot(target) and "onfoot" or "vehicle")
+				imgui.SetCursorPosX(8)  						
+					
+				KeyCap("TAB", (array.keys[plState]["TAB"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
+				KeyCap("Q", (array.keys[plState]["Q"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				KeyCap("W", (array.keys[plState]["W"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				KeyCap("E", (array.keys[plState]["E"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				KeyCap("R", (array.keys[plState]["R"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+	
+	
+				KeyCap("RM", (array.keys[plState]["RKM"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				KeyCap("LM", (array.keys[plState]["LKM"] ~= nil), imgui.ImVec2(33, 30))					
+	
+	
+				KeyCap("Shift", (array.keys[plState]["Shift"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
+				KeyCap("A", (array.keys[plState]["A"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				KeyCap("S", (array.keys[plState]["S"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				KeyCap("D", (array.keys[plState]["D"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				KeyCap("C", (array.keys[plState]["C"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				
+				KeyCap("Enter", (array.keys[plState]["Enter"] ~= nil), imgui.ImVec2(77, 30))
+	
+				KeyCap("Ctrl", (array.keys[plState]["Ctrl"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
+				KeyCap("Alt", (array.keys[plState]["Alt"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+				KeyCap("Space", (array.keys[plState]["Space"] ~= nil), imgui.ImVec2(205, 30))
+			else
+				imgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон, R - обновить в ручную.\nНачинаю процесс автоматического обновления рекона...")
+				auto_update_recon()
+			end
+			imgui.End()
+		imgui.EndGroup()
 		imgui.PopFont()
 		imgui.End()
 	end
 	if array.windows.menu_in_recon.v then -- кнопки снизу рекон меню
 		imgui.ShowCursor = false
-		imgui.SetNextWindowPos(imgui.ImVec2((sw*0.5)-300, sh-60))
+		imgui.SetNextWindowPos(imgui.ImVec2((sw*0.5)-300, sh-65))
 		imgui.Begin("##recon+", array.windows.menu_in_recon, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+		imgui.PushFont(fontsize)
 		if imgui.Button(u8'<- Предыдущий') then
 			lua_thread.create(function()
 				if control_player_recon < sampGetMaxPlayerId() then
@@ -2581,6 +2676,7 @@ function imgui.OnDrawFrame()
 			end
 			imgui.EndPopup()
 		end
+		imgui.PopFont()
 		imgui.End()
 	end
 	if array.windows.custom_ans.v then -- свой ответ в репорт
@@ -2706,59 +2802,6 @@ function imgui.OnDrawFrame()
 		for i = 1, #array.admins do imgui.TextColoredRGB(array.admins[i]) end
         imgui.End()
 	end
-	if array.windows.new_flood_mess.v then -- создание нового флуда в месс
-		imgui.SetNextWindowPos(imgui.ImVec2(sw * 0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.SetNextWindowSize(imgui.ImVec2(265,340), imgui.Cond.FirstUseEver)
-		imgui.Begin(u8'Новый флуд', array.windows.new_flood_mess, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
-		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
-		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-		if imgui.Button(u8'Скрипт сам допишет /mess\nВам лишь надо указать цвет.', imgui.ImVec2(250,32)) then sampAddChatMessage(tag .. 'Открыт диалог с цветами',-1) sampSendChat('/mcolors') end
-		imgui.Text(u8'Название: ')
-		imgui.PushItemWidth(250)
-		imgui.InputText('##title_flood_mess', array.buffer.title_flood_mess)
-		imgui.PopItemWidth()
-		imgui.Text(u8'Текст: ')
-		imgui.InputTextMultiline("##5", array.buffer.new_flood_mess, imgui.ImVec2(250, 100))
-		if imgui.Button(u8'Сохранить', imgui.ImVec2(250, 24)) then
-			if #(u8:decode(array.buffer.new_flood_mess.v)) > 3 and #(u8:decode(array.buffer.title_flood_mess.v)) ~= 0 then
-				if array.buffer.new_flood_mess.v ~= 0 then
-					if tonumber(string.sub(array.buffer.new_flood_mess.v, 1, 1)) then
-						cfg.myflood[u8:decode(array.buffer.title_flood_mess.v)] = string.gsub(u8:decode(array.buffer.new_flood_mess.v), '\n', '\\n')
-						save()
-						array.buffer.title_flood_mess.v = ''
-						array.buffer.new_flood_mess.v = ''
-					else sampAddChatMessage(tag .. 'Цвет не указан', -1) end
-				else sampAddChatMessage(tag .. 'Вы не указали номер цвета', -1) end
-			else sampAddChatMessage(tag .. 'Что вы собрались сохранять?', -1) end
-		end
-		for k,v in pairs(cfg.myflood) do
-			if imgui.Button(u8(k), imgui.ImVec2(225, 24)) then
-				local v = textSplit(v, '\\n')
-				for _,v in pairs(v) do
-					sampSendChat('/mess ' .. v)
-				end
-			end
-			imgui.SameLine()
-			imgui.SetCursorPosX(235)
-			imgui.PushFont(fontsize)
-			if imgui.Button(fa.ICON_COG ..'##'..k, imgui.ImVec2(24,24)) then
-				imgui.OpenPopup("settings")
-			end
-			if imgui.BeginPopup('settings') then
-				if imgui.Button(fa.ICON_PENCIL) then
-					array.buffer.title_flood_mess.v = u8(k)
-					array.buffer.new_flood_mess.v = (string.gsub(u8(v), '\\n', '\n'))
-				end
-				if imgui.Button(fa.ICON_BAN) then
-					cfg.myflood[k] = nil
-					save()
-				end
-				imgui.EndPopup()
-			end
-			imgui.PopFont()
-		end
-		imgui.End()
-	end
 	if array.windows.pravila.v then -- ahelp
 		imgui.ShowCursor = true
 		imgui.SetNextWindowPos(imgui.ImVec2(sw * 0.5, sh * 0.5), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5,0.5))
@@ -2827,6 +2870,7 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 	if array.windows.menu_chatlogger.v then -- chatlogger
+		if wasKeyPressed(VK_ESCAPE) then array.windows.menu_chatlogger.v = false end
 		imgui.ShowCursor = true
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(sw*0.7, sh*0.8), imgui.Cond.FirstUseEver)
@@ -2992,60 +3036,32 @@ function imgui.OnDrawFrame()
 			else chat[2] = #array.chatlog_3 end
 			check_chat = array.chatlog_3
 		end
+		if imgui.BeginPopup('raskl') then
+			imgui.Text(u8'Смените вашу раскладку клавиатуры на английский язык для копирования данной строки.')
+			imgui.EndPopup()
+		end
+		if imgui.BeginPopup('scop') then
+			imgui.Text(u8'Скопировано.')
+			imgui.EndPopup()
+		end
 		for i = chat[1], chat[2] do
-			if string.rlower(check_chat[i]):find(string.rlower(u8:decode(array.buffer.find_log.v))) then
-				imgui.TextColoredRGB(check_chat[i])
+			if string.rlower(check_chat[i]):find(string.rlower(u8:decode(array.buffer.find_log.v)))  then
+
+				imgui.BeginGroup() -- для того чтобы при нажатии на текст срабатывало действие
+					imgui.TextColoredRGB(check_chat[i])
+				imgui.EndGroup()
+
 				if imgui.IsItemClicked(0) then
 					if getCurrentLanguageName() ~= '00000419' then 
-						sampAddChatMessage(tag ..'Измените раскладку клавиатуры на русский язык для одинаковой кодировки', -1)
+						imgui.OpenPopup('raskl')
 					else
-						sampAddChatMessage(tag..'Строка скопирована в буфера обмена',-1) 
-						setClipboardText(check_chat[i])
+						imgui.OpenPopup('scop')
+						setClipboardText(string.sub(string.gsub( string.gsub (check_chat[i], '{%w%w%w%w%w%w}', ''), '%[(%d+):(%d+):(%d+)%]', '' ), 2))
 					end
 				end
 			end
 		end
  		imgui.PopFont()
-		imgui.End()
-	end
-	if target ~= -1 and not AFK then
-		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.keysyncx, cfg.settings.keysyncy), imgui.Cond.Always, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin('##keysync', nil, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
-		if doesCharExist(target) then
-			local plState = (isCharOnFoot(target) and "onfoot" or "vehicle")
-			imgui.SetCursorPosX(8)  						
-				
-			KeyCap("TAB", (array.keys[plState]["TAB"] ~= nil), imgui.ImVec2(40, 30)); imgui.SameLine()
-			KeyCap("Q", (array.keys[plState]["Q"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			KeyCap("W", (array.keys[plState]["W"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			KeyCap("E", (array.keys[plState]["E"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			KeyCap("R", (array.keys[plState]["R"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-
-
-			KeyCap("RM", (array.keys[plState]["RKM"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			KeyCap("LM", (array.keys[plState]["LKM"] ~= nil), imgui.ImVec2(30, 30))					
-
-
-			KeyCap("Shift", (array.keys[plState]["Shift"] ~= nil), imgui.ImVec2(40, 30)); imgui.SameLine()
-			KeyCap("A", (array.keys[plState]["A"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			KeyCap("S", (array.keys[plState]["S"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			KeyCap("D", (array.keys[plState]["D"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			KeyCap("C", (array.keys[plState]["C"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			
-			KeyCap("Enter", (array.keys[plState]["Enter"] ~= nil), imgui.ImVec2(67, 30))
-
-			KeyCap("Ctrl", (array.keys[plState]["Ctrl"] ~= nil), imgui.ImVec2(40, 30)); imgui.SameLine()
-			KeyCap("Alt", (array.keys[plState]["Alt"] ~= nil), imgui.ImVec2(30, 30)); imgui.SameLine()
-			KeyCap("Space", (array.keys[plState]["Space"] ~= nil), imgui.ImVec2(182, 30))
-			if not array.windows.recon_menu.v then
-				array.windows.menu_in_recon.v = false
-				keysync('off')
-			end
-		else
-			imgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон, R - обновить в ручную.\nНачинаю процесс автоматического обновления рекона...")
-			auto_update_recon()
-			if not array.windows.recon_menu.v then keysync('off') end
-		end
 		imgui.End()
 	end
 end
@@ -3106,7 +3122,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 	end
 end
 function sampev.onServerMessage(color,text) -- Получение сообщений из чата
-	log( '{'..('%x'):format(color):sub(9, 14)..'}'..text)
+	log( '{'..('%X'):format(color):sub(9, 14)..'}'..text)
 	if cfg.settings.render_admins and (text:match('Время администратирования за сегодня:') or text:match('Ваша репутация:') or text:match('Всего администрации в сети:')) then
 		return false
 	elseif text:match("(.+)%((%d+)%) пытался написать в чат: .+") then
@@ -3170,11 +3186,11 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 								if (find_admin_form.sub(find_admin_form, 2)):find('//') then array.admin_form.styleform = true end
 								array.admin_form.sett = true
 								wait_accept_form()
-								text = text .. " (" ..array.admin_form.nickid..")"
+								text = text .. " {A9A9A9}(" ..array.admin_form.nickid..")"
 								break
 							else
 								array.admin_form = {}
-								text = text .. " (Не в сети)"
+								text = text .. " {A9A9A9}(Не в сети)"
 								break
 							end
 						else break end
@@ -3635,7 +3651,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		end
 		if peremrep then
 			if #(peremrep) > 80 then
-				sampAddChatMessage(tag .. 'Ваш ответ оказался слишком длинный, попробуйте сократить текст.',-1) 
+				sampAddChatMessage(tag .. '{FFFFFF}Ваш ответ оказался слишком длинный {ff0000}' .. #peremrep..'{FFFFFF}/80 символов, попробуйте сократить текст.',-1)
 				peremrep = nil
 				lua_thread.create(function()
 					wait(0)
@@ -3705,14 +3721,14 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 	elseif text == ('~y~REPORT++') then
 		if not AFK then
 			if tr and not sampIsDialogActive() then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0) end
-			if cfg.settings.notify_report then printStyledString('~n~~p~REPORT ++', 1000, 4) end
+			if cfg.settings.notify_report then printStyledString('~n~~p~REPORT ++', 1500, 4) end
 		end
 		return false
 	end
 end
 
 function log(text, color) -- записываем лог
-	if cfg.settings.chat_log and not AFK then
+	if cfg.settings.chat_log and not AFK and #text > 8 then
 		local data_today = os.date("*t") -- узнаем дату сегодня
 		local log = ('moonloader\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 		local file = io.open(log,"a")
