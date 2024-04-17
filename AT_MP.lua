@@ -431,9 +431,10 @@ function imgui.OnDrawFrame()
                             win_captcha[param] = sampGetPlayerNickname(param) .. '['..param..']: '..pobed..' побед'
                         end
                     end)
+                    sampCloseCurrentDialogWithButton(0)
                     sampSendChat('/mess ' .. option_color.v .. ' Начинается мероприятие "Капча", правила просты: первый написавший капчу администратора - получает балл')
                     sampSendChat('/mess ' .. option_color.v .. ' Игрок собравший наибольшее количество баллов получает приз.')
-                    if #text_myprize.v > 0 then sampSendChat("Приз данного мероприятия - " .. u8:decode(text_myprize.v)) end
+                    if #text_myprize.v > 0 then sampSendChat("/mess "..option_color.v.." Приз данного мероприятия - " .. u8:decode(text_myprize.v)) end
                 end
                 if imgui.Button(u8'Мое мероприятие', imgui.ImVec2(310,24)) then menu = 'custom' sampCloseCurrentDialogWithButton(0) showCursor(true,false) end
                 imgui.PushItemWidth(310)
@@ -677,7 +678,7 @@ function imgui.OnDrawFrame()
                     local id = -1
                     for k,v in pairs(win_captcha) do
                         local pobed = win_captcha[k]:match('(%d+) побед')
-                        if tonumber(pobed) > max and sampIsPlayerConnected(k) then max = tonumber(pobed) id = k  end
+                        if tonumber(pobed) > max then max = tonumber(pobed) id = k  end
                     end
                     sampSendChat('/mess ' .. option_color.v .. ' =============================| Победитель |=============================')
                     sampSendChat('/mess ' .. option_color.v .. ' Победитель мероприятия, набравший ' .. max.. ' побед - ' .. sampGetPlayerNickname(id) .. '[' .. id .. '] получает свой приз, поздравим его!')
