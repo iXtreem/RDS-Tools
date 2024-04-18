@@ -478,7 +478,7 @@ function main()
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
 		if sampGetCurrentServerAddress() ~= '46.174.52.246' --[[ 01 SERVER ]] and sampGetCurrentServerAddress() ~= '46.174.49.170' --[[ 02 SERVER ]] then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
-			--ScriptExport()
+			ScriptExport()
 	 	else sampAddChatMessage("",-1) sampAddChatMessage(tag.. 'Скрипт успешно загружен. Активация: клавиша ' .. cfg.settings.open_tool .. ' или /tool', -1) sampAddChatMessage("",-1)  end
 	end
 	local AdminTools = nil 
