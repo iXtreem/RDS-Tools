@@ -3,7 +3,7 @@ script_name 'AT Plus+'
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
 local imgui = require 'imgui' 
-local version = 1.6
+local version = 1.7
 local key = require 'vkeys'
 local encoding = require 'encoding' 
 encoding.default = 'CP1251' 
@@ -78,6 +78,7 @@ sampRegisterChatCommand('update_atp', function()
 	end)
 end)
 function main()
+	while not isSampAvailable() do wait(3000) end
 	while not sampIsPlayerConnected() do wait(1000) end
 	local dlstatus = require('moonloader').download_status
     downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/AdminToolsPlus.ini", "moonloader//config//AT//AdminToolsPlus.ini", function(id, status)
@@ -93,7 +94,6 @@ function main()
 			end
 		end
 	end)
-
 	sampAddChatMessage(tag .. 'Скрипт инициализирован. Активация: /atp', -1)
 	while true do
 		wait(5000)
