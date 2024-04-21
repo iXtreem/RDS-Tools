@@ -14,6 +14,7 @@ fa 				= require 'faicons'					-- Иконки в imgui
 mem 				= require 'memory'					-- Работа с памятью игры
 font 				= require ('moonloader').font_flag	-- Шрифты визуальных текстов на экране
 sw, sh 			= getScreenResolution()
+mimgui = require"mimgui"
 
 getBonePosition = ffi.cast("int (__thiscall*)(void*, float*, int, bool)", 0x5E4280)
 fa_glyph_ranges = imgui.ImGlyphRanges( {fa.min_range, fa.max_range} )
@@ -81,7 +82,7 @@ local russian_characters = {
 	['Ё'] = 'ё', ['А'] = 'а', ['Б'] = 'б', ['В'] = 'в', ['Г'] = 'г', ['Д'] = 'д', ['Е'] = 'е', ['Ж'] = 'ж',
 	['З'] = 'з', ['И'] = 'и', ['П'] = 'п', ['Н'] = 'н', ['О'] = 'о', ['Ф'] = 'ф', ['Х'] = 'х', ['Ц'] = 'ц', ['Р'] = 'р',
 	['Ы'] = 'ы', ['Ь'] = 'ь', ['Э'] = 'э', ['Й'] = 'й', ['Р'] = 'р', ['Ч'] = 'ч', ['Ю'] = 'ю', ['К'] = 'к', ['С'] = 'с',
-	['Ш'] = 'ш', ['Я'] = 'я', ['Л'] = 'л', ['Т'] = 'т', ['Щ'] = 'щ', ['М'] = 'м', ['У'] = 'у', ['Ъ'] = 'ъ', ['['] = '%['
+	['Ш'] = 'ш', ['Я'] = 'я', ['Л'] = 'л', ['Т'] = 'т', ['Щ'] = 'щ', ['М'] = 'м', ['У'] = 'у', ['Ъ'] = 'ъ'
 }
 
 
@@ -165,7 +166,7 @@ function getDownKeys()
 end
 
 function getDownKeysText()
-	tKeys = textSplit(getDownKeys(), " ")
+	local tKeys = textSplit(getDownKeys(), " ")
 	if #tKeys ~= 0 then
 		for i = 1, #tKeys do
 			if i == 1 then str = vkeys.id_to_name(tonumber(tKeys[i]))
@@ -176,7 +177,7 @@ function getDownKeysText()
 end
 
 function strToIdKeys(str)
-	tKeys = textSplit(str, "+")
+	local tKeys = textSplit(str, "+")
 	if #tKeys ~= 0 then
 		for i = 1, #tKeys do
 			if i == 1 then str = vkeys.name_to_id(tKeys[i], false)
