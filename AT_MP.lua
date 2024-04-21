@@ -894,6 +894,16 @@ sampRegisterChatCommand('state', function()
 end)
 sampRegisterChatCommand('mp', function()
     if not sampIsDialogActive() then
+        for i = 1, 512 do  -- [[[ FIX BUG INPUT TEXT IMGUI  ]]]
+			imgui:GetIO().KeysDown[i] = false
+		end
+		for i = 1, 5 do
+			imgui:GetIO().MouseDown[i] = false
+		end
+		imgui:GetIO().KeyCtrl = false
+		imgui:GetIO().KeyShift = false
+		imgui:GetIO().KeyAlt = false
+		imgui:GetIO().KeySuper = false  
         sampSendChat('/mp')
         windows.secondary_window_state.v = true
         imgui.Process = windows.secondary_window_state.v
