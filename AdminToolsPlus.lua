@@ -1,21 +1,13 @@
 require 'lib.moonloader'
+require("my_lib")
 script_name 'AT Plus+' 
 script_author 'Neon4ik'
 script_properties("work-in-pause") 
-local imgui = require 'imgui' 
-local version = 1.7
-local key = require 'vkeys'
-local encoding = require 'encoding' 
-encoding.default = 'CP1251' 
-local u8 = encoding.UTF8 
-local imadd = require 'imgui_addons'
-local sampev = require 'lib.samp.events'
+local version = 1.8
 local dektor_window_state = imgui.ImBool(false)
 local main_window_state = imgui.ImBool(false)
 local secondary_window_state = imgui.ImBool(false)
 local tag = '{DC143C}AdminTools Plus+: {FFFACD}'
-local sw, sh = getScreenResolution()
-local inicfg = require 'inicfg'
 local offadmins = {}
 local cfg = inicfg.load({
     settings = {
@@ -330,7 +322,6 @@ function imgui.OnDrawFrame()
 					else
 						buffer.text_buffer.v = (buffer.text_buffer.v .. '[' .. buffer.text_buffer2.v  .. ' - '.. buffer.text_buffer3.v .. u8' баллов] = +' .. newlvl .. u8' LVL и ' .. SendKai .. word_ball(nil, SendKai) .. '\n')
 					end
-					buffer.text_buffer.v = buffer.text_buffer.v .. '===================================\n'
 					for _,k in pairs(topadm) do
 						local nick, peremball = string.match(k, '(.+) = (.+)') -- находим ник и баллы
 						local peremball = tonumber(string.sub(peremball, 1, -4))   -- удаляем числа после точки 1235.11
@@ -511,7 +502,6 @@ function imgui.OnDrawFrame()
 	end
 end
 
-
 function sampev.onServerMessage(color,text)
 	if not AFK then
 		if cfg.settings.auto_hello and text:match("%[A%] Администратор (.+)%[(%d+)%] %(%d+ level%) авторизовался в админ панели") then
@@ -551,16 +541,6 @@ function sampev.onServerMessage(color,text)
 		end
 	end
 end
-function daysPassed(year1, month1, day1) -- узнаем разницу в днях
-    local currentDate = os.date("*t")
-    currentDate.year = year1
-    currentDate.month = month1
-    currentDate.day = day1
-    local currentTimestamp = os.time(currentDate)
-    local secondsPassed = os.difftime(os.time(), currentTimestamp)
-    local daysPassed = math.floor(secondsPassed / (24 * 60 * 60))
-    return daysPassed
-end
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 	if button1 == '{f76663}X' and imgui.Process then	-- окно /offadmins - администратор
 		lua_thread.create(function()
@@ -568,9 +548,11 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 			if text[27] then -- защита от крашей
 				--{FFFFFF}Дата выдачи:				{63BD4E}[2023-10-02 23:09:30]. {FFFFFF}
 				local year, month, day = text[27]:match('{63BD4E}%[(%d+)%-(%d+)%-(%d+) (%d%d):(%d%d):(%d%d)%]')
-				local days = daysPassed(year, month, day)
-				if days < check_admin.v + 1 then
-					kick_admin[#kick_admin+1] = title
+				if year and month and day then
+					local days = daysPassed(year, month, day)
+					if days < check_admin.v + 1 then
+						kick_admin[#kick_admin+1] = title
+					end
 				end
 				wait(100)
 				sampCloseCurrentDialogWithButton(0)
