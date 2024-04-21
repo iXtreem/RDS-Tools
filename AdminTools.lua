@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8   			 							-- Версия скрипта
+local version = 8.1   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -112,6 +112,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		'админ',
 	},
 	auto_ban = {},
+	custom_hints = {},
 }, 'AT//AT_main.ini')
 inicfg.save(cfg, 'AT//AT_main.ini')
 style(cfg.settings.style)
@@ -291,6 +292,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/timestamp"]	= "Время в чате",
 		["/alogin"] 	= "Авторизация в админ-права",
 		["/bk"] 		= "Укажите ID, чтобы вывести в чат ник вышедшего из игры нарушителя",
+		["/hints"]      = "Добавление своих подсказок в input helper",
 	},
 	help = {
 		["/uu"]      =  	'/unmute _',
@@ -377,6 +379,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/dj"] 	= 		'/kick _ DM in jail',
 	},
 	server = {},
+	custom = {},
 }
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
@@ -409,7 +412,7 @@ function main()
 	sampRegisterChatCommand('opencl', function()
 		for k, v in ipairs(scanDirectory('moonloader\\config\\chatlog\\')) do
 			local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
-			if data3 and data2 and data3 then
+			if tonumber(data3) and tonumber(data2) and tonumber(data3) then
 				if tonumber(daysPassed(data3,data2,data1)) < 3 then
 					local file = io.open('moonloader\\config\\chatlog\\'..v,'r')
 					for line in file:lines() do
@@ -426,7 +429,7 @@ function main()
 					end
 					file:close()
 				else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
-			else sampAddChatMessage(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название', -1) end
+			else print(tag ..'Что-то пошло не так, чат-лог не обнаружен, или имеет неверное название') end
 		end
 		for i = 1, 512 do  -- [[[ FIX BUG INPUT TEXT IMGUI  ]]]
 			imgui:GetIO().KeysDown[i] = false
@@ -473,8 +476,8 @@ function main()
 			end
 		end
 		if cfg.settings.versionFS and cfg.settings.versionMP then
-			if AdminTools.script.versionMP > cfg.settings.versionMP then update = true end
-			if AdminTools.script.versionFS > cfg.settings.versionFS then update = true end
+			if AdminTools.script.versionMP > cfg.settings.versionMP then sampAddChatMessage(tag .. 'Обнаружено новое обновление скрипта version['..AdminTools.script.version..']! Команда /update обновляет скрипт.', -1) end
+			if AdminTools.script.versionFS > cfg.settings.versionFS then sampAddChatMessage(tag .. 'Обнаружено новое обновление скрипта version['..AdminTools.script.version..']! Команда /update обновляет скрипт.', -1) end
 		else sampAddChatMessage(tag .. 'Дополнительные модули не подгружены! Сообщите об этом разработчику, или переустановите скрипт.', -1) end
 		if sampGetCurrentServerAddress() ~= '46.174.52.246' --[[ 01 SERVER ]] and sampGetCurrentServerAddress() ~= '46.174.49.170' --[[ 02 SERVER ]] then
 			sampAddChatMessage(tag .. 'Я предназначен для RDS, там и буду работать.', -1)
@@ -603,6 +606,8 @@ for k,v in pairs(cfg.my_command) do
 	end) 
 end
 
+for k,v in pairs(cfg.custom_hints) do basic_command.custom[k] = v end -- custom hints
+
 sampRegisterChatCommand('prfma', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Мл.Администратор ' .. cfg.settings.prefixma) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
 sampRegisterChatCommand('prfa', function(param) if #param ~= 0 then   sampSendChat('/prefix '  .. param .. ' Администратор ' .. cfg.settings.prefixa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
 sampRegisterChatCommand('prfsa', function(param) if #param ~= 0 then  sampSendChat('/prefix ' .. param .. ' Ст.Администратор ' .. cfg.settings.prefixsa) else sampAddChatMessage(tag ..'Вы не указали значение.', -1) end end)
@@ -659,6 +664,26 @@ sampRegisterChatCommand('del_autoprefix', function(param)
 		if not find_admin then sampAddChatMessage(tag .. 'Администратор ' .. param .. ' не был найден в исключений авто-выдачи префикса.', -1) for i = 1, #(cfg.render_admins_exception) do if cfg.render_admins_exception[i] then sampAddChatMessage(cfg.render_admins_exception[i], -1) end end end
 	else sampAddChatMessage(tag .. 'Введите ник администратора.', -1) end
 	find_admin = nil
+end)
+sampRegisterChatCommand('hints', function(param)
+	if not param:match("(.+) (.+)") then sampAddChatMessage(tag .. 'Форма: [Наименнование команды] [действие]', -1) return end
+	local param1 = textSplit(param, " ")
+	if not param1[1]:match('/') then sampAddChatMessage(tag .. 'Первая идет команда, пример /az', -1) return end;
+	if param1[2] == '-' then
+		if cfg.custom_hints[param1[1]] then
+			cfg.custom_hints[param1[1]] = nil 
+			save()
+			sampAddChatMessage(tag .. 'Подсказка на команду ' .. param1[1] .. ' успешно удалена', -1)
+			basic_command.custom[param1[1]] = nil;
+		else sampAddChatMessage(tag .. 'Команда не обнаружена, попробуйте еще раз.', -1) end
+		return;
+	end;
+	local param2 = string.gsub(param, param1[1].." ", "")
+	cfg.custom_hints[param1[1]] = param2
+	sampAddChatMessage(param1[1] .. ' -> ' .. param2,-1)
+	sampAddChatMessage(tag .. 'Если желаете удалить эту, или другую команду, введите [Команда] -, пример: /az -',-1)
+	basic_command.custom[param1[1]] = param2
+	save()
 end)
 sampRegisterChatCommand('color_report', function(param)
 	if #param == 6 then
@@ -3045,7 +3070,7 @@ function imgui.OnDrawFrame()
 			imgui.EndPopup()
 		end
 		for i = chat[1], chat[2] do
-			if string.rlower(check_chat[i]):find(string.rlower(u8:decode(array.buffer.find_log.v)))  then
+			if string.rlower(  string.gsub(check_chat[i], "%p","")     )    :find      (   string.rlower(   string.gsub(u8:decode(array.buffer.find_log.v), "%p", "")     )    )  then
 
 				imgui.BeginGroup() -- для того чтобы при нажатии на текст срабатывало действие
 					imgui.TextColoredRGB(check_chat[i])
