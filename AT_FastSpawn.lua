@@ -3,7 +3,6 @@ require 'my_lib'
 script_name 'AT_FastSpawn'
 script_author 'Neon4ik'
 local version = 1.8
-local key = require 'vkeys'
 local cfg2 = inicfg.load({
 	settings = {
 		versionFS = version,
@@ -70,9 +69,9 @@ function main()
 						sampSendDialogResponse(658, 1, 1)
 						wait(100)
 						sampCloseCurrentDialogWithButton(1)
-						setVirtualKeyDown(13, true)
-						wait(200)						--- а потому что закрывается но не хрена не скрывается
-						setVirtualKeyDown(13, false)
+						setVirtualvkeysDown(13, true)
+						wait(200)						--- пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+						setVirtualvkeysDown(13, false)
 					end
 					access = true
 					break
@@ -81,9 +80,9 @@ function main()
 				elseif cfg.settings.spawn then
 					local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
 					if not sampIsLocalPlayerSpawned() then
-						setVirtualKeyDown(16, true)
+						setVirtualvkeysDown(16, true)
 						wait(100)
-						setVirtualKeyDown(16, false)
+						setVirtualvkeysDown(16, false)
 					end
 				end
 			elseif sampIsDialogActive(1) and not access then
@@ -129,36 +128,36 @@ function imgui.OnDrawFrame()
 		imgui.Begin('-- FastSpawn --', main_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
-        imgui.Text(u8'Пароль от админки:')
+        imgui.Text(u8'пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ:')
         imgui.InputText('##SearchBar', text_buffer)
         imgui.SameLine()
-        if imgui.Button(u8'Сохранить') then
+        if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then
 			printStyledString('save', 1000, 7)
             cfg.settings.parolalogin = text_buffer.v .. '%'
 			save()
         end
-        imgui.Text(u8'Пароль от аккаунта:')
+        imgui.Text(u8'пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ:')
         imgui.InputText('##SearchBar2', text_buffer2)
         imgui.SameLine()
-        if imgui.Button(u8'Сoхранить') then
+        if imgui.Button(u8'пїЅoпїЅпїЅпїЅпїЅпїЅпїЅпїЅ') then
 			printStyledString('save', 1000, 7)
             cfg.settings.parolaccount = text_buffer2.v ..'%'
             save()
         end
         imgui.Separator()
-        if imgui.Checkbox(u8"Автоввод пароля", checked_test) then
+        if imgui.Checkbox(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ", checked_test) then
             cfg.settings.autorizate = not cfg.settings.autorizate
 			save()
         end
-        if imgui.Checkbox(u8'Автоввод А пароля', checked_test2) then
+        if imgui.Checkbox(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ', checked_test2) then
             cfg.settings.autoalogin = not cfg.settings.autoalogin
 			save()
         end
-        if imgui.Checkbox(u8'АвтоSpawn', checked_test3) then
+        if imgui.Checkbox(u8'пїЅпїЅпїЅпїЅSpawn', checked_test3) then
             cfg.settings.spawn = not cfg.settings.spawn
 			save()
         end
-        if imgui.Button(u8"Добавить команды") then
+        if imgui.Button(u8"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ") then
             secondary_window_state.v = not secondary_window_state.v
         end
 		imgui.PopFont()
@@ -166,12 +165,12 @@ function imgui.OnDrawFrame()
     end
 	if secondary_window_state.v then
 		imgui.SetNextWindowPos(imgui.ImVec2((sw / 2), sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.Begin(u8'Добавить команды', secondary_window_state, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.Begin(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ', secondary_window_state, imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
-		imgui.Text(u8'      Команда')
+		imgui.Text(u8'      пїЅпїЅпїЅпїЅпїЅпїЅпїЅ')
 		imgui.SameLine()
-		imgui.Text(u8'    Задержка')
+		imgui.Text(u8'    пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ')
 		for i = 0, #inputCommand do
 			if inputCommand[i] then
 				imgui.PushItemWidth(100)
@@ -183,14 +182,14 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.PushItemWidth(100)
 				inputWait[i].v = cfg.wait_command[i]
-				if imgui.Combo("##selected" .. tostring(i), inputWait[i], {u8'0.5 сек', u8'1 сек', u8'1.5 сек', u8'2 сек', u8'3 сек'}, 5) then
+				if imgui.Combo("##selected" .. tostring(i), inputWait[i], {u8'0.5 пїЅпїЅпїЅ', u8'1 пїЅпїЅпїЅ', u8'1.5 пїЅпїЅпїЅ', u8'2 пїЅпїЅпїЅ', u8'3 пїЅпїЅпїЅ'}, 5) then
 					cfg.wait_command[i] = inputWait[i].v
 					save()
 				end
 				imgui.PopItemWidth()
 			end
 		end
-		if imgui.Button(u8'Добавить', imgui.ImVec2(210,24)) then
+		if imgui.Button(u8'пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ', imgui.ImVec2(210,24)) then
 			if #(cfg.command) <= 10 then
 				if #(cfg.command[#(cfg.command)]) >= 2 then
 					cfg.command[#(cfg.command) + 1] = ''
@@ -198,8 +197,8 @@ function imgui.OnDrawFrame()
 					save() 
 					inputCommand[#inputCommand+1] = imgui.ImBuffer(u8(cfg.command[#(cfg.command)]), 256)
 					inputWait[#inputWait+1] = imgui.ImInt(cfg.wait_command[#(cfg.wait_command)])
-				else sampAddChatMessage(tag .. 'Прошлый пункт не заполнен, а значит будет выводить пустую строку.', -1) end
-			else sampAddChatMessage(tag .. 'Вы достигли максимума - 10 команд.', -1) end
+				else sampAddChatMessage(tag .. 'пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ.', -1) end
+			else sampAddChatMessage(tag .. 'пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - 10 пїЅпїЅпїЅпїЅпїЅпїЅ.', -1) end
 		end
 		imgui.PopFont()
 		imgui.End()
