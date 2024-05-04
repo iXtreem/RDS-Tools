@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8.2   			 							-- Версия скрипта
+local version = 8.3   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -2897,6 +2897,7 @@ function imgui.OnDrawFrame()
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(sw*0.7, sh*0.8), imgui.Cond.FirstUseEver)
 		imgui.Begin(u8'Логирование чата', array.windows.menu_chatlogger, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		if imgui.IsWindowAppearing() then chat = {1, 500, 1} end -- 1 параметр начало массива, 2 параметр - конец массива, 3 - страница.
 		imgui.PushFont(fontsize)
 		imgui.CenterText(u8'Выберите файл для просмотра')
@@ -3067,7 +3068,7 @@ function imgui.OnDrawFrame()
 			imgui.EndPopup()
 		end
 		for i = chat[1], chat[2] do
-			if string.rlower(  string.gsub(check_chat[i], "%p","")     )    :find      (   string.rlower(   u8:decode(string.gsub(array.buffer.find_log.v, "%p", ""))     )    )  then
+			if string.rlower(  string.gsub(check_chat[i], "%p","")     )    :find      (   string.rlower(    string.gsub(u8:decode(array.buffer.find_log.v), '%p', '')  )     )      then
 
 				imgui.BeginGroup() -- для того чтобы при нажатии на текст срабатывало действие
 					imgui.TextColoredRGB(check_chat[i])
@@ -3078,7 +3079,7 @@ function imgui.OnDrawFrame()
 						imgui.OpenPopup('raskl')
 					else
 						imgui.OpenPopup('scop')
-						setClipboardText(string.sub(string.gsub( string.gsub (check_chat[i], '{%w%w%w%w%w%w}', ''), '%[(%d+):(%d+):(%d+)%]', '' ), 2))
+						setClipboardText(string.sub(string.gsub( string.gsub (check_chat[i], '{%w%w%w%w%w%w}', ''), '%[(%d+):(%d+):(%d+)%]', '' ), 2)) -- удаляем время, удаляем html color - copy
 					end
 				end
 			end
@@ -3778,9 +3779,7 @@ end
 function onWindowMessage(msg, wparam, lparam) -- блокировка ALT + Enter
 	if msg == 261 and wparam == 13 then consumeWindowMessage(true, true) end
 end
-function save()
-	inicfg.save(cfg,'AT//AT_main.ini')
-end
+function save() inicfg.save(cfg,'AT//AT_main.ini') end
 function wait_accept_form()
 	lua_thread.create(function()
 		local fonts = renderCreateFont('TimesNewRoman', 12, 5) -- текст для автоформ
@@ -3805,11 +3804,13 @@ function wait_accept_form()
 							sampAddChatMessage(tag .. 'Указанный игрок не в сети', -1)
 							break
 						end
-						if not array.admin_form.styleform then sampSendChat(array.admin_form.forma .. ' // ' .. sampGetPlayerNickname(array.admin_form.idadmin))
-						else sampSendChat(array.admin_form.forma) end
-						wait(1000)
-						sampSendChat('/a AT - Принято.')
-					else sampAddChatMessage(tag .. 'Администратор не в сети.', -1) end
+						if (array.admin_form.forma) then
+							if not array.admin_form.styleform then sampSendChat(array.admin_form.forma .. ' // ' .. sampGetPlayerNickname(array.admin_form.idadmin))
+							else sampSendChat(array.admin_form.forma) end
+							wait(1000)
+							sampSendChat('/a AT - Принято.')
+						else sampAddChatMessage(tag .. 'Ошибка, форма потеряна... Попробуйте ещё раз.', -1) end
+ 					else sampAddChatMessage(tag .. 'Администратор не в сети.', -1) end
 					break
 				end
 				if wasKeyPressed(VK_J) then
