@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8.3   			 							-- Версия скрипта
+local version = 8.4   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -111,6 +111,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 	spisokoskadm = {
 		'админ',
 	},
+	report_button = {},
 	auto_ban = {},
 	custom_hints = {},
 }, 'AT//AT_main.ini')
@@ -204,6 +205,8 @@ local array = {
 		sokr_nick			= imgui.ImBuffer(cfg.settings.sokr_nick, 256),
 		custom_addtext_report = imgui.ImBuffer(cfg.settings.custom_addtext_report, 256),
 		customtimetext 		  = imgui.ImBuffer( u8(cfg.settings.customtimetext), 1024),
+		newButtonReport 	  = imgui.ImBuffer(1024),
+		newButtonReportName   = imgui.ImBuffer(1024),
 	},
 	chatlog_1 		= {}, 											-- чат-лог1
 	chatlog_2 		= {}, 											-- чат-лог2
@@ -715,7 +718,8 @@ sampRegisterChatCommand('c', function(param)
 			if array.answer.control_player then sampSendChat('/re ' .. autorid)
 			elseif array.answer.slejy then sampSendChat('/re ' .. reportid)
 			elseif array.answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport) 
-			elseif array.answer.moiotvet then sampSendChat('/ans ' .. param .. ' ' .. peremrep) end
+			elseif array.answer.moiotvet then sampSendChat('/ans ' .. param .. ' ' .. peremrep)
+			elseif array.answer.customans then sampSendChat('/ans ' .. param .. ' ' .. array.answer.customans) end
 			if array.answer.slejy and not copies_player_recon and tonumber(autorid) and cfg.settings.answer_player_report then
 				local copies_report_id = reportid
 				copies_player_recon = autorid
@@ -1374,7 +1378,7 @@ function imgui.OnDrawFrame()
 				if imgui.BeginPopup('text') then
 					imgui.Text(u8'Текст вместо времени по умолчанию:')
 					if imgui.InputText("##text", array.buffer.customtimetext) then
-						array.buffer.customtimetext.v = string.gsub( array.buffer.customtimetext.v, '%p', '')
+						array.buffer.customtimetext.v = string.gsub(string.gsub( array.buffer.customtimetext.v, '%[', ''), '%]', '')
 						cfg.settings.customtimetext = u8:decode(array.buffer.customtimetext.v)
 						save()
 						func_timetext:terminate()
@@ -2317,151 +2321,201 @@ function imgui.OnDrawFrame()
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
 		imgui.Text(u8('Игрок: '..autor .. '[' ..autorid.. ']'))
-		imgui.SameLine()
-		if tonumber(autorid) then 				-- Если игрок в сети
-			imgui.Text(fa.ICON_EYE) 			-- Иконка глаза
-			if imgui.IsItemClicked(0) or (isKeyDown(VK_X) and not sampIsChatInputActive()) then
-				array.answer.rabotay = true 		-- Отправляем что работает по жалобе
-				array.answer.control_player = true 	-- Переходим в рекон
-			end
-			imgui.Tooltip('X')
-			imgui.SameLine()
-		end
  		imgui.SameLine()
 		imgui.Text(fa.ICON_FILES_O)
 		if imgui.IsItemClicked(0) then 
 			setClipboardText(autor)
 			sampAddChatMessage(tag .. 'Ник скопирован в буфер обмена.', -1)
 		end
+		imgui.SameLine()
+		imgui.SetCursorPosX(495)
+		imgui.Text(fa.ICON_PLUS_CIRCLE)
+		if imgui.IsItemClicked(0) then
+			imgui.OpenPopup('new')
+			array.buffer.newButtonReport.v = array.buffer.text_ans.v
+			array.buffer.newButtonReportName.v = ""
+		end
+		imgui.Tooltip(u8'Добавить кнопку')
 		imgui.TextWrapped(u8('Репорт: ' .. textreport))
 		if reportid and sampIsPlayerConnected(reportid) then
 			imgui.SameLine()
 			imgui.TextColoredRGB(u8('{D3D3D3}>> '..sampGetPlayerNickname(reportid)))
 		end
-		if wasKeyPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end 
-		imgui.NewInputText('##SearchBar', array.buffer.text_ans, 375, u8'Введите ваш ответ.', 2)
-		imgui.SameLine()
-		imgui.SetCursorPosX(392)
-		imgui.Tooltip('Space')
-		if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) or (not cfg.settings.enter_report and wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
-			if #(u8:decode(array.buffer.text_ans.v)) ~= 0 then array.answer.moiotvet = true
-			else sampAddChatMessage(tag .. 'Ответ не менее 1 символа.', -1) end
-		end
-		imgui.Tooltip('Enter')
-		imgui.Separator()
-		if #(array.buffer.text_ans.v) > 5 then
-			if imgui.Checkbox(u8"При нажатии на Enter отправить сохраненный ответ", array.checkbox.button_enter_in_report) then
-				cfg.settings.enter_report = not cfg.settings.enter_report
-				save()
+		if imgui.BeginPopup('new') then
+			imgui.NewInputText('##', array.buffer.newButtonReportName, 200, u8'Название кнопки', 2)
+			imgui.NewInputText('##2', array.buffer.newButtonReport, 200, u8'Ответ игроку', 2)
+			if imgui.Button(u8'Сохранить', imgui.ImVec2(200,24)) then
+				if #array.buffer.newButtonReportName.v < 3 or #array.buffer.newButtonReportName.v > 23 then sampAddChatMessage(tag .. "Название кнопки не подходит под критерии 3 < n < 23", -1) 
+				elseif #array.buffer.newButtonReport.v < 3 or #array.buffer.newButtonReport.v > 80 then sampAddChatMessage(tag .. 'Ответ не подходит под критерии 3 < n < 80',-1)
+				else
+					if getDownKeysText() and not getDownKeysText():find('+') then
+						cfg.report_button[string.gsub(string.gsub(u8:decode(u8(array.buffer.newButtonReportName.v)), '%[', ''), '%]', '')] = getDownKeysText() .. "_" .. string.gsub(string.gsub(u8:decode(array.buffer.newButtonReport.v), '%[', ''), '%]', '')
+						save()
+						sampAddChatMessage(tag .. 'Новый ответ успешно сохранен.', -1)
+					elseif getDownKeysText() == nil or not getDownKeysText():find('+') then
+						cfg.report_button[string.gsub(string.gsub(u8:decode(u8(array.buffer.newButtonReportName.v)), '%[', ''), '%]', '')] = "None_" .. string.gsub(string.gsub(u8:decode(array.buffer.newButtonReport.v), '%[', ''), '%]', '')
+						save()
+						sampAddChatMessage(tag .. 'Клавиша сохранена, но без быстрой клавиши.', -1)
+					end
+					array.buffer.newButtonReport.v = ""
+					array.buffer.newButtonReportName.v = ""
+				end
 			end
-			for k,v in pairs(cfg.customotvet) do
-				if string.rlower(string.gsub(v, '%p', '')):find(string.rlower(string.gsub(u8:decode(array.buffer.text_ans.v), '%p', ''))) or string.rlower(string.gsub(v, '%p', '')):find(translateText(string.rlower(string.gsub(u8:decode(array.buffer.text_ans.v), '%p', '')))) then
-					if imgui.Button(u8(v), imgui.ImVec2(imgui.GetWindowWidth()-18, 24)) or (wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
-						if not array.answer.customans then 
-							array.answer.customans = v
+			imgui.SameLine()
+			if imgui.Button(u8'Del') then
+				if (#array.buffer.newButtonReportName.v == 0) then 
+					sampAddChatMessage(tag .. 'Название кнопки не заполнено.', -1)
+				else
+					cfg.report_button[u8:decode(u8(array.buffer.newButtonReportName.v))]=nil
+					save()
+					sampAddChatMessage(tag .. 'Удаление происходит по названию кнопки, если оно указано неверно - кнопка не будет удалена.', -1)
+					array.buffer.newButtonReportName.v = ""
+				end
+			end
+			if (getDownKeysText()) then
+				imgui.Text(u8'Зажата клавиша: ' .. getDownKeysText())
+			else
+				imgui.Text(u8'Нет зажатых клавиш')
+			end
+			imgui.EndPopup()
+		else
+			if wasKeyPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end 
+			imgui.NewInputText('##SearchBar', array.buffer.text_ans, 375, u8'Введите ваш ответ.', 2)
+			imgui.SameLine()
+			imgui.SetCursorPosX(392)
+			imgui.Tooltip('Space')
+			if imgui.Button(u8'Отправить ' .. fa.ICON_SHARE, imgui.ImVec2(120, 25)) or (not cfg.settings.enter_report and wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
+				if #(array.buffer.text_ans.v) ~= 0 then array.answer.moiotvet = true
+				else sampAddChatMessage(tag .. 'Ответ не менее 1 символа.', -1) end
+			end
+			imgui.Tooltip('Enter')
+			imgui.Separator()
+			if #(array.buffer.text_ans.v) > 4 then
+				if imgui.Checkbox(u8"При нажатии на Enter отправить сохраненный ответ", array.checkbox.button_enter_in_report) then
+					cfg.settings.enter_report = not cfg.settings.enter_report
+					save()
+				end
+				for k,v in pairs(cfg.customotvet) do
+					if string.rlower(string.gsub(v, '%p', '')):find(string.rlower(string.gsub(u8:decode(array.buffer.text_ans.v), '%p', ''))) or string.rlower(string.gsub(v, '%p', '')):find(translateText(string.rlower(string.gsub(u8:decode(array.buffer.text_ans.v), '%p', '')))) then
+						if imgui.Button(u8(v), imgui.ImVec2(imgui.GetWindowWidth()-18, 24)) or (wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
+							if not array.answer.customans then 
+								array.answer.customans = v
+							end
 						end
 					end
 				end
+			else
+				if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_Q) and not sampIsChatInputActive()) then
+					array.answer.rabotay = true 		-- Отправляем что работает по жалобе
+					array.answer.control_player = true 	-- Переходим в рекон
+				end
+				imgui.Tooltip('Q')
+				imgui.SameLine()
+				if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_E) and not sampIsChatInputActive()) then
+					array.answer.slejy = true
+				end
+				imgui.Tooltip('E')
+				imgui.SameLine()
+				if imgui.Button('Skin/Color', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_R) and not sampIsChatInputActive()) then
+					array.windows.custom_ans.v = true
+				end
+				imgui.Tooltip('R')
+				imgui.SameLine()
+				if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_V) and not sampIsChatInputActive()) then
+					array.answer.peredamrep = true
+				end
+				imgui.Tooltip('V')
+				if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_G) and not sampIsChatInputActive()) then
+					imgui.OpenPopup('option')
+				end
+				if imgui.BeginPopup('option') then
+					if imgui.Button(u8'Оффтоп (1)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_1) then
+						array.nakazatreport.oftop = true
+						array.answer.nakajy = true
+					end
+					if imgui.Button(u8'Капс (2)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_2) then
+						array.nakazatreport.capsrep = true
+						array.answer.nakajy = true
+					end
+					if imgui.Button(u8'Оскорбление администрации (3)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_3) then
+						array.nakazatreport.oskadm = true
+						array.answer.nakajy = true
+					end
+					if imgui.Button(u8'Клевета на администрацию (4)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_4) then
+						array.nakazatreport.kl = true
+						array.answer.nakajy = true
+					end
+					if imgui.Button(u8'Оск/Упом родных (5)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_5) then
+						array.nakazatreport.oskrod = true
+						array.answer.nakajy = true
+					end
+					if imgui.Button(u8'Попрошайничество (6)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_6) then
+						array.nakazatreport.poprep = true
+						array.answer.nakajy = true
+					end
+					if imgui.Button(u8'Оскорбление/Унижение (7)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_7) then
+						array.nakazatreport.oskrep = true
+						array.answer.nakajy = true
+					end
+					if imgui.Button(u8'Нецензурная лексика (8)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_8) then
+						array.nakazatreport.matrep = true
+						array.answer.nakajy = true
+					end
+					if imgui.Button(u8'Розжиг (9)', imgui.ImVec2(250,25)) or wasKeyPressed(VK_9) then
+						array.nakazatreport.rozjig = true
+					end
+					imgui.EndPopup()
+				end
+				imgui.Tooltip('G')
+				imgui.SameLine()
+				if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_B) and not sampIsChatInputActive()) then
+					array.answer.uto4id = true
+				end
+				imgui.Tooltip('B')
+				imgui.SameLine()
+				if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_F) and not sampIsChatInputActive()) then
+					array.answer.uto4 = true
+				end
+				imgui.Tooltip('F')
+				imgui.SameLine()
+				if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_Y) and not sampIsChatInputActive()) then
+					array.answer.otklon = true
+				end
+				local cnt = 0
+				for k,v in pairs(cfg.report_button) do
+					local v = textSplit(v, "_")
+					cnt = cnt + 1
+					if cnt % 4 ~= 1 then imgui.SameLine() end 
+					if imgui.Button(k, imgui.ImVec2(120, 25)) or (wasKeyPressed(strToIdKeys(v[1]))) then
+						array.answer.customans = v[2]
+					end
+					if (v[1] ~= "None") then
+						imgui.Tooltip(u8(v[1]))
+					end
+				end
 			end
-		else
-			if imgui.Button(u8'Работаю', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_Q) and not sampIsChatInputActive()) then
-				array.answer.rabotay = true
+			imgui.Separator()
+			if imadd.ToggleButton("#####", imgui.ImBool(cfg.settings.addBeginText)) then
+				cfg.settings.addBeginText = not cfg.settings.addBeginText
+				save()
 			end
-			imgui.Tooltip('Q')
 			imgui.SameLine()
-			if imgui.Button(u8'Слежу', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_E) and not sampIsChatInputActive()) then
-				array.answer.slejy = true
+			imgui.Text(u8'Добавить текст в начале ответа '.. fa.ICON_COMMENTING_O)
+			if imadd.ToggleButton('##doptextans', array.checkbox.check_add_answer_report) then
+				cfg.settings.add_answer_report = not cfg.settings.add_answer_report
+				save()
 			end
-			imgui.Tooltip('E')
+			imgui.Tooltip(u8'Добавляет текст к началу вашего ответа\nНе сработает, если кол-во символов в ответе превысит максимум\nЕсли функция включена и текст не указан - берет из словаря.')
 			imgui.SameLine()
-			if imgui.Button('Skin/Color', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_R) and not sampIsChatInputActive()) then
-				array.windows.custom_ans.v = true
+			imgui.Text(u8'Добавить текст в конце ответа  ' .. fa.ICON_COMMENTING_O)
+			if imadd.ToggleButton('##saveans', array.checkbox.check_save_answer) then
+				cfg.settings.custom_answer_save = not cfg.settings.custom_answer_save
+				save()
 			end
-			imgui.Tooltip('R')
+			imgui.Tooltip(u8'Добавляет текст к концу вашего ответу\nНе сработает, если кол-во символов в ответе превысит максимум\nТекст на данный момент:\n' .. u8(cfg.settings.mytextreport))
 			imgui.SameLine()
-			if imgui.Button(u8'Передать', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_V) and not sampIsChatInputActive()) then
-				array.answer.peredamrep = true
-			end
-			imgui.Tooltip('V')
-			if imgui.Button(u8'Наказать', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_G) and not sampIsChatInputActive()) then
-				imgui.OpenPopup('option')
-			end
-			if imgui.BeginPopup('option') then
-				if imgui.Button(u8'Оффтоп (1)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_1) then
-					array.nakazatreport.oftop = true
-					array.answer.nakajy = true
-				end
-				if imgui.Button(u8'Капс (2)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_2) then
-					array.nakazatreport.capsrep = true
-					array.answer.nakajy = true
-				end
-				if imgui.Button(u8'Оскорбление администрации (3)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_3) then
-					array.nakazatreport.oskadm = true
-					array.answer.nakajy = true
-				end
-				if imgui.Button(u8'Клевета на администрацию (4)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_4) then
-					array.nakazatreport.kl = true
-					array.answer.nakajy = true
-				end
-				if imgui.Button(u8'Оск/Упом родных (5)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_5) then
-					array.nakazatreport.oskrod = true
-					array.answer.nakajy = true
-				end
-				if imgui.Button(u8'Попрошайничество (6)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_6) then
-					array.nakazatreport.poprep = true
-					array.answer.nakajy = true
-				end
-				if imgui.Button(u8'Оскорбление/Унижение (7)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_7) then
-					array.nakazatreport.oskrep = true
-					array.answer.nakajy = true
-				end
-				if imgui.Button(u8'Нецензурная лексика (8)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_8) then
-					array.nakazatreport.matrep = true
-					array.answer.nakajy = true
-				end
-				if imgui.Button(u8'Розжиг (9)', imgui.ImVec2(250,25)) or wasKeyPressed(VK_9) then
-					array.nakazatreport.rozjig = true
-				end
-				imgui.EndPopup()
-			end
-			imgui.Tooltip('G')
-			imgui.SameLine()
-			if imgui.Button(u8'Уточните ID', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_B) and not sampIsChatInputActive()) then
-				array.answer.uto4id = true
-			end
-			imgui.Tooltip('B')
-			imgui.SameLine()
-			if imgui.Button(u8'Форум', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_F) and not sampIsChatInputActive()) then
-				array.answer.uto4 = true
-			end
-			imgui.Tooltip('F')
-			imgui.SameLine()
-			if imgui.Button(u8'Отклонить', imgui.ImVec2(120, 25)) or (wasKeyPressed(VK_Y) and not sampIsChatInputActive()) then
-				array.answer.otklon = true
-			end
-			imgui.Tooltip('Y')
+			imgui.Text(u8'Сохранить данный ответ в базу данных скрипта ' .. fa.ICON_DATABASE)
 		end
-		imgui.Separator()
-		if imadd.ToggleButton("#####", imgui.ImBool(cfg.settings.addBeginText)) then
-			cfg.settings.addBeginText = not cfg.settings.addBeginText
-			save()
-		end
-		imgui.SameLine()
-		imgui.Text(u8'Добавить текст в начале ответа '.. fa.ICON_COMMENTING_O)
-		if imadd.ToggleButton('##doptextans', array.checkbox.check_add_answer_report) then
-			cfg.settings.add_answer_report = not cfg.settings.add_answer_report
-			save()
-		end
-		imgui.Tooltip(u8'Добавляет текст к началу вашего ответа\nНе сработает, если кол-во символов в ответе превысит максимум\nЕсли функция включена и текст не указан - берет из словаря.')
-		imgui.SameLine()
-		imgui.Text(u8'Добавить текст в конце ответа  ' .. fa.ICON_COMMENTING_O)
-		if imadd.ToggleButton('##saveans', array.checkbox.check_save_answer) then
-			cfg.settings.custom_answer_save = not cfg.settings.custom_answer_save
-			save()
-		end
-		imgui.Tooltip(u8'Добавляет текст к концу вашего ответу\nНе сработает, если кол-во символов в ответе превысит максимум\nТекст на данный момент:\n' .. u8(cfg.settings.mytextreport))
-		imgui.SameLine()
-		imgui.Text(u8'Сохранить данный ответ в базу данных скрипта ' .. fa.ICON_DATABASE)
 		imgui.PopFont()
 		imgui.End()
 	end
@@ -3243,6 +3297,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 			return false
 		end
 	elseif not AFK then
+		local text = string.gsub(text, '|', '%|')
 		if cfg.settings.automute and (text:match("%((%d+)%): (.+)") or text:match("%[(%d+)%]: (.+)")) 			and not (text:match("%[a%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]:") or text:match('написал %[(%d+)%]:') or text:match('ответил (.+)%[(%d+)%]: ')) then
 			local report = false
 			if text:match('Жалоба (.+) %| {AFAFAF}(.+)%[(%d+)%]: {ffffff}.+') then 
@@ -4012,7 +4067,7 @@ function time_text()
 		end end
 	else
 		while true do wait(1) if not AFK then
-			renderFontDrawText(font_timetext, os.date("%X %d/%m/%y"), cfg.settings.timetext_pos_x, cfg.settings.timetext_pos_y, 0xCCFFFFFF)
+			renderFontDrawText(font_timetext, os.date("%H:%M %d/%m/%y"), cfg.settings.timetext_pos_x, cfg.settings.timetext_pos_y, 0xCCFFFFFF)
 		end end
 	end
 end
