@@ -416,20 +416,23 @@ function main()
 			local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
 			if tonumber(data3) and tonumber(data2) and tonumber(data3) then
 				if tonumber(daysPassed(data3,data2,data1)) < 3 then
-					local file = io.open('moonloader\\config\\chatlog\\'..v,'r')
-					for line in file:lines() do
-						local line = encrypt(line, -3)
-						if not (line:match('Время администратирования за сегодня:') or line:match('Ваша репутация:') or line:match('Всего администрации в сети:')) then
-							if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = line
-								array.checkbox.option_find_log.v = 0
-							elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = line
-								array.checkbox.option_find_log.v = 1
-							elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = line
-								array.checkbox.option_find_log.v = 2
+					local log = "moonloader\\config\\chatlog\\"..v
+					if file_exists(log) then
+						local file = io.open(log,'r')
+						for line in file:lines() do
+							local line = encrypt(line, -3)
+							if not (line:match('Время администратирования за сегодня:') or line:match('Ваша репутация:') or line:match('Всего администрации в сети:')) then
+								if k == 1 then array.chatlog_1[#array.chatlog_1 + 1] = line
+									array.checkbox.option_find_log.v = 0
+								elseif k == 2 then array.chatlog_2[#array.chatlog_2 + 1] = line
+									array.checkbox.option_find_log.v = 1
+								elseif k == 3 then array.chatlog_3[#array.chatlog_3 + 1] = line
+									array.checkbox.option_find_log.v = 2
+								end
 							end
 						end
+						file:close()
 					end
-					file:close()
 				else os.remove('moonloader\\config\\chatlog\\' .. v) end -- если чатлогу больше 3 дней (вкл) то удаляем его
 			else os.remove("moonloader\\config\\chatlog\\" ..v) end
 		end
