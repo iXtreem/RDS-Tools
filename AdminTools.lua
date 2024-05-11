@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8.4   			 							-- Версия скрипта
+local version = 8.5   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -90,6 +90,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		time_nakazanie = true,
 		time_nakazanie_posx = sw-400,
 		time_nakazanie_posy = 10,
+		time_form = 8,
 	},
 	customotvet = {},
 	myflood = {},
@@ -166,7 +167,6 @@ local array = {
 		add_full_words 			= imgui.ImBool(true),
 		autoaccept_form 		= imgui.ImBool(cfg.settings.autoaccept_form),
 		inputhelper			  	= imgui.ImBool(cfg.settings.inputhelper),
-		check_on_chatlog		= imgui.ImBool(cfg.settings.chat_log),
 		check_answer_player_report = imgui.ImBool(cfg.settings.answer_player_report),
 		check_on_custom_recon_menu = imgui.ImBool(cfg.settings.on_custom_recon_menu),
 		autoprefix				   = imgui.ImBool(cfg.settings.autoprefix),
@@ -179,6 +179,7 @@ local array = {
 		razmer_text				   = imgui.ImInt(cfg.settings.timetext_razmer),
 		radar 					   = imgui.ImBool(cfg.settings.save_radar),
 		time_nakazanie 			   = imgui.ImBool(cfg.settings.time_nakazanie),
+		time_form				   = imgui.ImInt(cfg.settings.time_form),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -258,7 +259,6 @@ local font_earschat  = renderCreateFont("Arial", cfg.settings.size_ears, font.BO
 local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW) -- шрифт открытого чата
 local font_timetext  = renderCreateFont("Arial", cfg.settings.timetext_razmer, font.BOLD + font.BORDER + font.SHADOW) -- время снизу
 
-
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	prochee = {
@@ -293,7 +293,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/headmove"] 	= "Настройка вращения головы персонажа",
 		["/timestamp"]	= "Время в чате",
 		["/alogin"] 	= "Авторизация в админ-права",
-		["/bk"] 		= "Укажите ID, чтобы вывести в чат ник вышедшего из игры нарушителя",
+		["/backnick"] 	= "Укажите ID, чтобы вывести в чат ник вышедшего из игры нарушителя",
 		["/hints"]      = "Добавление своих подсказок в input helper",
 	},
 	help = {
@@ -383,6 +383,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	server = {},
 	custom = {},
 }
+
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
 	while not isSampAvailable() do wait(3000) end
@@ -491,7 +492,13 @@ function main()
 	end
 	local AdminTools = nil 
 	local dlstatus = nil
-	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then 
+
+
+	local check_pass = inicfg.load(nil, 'AT//AT_FS.ini')
+	if check_pass.settings.parolalogin == nil or #check_pass.settings.parolalogin < 2 then sampAddChatMessage(tag .. 'До сих пор вводите /alogin вручную?)) Автоматизируйте рутину, вводите /fs', -1) end
+	local check_pass = nil
+
+	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then
 		sampProcessChatInput('/reset')
 	end
 
@@ -512,11 +519,13 @@ function main()
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
 	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
 
-	func = lua_thread.create_suspended(autoonline)
-	func1 = lua_thread.create_suspended(wallhack)
-	funcadm = lua_thread.create_suspended(render_admins)
-	local func4 = lua_thread.create_suspended(binder_key)
-	func4:run() 										--binder_key
+	func = lua_thread.create_suspended(autoonline) -- function autoonline
+	func1 = lua_thread.create_suspended(wallhack) -- function wallhack
+	funcadm = lua_thread.create_suspended(render_admins) -- function render admins
+	local func4 = lua_thread.create_suspended(binder_key) -- binder key
+	func4:run()
+	if cfg.settings.wallhack then on_wallhack() func1:run() end
+	if cfg.settings.autoonline then func:run() end
 	if cfg.settings.render_admins then
 		lua_thread.create(function()
 			while not array.admins do wait(0) end
@@ -526,8 +535,8 @@ function main()
 		end)
 		funcadm:run() 
 	end
-	if cfg.settings.wallhack then on_wallhack() func1:run() end
-	if cfg.settings.autoonline then func:run() end
+
+
 	if cfg.settings.save_radar then mem.write(sampGetBase() + 643864, 37008, 2, true) end
 
 	mem.write(0x747FB6, 0x1, 1, true) -- [[ AntiAFK Script in GameOver ]]
@@ -584,7 +593,6 @@ for k,v in pairs(basic_command.ban) do
 	sampRegisterChatCommand(string.sub(k,2), function(param)  if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 
 for k,v in pairs(basic_command.help) do sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then sampSendChat(string.gsub(v, '_', param)) else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
-
 
 for k,v in pairs(cfg.my_command) do
 	local v = string.gsub(v, '\\n','\n')
@@ -870,6 +878,12 @@ sampRegisterChatCommand('ahelp', function()
 end)
 sampRegisterChatCommand('update', function() download_update() end)
 sampRegisterChatCommand('reset', function()
+	lua_thread.create(function()
+		while sampIsDialogActive() do wait(0) end
+		sampSendChat('/access') 		-- проверка доступов
+		while not sampIsDialogActive(8991) do wait(0) end
+		sampCloseCurrentDialogWithButton(0)
+	end)
 	local dlstatus = require('moonloader').download_status
 	imgui.Process = false
 	showCursor(false,false)
@@ -919,7 +933,7 @@ sampRegisterChatCommand('ears', function()
 		print('Сканирование ЛС успешно активировано.', -1)
 	end
 end)
-sampRegisterChatCommand('bk', function(param)
+sampRegisterChatCommand('backnick', function(param)
 	if not tonumber(param) then sampAddChatMessage(tag .. 'Укажите ID игрока который потенциально вышел из сети недавно', -1) return end
 	if not array.flood.nick[param] then sampAddChatMessage(tag .. 'Игрок под данным ID не был зафиксирован в чате.', -1) return end
 	if not sampIsPlayerConnected(param) or array.flood.nick[param] ~= sampIsPlayerConnected(param) then
@@ -946,7 +960,6 @@ function imgui.OnDrawFrame()
 		array.windows.render_admins.v = false
 		imgui.ShowCursor = true
 		if wasKeyPressed(VK_ESCAPE) then array.windows.menu_tools.v = false end
-		if wasKeyPressed(VK_SCROLL) then sampAddChatMessage ('dawad') end
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(500, 500), imgui.Cond.FirstUseEver)
 		imgui.Begin('xX     Admin Tools [AT]     Xx', array.windows.menu_tools, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -1004,13 +1017,26 @@ function imgui.OnDrawFrame()
 				end
 				imgui.SameLine()
 				imgui.Text(u8'Слежка за формами')
-				if array.checkbox.check_find_form.v then
-					imgui.SameLine()
-					if imgui.Checkbox('##autoaccept', array.checkbox.autoaccept_form) then
-						cfg.settings.autoaccept_form = not cfg.settings.autoaccept_form
+				imgui.SameLine()
+				imgui.SetCursorPosX(435)
+				if imgui.Button(fa.ICON_COG.."##aaa", imgui.ImVec2(21,21)) then
+					imgui.OpenPopup('slejform')
+				end
+				if imgui.BeginPopup('slejform') then
+					if imgui.SliderInt('##Sliderы', array.checkbox.time_form, 6, 20) then
+						cfg.settings.time_form = array.checkbox.time_form.v
 						save()
 					end
-					imgui.Tooltip(u8'Автоматическое принятие форм\nПредупреждение: ответственность несете Вы')
+					if array.checkbox.check_find_form.v then
+						imgui.Text(u8'Автоматическое принятие форм ')
+						imgui.SameLine()
+						if imgui.Checkbox('##autoaccept', array.checkbox.autoaccept_form) then
+							cfg.settings.autoaccept_form = not cfg.settings.autoaccept_form
+							save()
+						end
+						imgui.Tooltip(u8'Предупреждение: ответственность несете Вы')
+					end
+					imgui.EndPopup()
 				end
 				if imgui.Button(fa.ICON_COG, imgui.ImVec2(30,20)) then imgui.OpenPopup('check_AM') end
 				imgui.SameLine()
@@ -1469,9 +1495,11 @@ function imgui.OnDrawFrame()
 					imgui.Tooltip(u8'Нажми, если у тебя есть все доступы\nКнопка будет отображена на второй странице')
 					vision_form()
 				end
-				imgui.SetCursorPosY(470)
+				imgui.SetCursorPosY(440)
 				imgui.Separator()
-				imgui.CenterText(u8'Конечный продукт для Администрации RDS '..fa.ICON_SPACE_SHUTTLE)
+				imgui.Text(u8'Разработчик N.E.O.N -') imgui.SameLine() imgui.Link("https://vk.com/alexandrkob",u8'Нажми, чтобы открыть ссылку в браузере')
+				imgui.Text(u8'Группа разработчика -') imgui.SameLine() imgui.Link("https://vk.com/club222702914",u8'Нажми, чтобы открыть ссылку в браузере')
+				--imgui.CenterText(u8'Конечный продукт для Администрации RDS '..fa.ICON_SPACE_SHUTTLE)
 			elseif menu == 'Дополнительные функции' then -- мульти выбор
 				imgui.SetCursorPosX(8)
 				if imgui.NewInputText('##doptextcomыmand', array.buffer.custom_addtext_report, 485, u8'Дополнительный текст в начале ответа', 2) then
@@ -1845,7 +1873,7 @@ function imgui.OnDrawFrame()
 				imgui.SetCursorPosX(50)
 				if imgui.Button(u8'Группа/Форум', imgui.ImVec2(130, 25)) then
 					sampSendChat('/mess 11 --------===================| Сторонние площадки |================-----------')
-					sampSendChat('/mess 7 У нашего проекта имеется группа vk сom/teamadmrds ...')
+					sampSendChat('/mess 7 У нашего проекта имеется группа vk сom/dmdriftgta ...')
 					sampSendChat('/mess 7 ... и даже форум, на котором игроки могут оставить жалобу на администрацию или игроков.')
 					sampSendChat('/mess 7 Следи за новостями и будь вкурсе событий.')
 					sampSendChat('/mess 11 --------===================| Сторонние площадки |================-----------')
@@ -2959,13 +2987,6 @@ function imgui.OnDrawFrame()
 		imgui.PushFont(fontsize)
 		imgui.CenterText(u8'Выберите файл для просмотра')
 		imgui.Text(u8'Примечание: Нажатие по тексту - копирует его в буфер обмена\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
-		if imgui.Checkbox('##cl', array.checkbox.check_on_chatlog) then
-			cfg.settings.chat_log = not cfg.settings.chat_log
-			save()
-		end
-		imgui.SameLine()
-		if array.checkbox.check_on_chatlog.v then imgui.Text(u8'Логировать чат игры и сохранять в скрипт')
-		else imgui.Text(u8'Не записывать чат игры для дальнейшего просмотра.') end
 		imgui.PushItemWidth(sw*0.7 - 30)
 		if imgui.Combo('##chatlog', array.checkbox.option_find_log, array.files_chatlogs, array.checkbox.option_find_log) then chat = {1, 500, 1} end
 		imgui.NewInputText('##searchlog', array.buffer.find_log, (sw*0.7)-30, u8'Сортировка текста', 2)
@@ -3146,9 +3167,26 @@ function imgui.OnDrawFrame()
 	end
 end
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
-	if string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' then
+	if string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' and not sampIsDialogActive() then
 		if ( command:match('mute (.+) (.+) (.+)') or command:match('muteakk (.+) (.+) (.+)') or command:match('muteoff (.+) (.+) (.+)')) then
 			back_punishment(6)
+
+			local check_player = function(param)
+				if not tonumber(param) then return false end
+				if not array.flood.nick[param] then return false end
+				if not sampIsPlayerConnected(param) or array.flood.nick[param] ~= sampIsPlayerConnected(param) then
+					return array.flood.nick[param]
+				end
+			end
+
+			local _, _, name, srok, prichina = command:match('(.+) (.+) (.+) (.+) (.+)') 
+			local check = (check_player(name))
+			sampAddChatMessage(name,-1)
+			if check then
+				sampAddChatMessage(tag .. 'Игрок вышел из сети. Но АТ это предусмотрел, и все равно выдаст наказание :3', -1)
+				SendChat('/muteoff ' .. check .. ' ' .. srok .. ' ' .. prichina)
+				return false
+			end
 			if cfg.settings.forma_na_mute then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
@@ -3201,6 +3239,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 		end
 	end
 end
+
 function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 	log( '{'..('%X'):format(color):sub(9, 14)..'}'..text)
 	if cfg.settings.render_admins and (text:match('Время администратирования за сегодня:') or text:match('Ваша репутация:') or text:match('Всего администрации в сети:')) then
@@ -3212,7 +3251,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		return false
 	elseif text:match('%[A%] NEARBY CHAT: .+') or text:match('%[A%] SMS: .+') then
 		array.checkbox.check_render_ears.v = true
-		local sokr_text = string.gsub( string.sub( string.gsub (string.gsub(string.gsub(string.gsub(text, 'NEARBY CHAT: ', '{87CEEB}'), 'SMS: ','{9ACD32}'), ' отправил ', ''), ' игрока ', ''), 5), ' |(.+)%((%d+)%)', '')
+		local sokr_text = string.gsub( string.sub( string.gsub (string.gsub(string.gsub(string.gsub(text, 'NEARBY CHAT: ', '{87CEEB}'), 'SMS: ','{D8BFD8}'), ' отправил ', ''), ' игрока ', ''), 5), ' |(.+)%((%d+)%)', '')
 		if #sokr_text > 40 then sokr_text = string.sub(sokr_text, 1, 40).."..." end
 		local sokr_text = "{696969}PM: " .. sokr_text
 		if #array.ears == cfg.settings.strok_ears then
@@ -3518,7 +3557,6 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 		if DELETE_TEXTDRAW_RECON[id] then return false end
 	end
 end
-
 function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- Работа с открытими ДИАЛОГАМИ
 	local closeDialog = function(id)
 		if cfg.settings.nodialog then 
@@ -3791,6 +3829,26 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			end
 		end)
 		if closeDialog(dialogID) then return false end
+	elseif dialogId == 8991 then
+		local text = textSplit(text, '{808080}')
+		for i = 2, #text do
+			if not text[i]:match("{03C03C}Имеется{FFFFFF}") then
+				if text[i]:match("Доступ на 'Все виды банов'") then
+					cfg.settings.forma_na_ban = true
+					sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /ban, активированы автоформы.', -1)
+				elseif text[i]:match("Доступ к '/tr'") then
+					cfg.settings.atr = true
+					sampAddChatMessage(tag .. 'У вас отсутствует команда /tr, активирована альтернатива, команда работает от имени АТ.', -1)
+				elseif text[i]:match("Доступ на 'Выдачу тюрьмы'") then
+					cfg.settings.forma_na_jail = true
+					sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /jail, активированы автоформы.', -1)
+				elseif text[i] then
+					cfg.settings.forma_na_mute = true
+					sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /mute, активированы автоформы.', -1)
+				end
+			end
+		end
+		save()
 	end
 end
 
@@ -3808,7 +3866,7 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 end
 
 function log(text, color) -- записываем лог
-	if cfg.settings.chat_log and not AFK and #text > 8 then
+	if not AFK and #text > 8 then
 		local data_today = os.date("*t") -- узнаем дату сегодня
 		local log = ('moonloader\\config\\chatlog\\chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 		local file = io.open(log,"a")
@@ -3845,8 +3903,8 @@ function wait_accept_form()
 			wait(2)
 			if array.admin_form.bool and array.admin_form.timer and array.admin_form.sett then
 				local timer = os.clock() - array.admin_form.timer
-				renderFontDrawText(fonts, '{FFFFFF}Обнаружена форма от администратора.\nНажми U, чтобы принять или J - чтобы отклонить\nВремени на раздумья 5 сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
-				if timer>5 then break end
+				renderFontDrawText(fonts, '{FFFFFF}Обнаружена форма от администратора.\nНажми U, чтобы принять или J - чтобы отклонить\nВремени на раздумья '..cfg.settings.time_form..' сек, прошло: '..tostring(os.date("!*t", timer).sec), sw/2, sh/2, 0xFFFFFFFF)
+				if timer> cfg.settings.time_form then break end
 			end
 			if not (sampIsChatInputActive() or sampIsDialogActive()) then
 				if wasKeyPressed(VK_U) or cfg.settings.autoaccept_form then
@@ -4038,26 +4096,27 @@ function input_helper()
 							if (string.sub(getInput, 1,1) == "/" and name:match(getInput) and not tonumber(string.sub(command, -1))) or getInput:match(name) or (string.rlower(string.gsub(command, "_", "(%d+)")):match( string.rlower(string.gsub(sampGetChatInputText(), "%p", ""))  ) and not tonumber(string.sub(command, -1))) then
 								if name:match(getInput.. " ") or getInput:match(name.." ") or name == getInput then
 									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
+								elseif (sampIsCursorActive() and mouseX < in2+705  and mouseY > in3 + 55 + (count*6) and mouseY<(in3 + 90 + (count*6))) then
+									if wasKeyPressed(VK_LBUTTON) then
+										sampSetChatInputText(name..' ') 
+										lua_thread.create(function() 
+											for i = 1, 100 do wait(1) 
+												sampSetChatInputEnabled(true)
+											end
+										end)
+									end  
 								else renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000) end
-								if (sampIsCursorActive() and mouseX < in2+705  and mouseY > in3 + 55 + (count*6) and mouseY<(in3 + 90 + (count*6))) and wasKeyPressed(VK_LBUTTON) then 
-									sampSetChatInputText(name..' ') 
-									lua_thread.create(function() 
-										for i = 1, 100 do wait(1) 
-											sampSetChatInputEnabled(true)
-										end
-									end)  
-								end
 								if names_command[name_razdel] then
 									renderFontDrawText(font_chat, "{A9A9A9}-f", 720, in3 + 60 + (count*6) , -1)
 								end
 								renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "ID"), in2 + 10, in3 + 60 + (count*6) , -1)
 								count = count + 5
-								if count > 16 then break break end
-							end
+								if count > 11 then break end -- не более 3-ех подсказок
+							end 
 						end
+						if count > 11 then break end -- не более 3-ех подсказок
 					end
 					if count == 0 then renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1) end
-					count = 0
 				else renderFontDrawText(font_chat, text, in2 + 5, in3 + 50, -1) end
 			end
 		end
