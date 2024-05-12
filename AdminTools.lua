@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8.5   			 							-- Версия скрипта
+local version = 8.6   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -91,6 +91,11 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		time_nakazanie_posx = sw-400,
 		time_nakazanie_posy = 10,
 		time_form = 8,
+		render_players = false,
+		render_players_x = sh*0.5,
+		render_players_y = sw*0.5 - 150,
+		render_players_size = 10,
+		render_players_count = 10,
 	},
 	customotvet = {},
 	myflood = {},
@@ -180,6 +185,9 @@ local array = {
 		radar 					   = imgui.ImBool(cfg.settings.save_radar),
 		time_nakazanie 			   = imgui.ImBool(cfg.settings.time_nakazanie),
 		time_form				   = imgui.ImInt(cfg.settings.time_form),
+		render_players			   = imgui.ImBool(cfg.settings.render_players),
+		render_players_size 	   = imgui.ImInt(cfg.settings.render_players_size),
+		render_players_count 	   = imgui.ImInt(cfg.settings.render_players_count),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -222,6 +230,7 @@ local array = {
 	adminchat_minimal = {},											-- Сокращенный AdminChat
 	ears 			= {},											-- Все ears сообщения хранятся тут
 	ears_minimal 	= {},											-- Сокращенный EARS
+	render_players  = {},											-- Входы выходы игроков
 	inforeport 		= {},											-- Вся информация о игроке в реконе хранится тут
 	pravila 		= {},											-- Правила/команды хранятся тут /ahelp
 	flood = { --[[сборник ID]]message = {},--[[Сообщение]]time = {},--[[время отправки]]count = {},--[[кол-во повторных сообщений]] nick = {} --[[ник-нейм запоминаем]]},
@@ -258,6 +267,7 @@ local font_adminchat = renderCreateFont("Arial", cfg.settings.size_adminchat, fo
 local font_earschat  = renderCreateFont("Arial", cfg.settings.size_ears, font.BOLD + font.BORDER + font.SHADOW)	   -- шрифт ears чата
 local font_chat 	 = renderCreateFont("Arial", cfg.settings.size_text_f6, font.BOLD + font.BORDER + font.SHADOW) -- шрифт открытого чата
 local font_timetext  = renderCreateFont("Arial", cfg.settings.timetext_razmer, font.BOLD + font.BORDER + font.SHADOW) -- время снизу
+local font_players   = renderCreateFont("Arial", cfg.settings.render_players_size, font.BOLD + font.BORDER + font.SHADOW) -- время снизу
 
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 local basic_command = { -- базовые команды, 1 аргумент = символ '_'
@@ -450,6 +460,10 @@ function main()
 		array.windows.menu_chatlogger.v = not array.windows.menu_chatlogger.v
 		imgui.Process = array.windows.menu_chatlogger.v
 	end)
+	local direct = "moonloader/resource/report.mp3"
+	if not file_exists(direct) then
+		downloadUrlToFile("https://raw.githubusercontent.com/iXtreem/RDS-Tools/main/report.mp3", direct, function(id, status) end)
+	end
 	while not sampIsLocalPlayerSpawned() do wait(1000) end
 	func_inputhelper = lua_thread.create_suspended(input_helper)
 	func_timetext    = lua_thread.create_suspended(time_text)
@@ -534,6 +548,46 @@ function main()
 			imgui.Process = true
 		end)
 		funcadm:run() 
+	end
+
+
+	if cfg.settings.render_players then
+		lua_thread.create(function()
+			sampev.onPlayerJoin = function(id, color, npc, nick)
+				if npc == false then
+					lua_thread.create(function()
+						wait(100)
+						if sampGetPlayerNickname(id) and not AFK then
+							local text = '{DCDCDC}'..sampGetPlayerNickname(id)..'['..id..'] ({228B22}Подключился{DCDCDC})'
+							if #array.render_players == cfg.settings.render_players_count then
+								for i = 0, #array.render_players do
+									if i ~= #array.render_players then array.render_players[i] = array.render_players[i + 1]
+									else array.render_players[#array.render_players] = text end
+								end
+							else array.render_players[#array.render_players + 1] = text end
+						end
+					end)
+				end
+			end
+			sampev.onPlayerQuit = function(id, reason)
+				if sampGetPlayerNickname(id) and not AFK then
+					local text = '{DCDCDC}'..sampGetPlayerNickname(id)..' ({FF0000}Отключился{DCDCDC})'
+					if #array.render_players == cfg.settings.render_players_count then
+						for i = 0, #array.render_players do
+							if i ~= #array.render_players then array.render_players[i] = array.render_players[i + 1]
+							else array.render_players[#array.render_players] = text end
+						end
+					else array.render_players[#array.render_players + 1] = text end
+				end
+			end 
+			while true do wait(1)
+				if not AFK then
+					for i = 1, #array.render_players do
+						renderFontDrawText(font_players, array.render_players[i], cfg.settings.render_players_x, cfg.settings.render_players_y + (i*15), 0xCCFFFFFF)
+					end
+				end
+			end
+		end)
 	end
 
 
@@ -1477,13 +1531,63 @@ function imgui.OnDrawFrame()
 							showCursor(true,true)
 							cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy = getCursorPos()
 							if wasKeyPressed(VK_RETURN) then save() break end
-							if wasKeyPressed(VK_ESCAPE) then cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy = old_pos_y break end
+							if wasKeyPressed(VK_ESCAPE) then cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy = old_pos_x, old_pos_y break end
 							wait(1)
 							renderFontDrawText(font_adminchat, 'До выдачи следующего наказания: 0/6 сек.', cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy, 0xCCFFFFFF)
 						end
 						showCursor(false,false)
 					end)
 					array.windows.menu_tools.v = false
+				end
+				if imadd.ToggleButton('##renderplayers', array.checkbox.render_players) then
+					cfg.settings.render_players = not cfg.settings.render_players
+					save()
+					imgui.Process = false
+					sampAddChatMessage(tag .. 'Выполняю инициализацию функции...', -1)
+					lua_thread.create(function()
+						wait(1500)
+						thisScript():reload()
+					end)
+				end
+				imgui.Tooltip(u8'Требуется перезагрузка.\nВо имя оптимизации.')
+				imgui.SameLine()
+				imgui.Text(u8'Входы/Выходы')
+				imgui.SameLine()
+				imgui.SetCursorPosX(190)
+				if imgui.Button(fa.ICON_ARROWS..'##22w35') then imgui.OpenPopup('in/out') end
+				if imgui.BeginPopup('in/out') then
+					imgui.CenterText(u8'Размер текста')
+					if imgui.SliderInt('##adwad2aw', array.checkbox.render_players_size, 6,14) then
+						cfg.settings.render_players_size = array.checkbox.render_players_size.v
+						save()
+						font_players = renderCreateFont("Arial", cfg.settings.render_players_size, font.BOLD + font.BORDER + font.SHADOW) -- время снизу
+					end
+					imgui.CenterText(u8'Максимальное кол-во сообщений')
+					if imgui.SliderInt('##adwadaw', array.checkbox.render_players_count, 3, 20) then
+						cfg.settings.render_players_count = array.checkbox.render_players_count.v
+						save()
+						if #array.render_players > array.checkbox.render_players_count.v then
+							for i = cfg.settings.render_players_count, #array.render_players do table.remove( array.render_players, i)  end
+						end
+					end
+					if imgui.Button(u8'Сменить позицию') then
+						lua_thread.create(function()
+							sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
+							sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
+							local old_pos_x, old_pos_y = cfg.settings.render_players_x, cfg.settings.render_players_y
+							while true do
+								showCursor(true,true)
+								cfg.settings.render_players_x, cfg.settings.render_players_y = getCursorPos()
+								if wasKeyPressed(VK_RETURN) then save() break end
+								if wasKeyPressed(VK_ESCAPE) then cfg.settings.render_players_x, cfg.settings.render_players_y = old_pos_x, old_pos_y break end
+								wait(1)
+								renderFontDrawText(font_adminchat, 'Предполагаемое место рендера', cfg.settings.render_players_x, cfg.settings.render_players_y, 0xCCFFFFFF)
+							end
+							showCursor(false,false)
+						end)
+						array.windows.menu_tools.v = false
+					end
+					imgui.EndPopup()
 				end
 				if array.checkbox.vision_form.v then
 					if imgui.Button(u8'Авто-отправка форм для младших администраторов', imgui.ImVec2(419, 24)) then imgui.OpenPopup('autoform') end
@@ -3576,7 +3680,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			array.admins = textSplit(text, '\n')
 			local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 			array.admins[#array.admins] = nil -- последний пункт диалога пустой
-			for i = 1, #array.admins do -- {FFFFFF}N.E.O.N(0) ({2E8B57}Мл.Администратор{FFFFFF}) | Уровень: {ff8587}6{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}
+			for i = 1, #array.admins do
 				local rang = string.sub(string.gsub(string.match(array.admins[i], '(%(.+)%)'), '(%(%d+)%)', ''), 3) --{FFFFFF}N.E.O.N(0) | Уровень: {ff8587}18{FFFFFF} | Выговоры: {ff8587}0 из 3{FFFFFF} | Репутация: {ff8587}60
 				array.admins[i] = string.gsub(array.admins[i], '{%w%w%w%w%w%w}', "")
 				local afk = string.match(array.admins[i], 'AFK: (.+)')
@@ -3859,7 +3963,12 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 	elseif text == ('~y~REPORT++') then
 		if not AFK then
 			if tr and not sampIsDialogActive() then sampSendChat("/ans") sampSendDialogResponse(2348, 1, 0) end
-			if cfg.settings.notify_report then printStyledString('~n~~p~REPORT ++', 1500, 4) end
+			if cfg.settings.notify_report then 
+				printStyledString('~n~~p~REPORT ++', 1500, 4)
+				local audio = loadAudioStream("moonloader/resource/report.mp3")
+				setAudioStreamState(audio, 1)
+				setAudioStreamVolume(audio, 100)
+			end
 		end
 		return false
 	end
