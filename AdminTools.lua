@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8.6   			 							-- Версия скрипта
+local version = 8.7   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -33,7 +33,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		wallhack = true,
 		answer_player_report = false,
 		admin_chat = true,
-		position_adminchat_x = -5,
+		position_adminchat_x = -10,
 		position_adminchat_y = sh*0.5-100,
 		custom_answer_save = false,
 		find_form = false,
@@ -44,7 +44,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		size_adminchat = 10,
 		size_ears = 10,
 		strok_ears = 11,
-		strok_admin_chat = 6,
+		strok_admin_chat = 9,
 		keysyncx = sw*0.5,
 		keysyncy = sh-120,
 		fast_key_ans = 'None',
@@ -550,14 +550,13 @@ function main()
 		funcadm:run() 
 	end
 
-
 	if cfg.settings.render_players then
 		lua_thread.create(function()
 			sampev.onPlayerJoin = function(id, color, npc, nick)
 				if npc == false then
 					lua_thread.create(function()
 						wait(100)
-						if sampGetPlayerNickname(id) and not AFK then
+						if sampIsPlayerConnected(id) and not AFK then
 							local text = '{DCDCDC}'..sampGetPlayerNickname(id)..'['..id..'] ({228B22}Подключился{DCDCDC})'
 							if #array.render_players == cfg.settings.render_players_count then
 								for i = 0, #array.render_players do
@@ -570,7 +569,7 @@ function main()
 				end
 			end
 			sampev.onPlayerQuit = function(id, reason)
-				if sampGetPlayerNickname(id) and not AFK then
+				if not AFK and sampIsPlayerConnected(id) then
 					local text = '{DCDCDC}'..sampGetPlayerNickname(id)..' ({FF0000}Отключился{DCDCDC})'
 					if #array.render_players == cfg.settings.render_players_count then
 						for i = 0, #array.render_players do
@@ -583,7 +582,7 @@ function main()
 			while true do wait(1)
 				if not AFK then
 					for i = 1, #array.render_players do
-						renderFontDrawText(font_players, array.render_players[i], cfg.settings.render_players_x, cfg.settings.render_players_y + (i*15), 0xCCFFFFFF)
+						renderFontDrawText(font_players, array.render_players[i], cfg.settings.render_players_x, cfg.settings.render_players_y + (i*16), 0xCCFFFFFF)
 					end
 				end
 			end
@@ -1003,6 +1002,7 @@ sampRegisterChatCommand('backnick', function(param)
 		end)
 	else sampAddChatMessage(tag .. 'Увы, игрока вышедшего из сети под данным ID не обнаружено.', -1) end
 end)
+
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
 	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
@@ -3283,9 +3283,9 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				end
 			end
 
-			local _, _, name, srok, prichina = command:match('(.+) (.+) (.+) (.+) (.+)') 
+			local _, name, srok,prichina = command:match('(.+) (.+) (.+) (.+) (.+)') 
 			local check = (check_player(name))
-			sampAddChatMessage(name,-1)
+
 			if check then
 				sampAddChatMessage(tag .. 'Игрок вышел из сети. Но АТ это предусмотрел, и все равно выдаст наказание :3', -1)
 				SendChat('/muteoff ' .. check .. ' ' .. srok .. ' ' .. prichina)
