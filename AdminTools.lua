@@ -553,10 +553,10 @@ function main()
 	if cfg.settings.render_players then
 		lua_thread.create(function()
 			sampev.onPlayerJoin = function(id, color, npc, nick)
-				if npc == false then
+				if not AFK and npc == false then
 					lua_thread.create(function()
 						wait(100)
-						if sampIsPlayerConnected(id) and not AFK then
+						if sampIsPlayerConnected(id) then
 							local text = '{DCDCDC}'..sampGetPlayerNickname(id)..'['..id..'] ({228B22}Подключился{DCDCDC})'
 							if #array.render_players == cfg.settings.render_players_count then
 								for i = 0, #array.render_players do
