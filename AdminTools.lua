@@ -3250,7 +3250,8 @@ function imgui.OnDrawFrame()
 			imgui.EndPopup()
 		end
 		for i = chat[1], chat[2] do
-			if string.rlower(  string.gsub(check_chat[i], "%p","")     )    :find      (   string.rlower(    string.gsub(u8:decode(array.buffer.find_log.v), '%p', '')  )     )      then
+			local txt = u8:decode(array.buffer.find_log.v)
+			if string.rlower(  string.gsub(check_chat[i], "%p","")     )    :find      (   string.rlower(    string.gsub(txt, '%p', '')  )     )      then
 
 				imgui.BeginGroup() -- для того чтобы при нажатии на текст срабатывало действие
 					imgui.TextColoredRGB(check_chat[i])
@@ -4018,7 +4019,7 @@ function wait_accept_form()
 			if not (sampIsChatInputActive() or sampIsDialogActive()) then
 				if wasKeyPressed(VK_U) or cfg.settings.autoaccept_form then
 					if sampIsPlayerConnected(array.admin_form.idadmin) then
-						if not (array.admin_form.forma):match('kick') and not (array.admin_form.forma):match('off') and not (array.admin_form.forma):match('akk') and not ((array.admin_form.forma):match('unban')) then
+						if array.admin_form.forma~=nil and not (array.admin_form.forma):match('kick') and not (array.admin_form.forma):match('off') and not (array.admin_form.forma):match('akk') and not ((array.admin_form.forma):match('unban')) then
 							local _, id, sec, prichina = (array.admin_form.forma):match('(.+) (.+) (.+) (.+)')
 							if not (tonumber(id) or tonumber(sec) or prichina) then
 								sampSendChat('/a АТ - Отказано.')
