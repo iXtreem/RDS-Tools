@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8.7   			 							-- Версия скрипта
+local version = 8.8   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -303,7 +303,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/headmove"] 	= "Настройка вращения головы персонажа",
 		["/timestamp"]	= "Время в чате",
 		["/alogin"] 	= "Авторизация в админ-права",
-		["/backnick"] 	= "Укажите ID, чтобы вывести в чат ник вышедшего из игры нарушителя",
 		["/hints"]      = "Добавление своих подсказок в input helper",
 	},
 	help = {
@@ -986,23 +985,6 @@ sampRegisterChatCommand('ears', function()
 		print('Сканирование ЛС успешно активировано.', -1)
 	end
 end)
-sampRegisterChatCommand('backnick', function(param)
-	if not tonumber(param) then sampAddChatMessage(tag .. 'Укажите ID игрока который потенциально вышел из сети недавно', -1) return end
-	if not array.flood.nick[param] then sampAddChatMessage(tag .. 'Игрок под данным ID не был зафиксирован в чате.', -1) return end
-	if not sampIsPlayerConnected(param) or array.flood.nick[param] ~= sampIsPlayerConnected(param) then
-		sampAddChatMessage('Ник прошлого игрока, вышедшего из сети: {A9A9A9}' .. array.flood.nick[param]..'{FFFFFF}. Был скопирован в буфер обмена (ctrl + c, ctrl + v)', -1)
-		setClipboardText(array.flood.nick[param])
-		lua_thread.create(function()
-			wait(50)
-			sampSetChatInputText(array.flood.nick[param])
-			for i = 1,50 do
-				wait(1)
-				sampSetChatInputEnabled(true)
-			end
-		end)
-	else sampAddChatMessage(tag .. 'Увы, игрока вышедшего из сети под данным ID не обнаружено.', -1) end
-end)
-
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
 	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
@@ -3276,22 +3258,6 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 		if ( command:match('mute (.+) (.+) (.+)') or command:match('muteakk (.+) (.+) (.+)') or command:match('muteoff (.+) (.+) (.+)')) then
 			back_punishment(6)
 
-			local check_player = function(param)
-				if not tonumber(param) then return false end
-				if not array.flood.nick[param] then return false end
-				if not sampIsPlayerConnected(param) or array.flood.nick[param] ~= sampIsPlayerConnected(param) then
-					return array.flood.nick[param]
-				end
-			end
-
-			local _, name, srok,prichina = command:match('(.+) (.+) (.+) (.+) (.+)') 
-			local check = (check_player(name))
-
-			if check then
-				sampAddChatMessage(tag .. 'Игрок вышел из сети. Но АТ это предусмотрел, и все равно выдаст наказание :3', -1)
-				SendChat('/muteoff ' .. check .. ' ' .. srok .. ' ' .. prichina)
-				return false
-			end
 			if cfg.settings.forma_na_mute then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
@@ -4018,8 +3984,8 @@ function wait_accept_form()
 			end
 			if not (sampIsChatInputActive() or sampIsDialogActive()) then
 				if wasKeyPressed(VK_U) or cfg.settings.autoaccept_form then
-					if sampIsPlayerConnected(array.admin_form.idadmin) then
-						if array.admin_form.forma~=nil and not (array.admin_form.forma):match('kick') and not (array.admin_form.forma):match('off') and not (array.admin_form.forma):match('akk') and not ((array.admin_form.forma):match('unban')) then
+					if sampIsPlayerConnected(array.admin_form.idadmin) and array.admin_form.forma~=nil then
+						if not (array.admin_form.forma):match('kick') and not (array.admin_form.forma):match('off') and not (array.admin_form.forma):match('akk') and not ((array.admin_form.forma):match('unban')) then
 							local _, id, sec, prichina = (array.admin_form.forma):match('(.+) (.+) (.+) (.+)')
 							if not (tonumber(id) or tonumber(sec) or prichina) then
 								sampSendChat('/a АТ - Отказано.')
