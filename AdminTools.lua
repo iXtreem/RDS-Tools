@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8.8   			 							-- Версия скрипта
+local version = 8.9   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -348,7 +348,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	},
 	rmute = { -- ВНИМАНИЕ КОМАНДЫ ДЛЯ ВЫДАЧИ В ОФФЛАЙНЕ СОЗДАЮТСЯ САМИ С ОКОНЧАНИЕМ -f
 		["/oft"] 	= 		'/rmute _ 120 оффтоп в репорт',		--[[x10]]["/oft2"]='/rmute _ 240 оффтоп в репорт x2',["/oft3"]='/rmute _ 360 оффтоп в репорт x3',["/oft4"]='/rmute _ 480 оффтоп в репорт х4',["/oft5"]='/rmute _ 600 оффтоп в репорт х5',["/oft6"]='/rmute _ 720 оффтоп в репорт x6',["/oft7"]='/rmute _ 840 оффтоп в репорт х7',["/oft8"]='/rmute _ 960 оффтоп в репорт х8',["/oft9"]='/rmute _ 1080 оффтоп в репорт х9',["/oft10"]='/rmute _ 1200 оффтоп в репорт х10',
-		["/cp"] 	= 		'/rmute _ 120 caps in /report',		--[[x10]]["/cp2"]='/rmute _ 240 Caps in /report x2',["/cp3"]='/rmute _ 360 Caps in /report x3',["/cp4"]='/rmute _ 480 Caps in /report x4',["/cp5"]='/rmute _ 600 Caps in /report x5',["/cp6"]='/rmute _ 720 Caps in /report x6',["/cp7"]='/rmute _ 840 Caps in /report x7',["/cp8"]='/rmute _ 960 Caps in /report x8',["/cp9"]='/rmute _ 1080 Caps in /report x9',["/cp10"]='/rmute _ 1200 Caps in /report x10',
 		["/rpo"]	=		'/rmute _ 120 Попрошайка в /report',--[[x10]]["/rpo2"]='/rmute _ 240 Попрошайка в /report x2',["/rpo3"]='/rmute _ 360 Попрошайка в /report x3',["/rpo4"]='/rmute _ 480 Попрошайка в /report x4',["/rpo5"]='/rmute _ 600 Попрошайка в /report x5',["/rpo6"]='/rmute _ 720 Попрошайка в /report x6',["/rpo7"]='/rmute _ 840 Попрошайка в /report x7',["/rpo8"]='/rmute _ 960 Попрошайка в /report x8',["/rpo9"]='/rmute _ 1080 Попрошайка в /report x9',["/rpo10"]='/rmute _ 1200 Попрошайка в /report x10',
 		["/rm"] 	= 		'/rmute _ 300 мат в /report',		--[[x10]]["/rm2"]='/rmute _ 600 мат в /report x2',["/rm3"]='/rmute _ 900 мат в /report x3',["/rm4"]='/rmute _ 600 мат в /report x4',["/rm5"]='/rmute _ 600 мат в /report x5',["/rm6"]='/rmute _ 600 мат в /report x6',["/rm7"]='/rmute _ 600 мат в /report x7',["/rm8"]='/rmute _ 600 мат в /report x8',["/rm9"]='/rmute _ 600 мат в /report x9',["/rm10"]='/rmute _ 600 мат в /report x10',
 		["/rok"] 	= 		'/rmute _ 400 Оскорбление в /report',--[[x10]]["/rok2"]='/rmute _ 800 Оскорбление в /report x2',["/rok3"]='/rmute _ 1200 Оскорбление в /report x3',["/rok4"]='/rmute _ 1600 Оскорбление в /report x4',["/rok5"]='/rmute _ 2000 Оскорбление в /report x5',["/rok6"]='/rmute _ 2400 Оскорбление в /report x6',["/rok7"]='/rmute _ 2800 Оскорбление в /report x7',["/rok8"]='/rmute _ 3200 Оскорбление в /report x8',["/rok9"]='/rmute _ 3600 Оскорбление в /report x9',["/rok10"]='/rmute _ 4000 Оскорбление в /report x10',
@@ -383,9 +382,8 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/obm"] 	= 		'/siban _ 30 Обман/Развод',
 	},
 	kick = {
-		["/kk3"] 	= 		'/ban _ 7 Смените ник 3/3.',
-		["/kk2"] 	= 		'/kick _ Смените ник 2/3.',
-		["/kk1"] 	= 		'/kick _ Смените ник 1/3.',
+		["/nickban"] 	= 	'/ban _ 7 Смените никнейм.',
+		["/nick"] 	= 		'/kick _ Смените никнейм.',
 		["/cafk"] 	= 		'/kick _ AFK in /arena',
 		["/dj"] 	= 		'/kick _ DM in jail',
 	},
@@ -1682,6 +1680,13 @@ function imgui.OnDrawFrame()
 					end
 					imgui.EndPopup()
 				end
+				imgui.PushItemWidth(485)
+				if imgui.Combo("##selected", array.checkbox.style_selected, {u8"Классическая тема", u8"Красная тема", u8"Синяя тема", u8"Фиолетовая тема", u8"Розовая тема", u8"Голубая тема"}, array.checkbox.style_selected) then
+					cfg.settings.style = array.checkbox.style_selected.v 
+					save()
+					style(cfg.settings.style)
+				end
+				imgui.PopItemWidth()
 				if imgui.Checkbox(u8'Скрытие закрытых диалогов для автоонлайна/рендера /admins', imgui.ImBool(cfg.settings.nodialog)) then
 					cfg.settings.nodialog = not cfg.settings.nodialog
 					save()
@@ -2251,21 +2256,13 @@ function imgui.OnDrawFrame()
 					array.buffer.newosk.v = ''
 					imgui.SetKeyboardFocusHere(-1)
 				end
-				imgui.CenterText(u8'Выберите тему оформления')
-				imgui.PushItemWidth(480)
-				if imgui.Combo("##selected", array.checkbox.style_selected, {u8"Классическая тема", u8"Красная тема", u8"Синяя тема", u8"Фиолетовая тема", u8"Розовая тема", u8"Голубая тема"}, array.checkbox.style_selected) then
-					cfg.settings.style = array.checkbox.style_selected.v 
-					save()
-					style(cfg.settings.style)
-				end
-				imgui.PopItemWidth()
 				imgui.CenterText(u8'Добавить быструю команду')
 				imgui.SameLine()
 				if imgui.Link(u8"[ИНСТРУКЦИЯ]", u8"Нажми, чтобы открыть ссылку в браузере") then
 					os.execute(('explorer.exe "%s"'):format("https://youtu.be/gCtzMFcTtis"))
 				end
 				imgui.NewInputText('##titlecommand5', array.buffer.new_command_title, 480, u8'Название команды (пример: /ok, /dz, /ch)', 2)
-				imgui.InputTextMultiline("##newcommand", array.buffer.new_command, imgui.ImVec2(480, 170))
+				imgui.InputTextMultiline("##newcommand", array.buffer.new_command, imgui.ImVec2(480, 210))
 				if imgui.Button(u8'Добавить аргументы', imgui.ImVec2(480, 24)) then
 					imgui.OpenPopup('settings_command')
 				end
@@ -2550,35 +2547,31 @@ function imgui.OnDrawFrame()
 						array.nakazatreport.oftop = true
 						array.answer.nakajy = true
 					end
-					if imgui.Button(u8'Капс (2)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_2) then
-						array.nakazatreport.capsrep = true
-						array.answer.nakajy = true
-					end
-					if imgui.Button(u8'Оскорбление администрации (3)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_3) then
+					if imgui.Button(u8'Оскорбление администрации (2)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_2) then
 						array.nakazatreport.oskadm = true
 						array.answer.nakajy = true
 					end
-					if imgui.Button(u8'Клевета на администрацию (4)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_4) then
+					if imgui.Button(u8'Клевета на администрацию (3)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_3) then
 						array.nakazatreport.kl = true
 						array.answer.nakajy = true
 					end
-					if imgui.Button(u8'Оск/Упом родных (5)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_5) then
+					if imgui.Button(u8'Оск/Упом родных (4)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_4) then
 						array.nakazatreport.oskrod = true
 						array.answer.nakajy = true
 					end
-					if imgui.Button(u8'Попрошайничество (6)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_6) then
+					if imgui.Button(u8'Попрошайничество (5)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_5) then
 						array.nakazatreport.poprep = true
 						array.answer.nakajy = true
 					end
-					if imgui.Button(u8'Оскорбление/Унижение (7)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_7) then
+					if imgui.Button(u8'Оскорбление/Унижение (6)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_6) then
 						array.nakazatreport.oskrep = true
 						array.answer.nakajy = true
 					end
-					if imgui.Button(u8'Нецензурная лексика (8)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_8) then
+					if imgui.Button(u8'Нецензурная лексика (7)', imgui.ImVec2(250, 25)) or wasKeyPressed(VK_7) then
 						array.nakazatreport.matrep = true
 						array.answer.nakajy = true
 					end
-					if imgui.Button(u8'Розжиг (9)', imgui.ImVec2(250,25)) or wasKeyPressed(VK_9) then
+					if imgui.Button(u8'Розжиг (8)', imgui.ImVec2(250,25)) or wasKeyPressed(VK_8) then
 						array.nakazatreport.rozjig = true
 					end
 					imgui.EndPopup()
@@ -3028,18 +3021,11 @@ function imgui.OnDrawFrame()
 				jail = 'Выдача деморгана',
 				ban = 'Блокировка аккаунта',
 				kick = 'Кикнуть игрока',
-				server = "Серверные команды",
+				server = '(-_-) -_- (-_-)',
 				custom = "Мои команды",
 			}
-			if imgui.CollapsingHeader( u8('Мои команды') ) then
-				for k,v in pairs(cfg.my_command) do
-					local v = string.gsub( v, '_', '[ID]')
-					imgui.Text( u8('/'..k ..' =') ) imgui.SameLine()
-					imgui.TextWrapped( u8(v) )
-				end
-			end
 			for name, _ in pairs(basic_command) do
-				if imgui.CollapsingHeader( u8(command[name]) ) then
+				if name ~= "server" and imgui.CollapsingHeader( u8(command[name]) ) then
 					for k,v in pairs(basic_command[name]) do
 						if not tonumber( string.sub(k, -1) ) then 
 							local v = string.gsub( v, '_', '[ID]')
@@ -3870,14 +3856,13 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			elseif array.answer.slejy then sampSendChat('/re ' .. reportid)
 			elseif array.answer.peredamrep then sampSendChat('/a ' .. autor .. '[' .. autorid .. '] | ' .. textreport)
 			elseif array.answer.nakajy then
-				if not tonumber(autorid) then autorid = autor command = '/rmuteoff '
+				if not tonumber(autorid) or not sampIsPlayerConnected(autorid) then autorid = autor command = '/rmuteoff '
 				else command = '/rmute ' end
 				if array.nakazatreport.oftop then       sampSendChat(command  .. autorid .. ' 120 Оффтоп в /report')
 				elseif array.nakazatreport.oskadm then  sampSendChat(command  .. autorid .. ' 2500 Оскорбление администрации')
 				elseif array.nakazatreport.oskrep then  sampSendChat(command  .. autorid .. ' 400 Оскорбление/Унижение')
 				elseif array.nakazatreport.poprep then  sampSendChat(command  .. autorid .. ' 120 Попрошайничество')
 				elseif array.nakazatreport.oskrod then  sampSendChat(command  .. autorid .. ' 5000 Оскорбление/Упоминание родни')
-				elseif array.nakazatreport.capsrep then sampSendChat(command  .. autorid .. ' 120 Капс в /report')
 				elseif array.nakazatreport.matrep then  sampSendChat(command  .. autorid .. ' 300 Нецензурная лексика')
 				elseif array.nakazatreport.rozjig then  sampSendChat(command  .. autorid .. ' 5000 Розжиг')
 				elseif array.nakazatreport.kl then      sampSendChat(command  .. autorid .. ' 3000 Клевета') end
