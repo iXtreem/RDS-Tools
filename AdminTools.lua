@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 8.9   			 							-- Версия скрипта
+local version = 9   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -96,6 +96,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		render_players_y = sw*0.5 - 150,
 		render_players_size = 10,
 		render_players_count = 10,
+		sound_report = 80,
 	},
 	customotvet = {},
 	myflood = {},
@@ -188,6 +189,7 @@ local array = {
 		render_players			   = imgui.ImBool(cfg.settings.render_players),
 		render_players_size 	   = imgui.ImInt(cfg.settings.render_players_size),
 		render_players_count 	   = imgui.ImInt(cfg.settings.render_players_count),
+		sound_report 			   = imgui.ImInt(cfg.settings.sound_report),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -1145,8 +1147,17 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.SetCursorPosX(250)
 				if imadd.ToggleButton("##NotifyReport", array.checkbox.check_notify_report) then
+					if not cfg.settings.notify_report then imgui.OpenPopup('1') end
 					cfg.settings.notify_report = not cfg.settings.notify_report
 					save()
+				end
+				if imgui.BeginPopup('1') then
+					imgui.Text(u8'Громкость оповещения')
+					if imgui.SliderInt('##sound', array.checkbox.sound_report, 0, 100) then
+						cfg.settings.sound_report = array.checkbox.sound_report.v
+						save()
+					end
+					imgui.EndPopup()
 				end
 				imgui.SameLine()
 				imgui.Text(u8'Уведомление о репорте')
@@ -2801,14 +2812,9 @@ function imgui.OnDrawFrame()
 			end
 			imgui.SameLine()
 			if (imgui.Button(u8'Обновить') or (wasKeyPressed(VK_R)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
-				sampSendChat('/re '..control_player_recon)
 				printStyledString('~n~~w~update...', 200, 4)
-				if cfg.settings.keysync then
-					lua_thread.create(function()
-						wait(1000)
-						keysync(control_player_recon)
-					end)
-				end
+				sampSendClickTextdraw(array.textdraw.refresh)
+				keysync(control_player_recon)
 			end
 			imgui.Tooltip('R')
 			if wasKeyPressed(VK_RBUTTON) and not (sampIsChatInputActive() or sampIsDialogActive()) then
@@ -2940,36 +2946,43 @@ function imgui.OnDrawFrame()
 			copies_player_recon = nil
 			array.windows.answer_player_report.v = false
 		end
+		imgui.Tooltip('/n ' .. copies_player_recon)
 		if imgui.Button(u8'Данный игрок чист (2)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_2) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
 			sampProcessChatInput('/cl ' .. copies_player_recon)
 			copies_player_recon = nil
 			array.windows.answer_player_report.v = false
 		end
+		imgui.Tooltip('/cl ' .. copies_player_recon)
 		if imgui.Button(u8'Игрок наказан. (3)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_3) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
 			sampProcessChatInput('/nak ' .. copies_player_recon)
 			copies_player_recon = nil
 			array.windows.answer_player_report.v = false
 		end
+		imgui.Tooltip('/nak ' .. copies_player_recon)
 		if imgui.Button(u8'Помогли вам. (4)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_4) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
 			sampProcessChatInput('/pmv ' .. copies_player_recon)
 			copies_player_recon = nil
 			array.windows.answer_player_report.v = false
 		end
+		imgui.Tooltip('/pmv ' .. copies_player_recon)
 		if imgui.Button(u8'Игрок AFK (5)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_5) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
 			sampProcessChatInput('/afk ' .. copies_player_recon)
 			copies_player_recon = nil
 			array.windows.answer_player_report.v = false
 		end
+		imgui.Tooltip('/afk ' .. copies_player_recon)
 		if imgui.Button(u8'Игрок не в сети (6)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_6) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
 			sampProcessChatInput('/nv ' .. copies_player_recon)
 			copies_player_recon = nil
 			array.windows.answer_player_report.v = false
 		end
+		imgui.Tooltip('/nv ' .. copies_player_recon)
 		if imgui.Button(u8'Это донат-преимущества (7)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_7) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
 			sampProcessChatInput('/dpr ' .. copies_player_recon)
 			copies_player_recon = nil
 			array.windows.answer_player_report.v = false
 		end
+		imgui.Tooltip('/dpr ' .. copies_player_recon)
 		if (wasKeyPressed(VK_RBUTTON) or wasKeyPressed(VK_F)) and not (sampIsChatInputActive() or sampIsDialogActive()) then
 			if sampIsCursorActive() then showCursor(false,false)
 			else showCursor(true,false) end
@@ -3021,7 +3034,7 @@ function imgui.OnDrawFrame()
 				jail = 'Выдача деморгана',
 				ban = 'Блокировка аккаунта',
 				kick = 'Кикнуть игрока',
-				server = '(-_-) -_- (-_-)',
+				server = "amogus babous",
 				custom = "Мои команды",
 			}
 			for name, _ in pairs(basic_command) do
@@ -3243,7 +3256,6 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 	if string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' and not sampIsDialogActive() then
 		if ( command:match('mute (.+) (.+) (.+)') or command:match('muteakk (.+) (.+) (.+)') or command:match('muteoff (.+) (.+) (.+)')) then
 			back_punishment(6)
-
 			if cfg.settings.forma_na_mute then
 				printStyledString('send forms ...', 1000, 4)
 				if cfg.settings.add_mynick_in_form then
@@ -3298,7 +3310,7 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 end
 
 function sampev.onServerMessage(color,text) -- Получение сообщений из чата
-	log( '{'..('%X'):format(color):sub(9, 14)..'}'..text)
+	log( '{'..('%x'):format(color):sub(9, 14)..'}'..text)
 	if cfg.settings.render_admins and (text:match('Время администратирования за сегодня:') or text:match('Ваша репутация:') or text:match('Всего администрации в сети:')) then
 		return false
 	elseif text:match("(.+)%((%d+)%) пытался написать в чат: .+") then
@@ -3919,7 +3931,7 @@ function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране
 				printStyledString('~n~~p~REPORT ++', 1500, 4)
 				local audio = loadAudioStream("moonloader/resource/report.mp3")
 				setAudioStreamState(audio, 1)
-				setAudioStreamVolume(audio, 100)
+				setAudioStreamVolume(audio, cfg.settings.sound_report) -- проигрывание и громкость звука
 			end
 		end
 		return false
@@ -3970,7 +3982,7 @@ function wait_accept_form()
 			if not (sampIsChatInputActive() or sampIsDialogActive()) then
 				if wasKeyPressed(VK_U) or cfg.settings.autoaccept_form then
 					if sampIsPlayerConnected(array.admin_form.idadmin) and array.admin_form.forma~=nil then
-						if not (array.admin_form.forma):match('kick') and not (array.admin_form.forma):match('off') and not (array.admin_form.forma):match('akk') and not ((array.admin_form.forma):match('unban')) then
+						if not (array.admin_form.forma):match('kick') and not (array.admin_form.forma):match('off') and not (array.admin_form.forma):match('akk') and not (array.admin_form.forma):match('unban') then
 							local _, id, sec, prichina = (array.admin_form.forma):match('(.+) (.+) (.+) (.+)')
 							if not (tonumber(id) or tonumber(sec) or prichina) then
 								sampSendChat('/a АТ - Отказано.')
@@ -4146,7 +4158,7 @@ function input_helper()
 			if getCurrentLanguageName() == '00000419' then raskl = 'RU'
 			else raskl = 'EN' end
 
-			local text = ("Ваш ник: "..cfg.settings.color_chat..name.."["..pID.."]{ffffff}, Ваш пинг: "..cfg.settings.color_chat..ping.."{ffffff}, Раскладка: "..cfg.settings.color_chat..raskl.."{ffffff}, Capslock: "..cfg.settings.color_chat..caps)
+			local text = ("Ваш ник: "..cfg.settings.color_chat..name.."["..pID.."]{ffffff}, Ваш пинг: "..cfg.settings.color_chat..ping.."{ffffff}, Раскладка: "..cfg.settings.color_chat..raskl.."{ffffff}, CapsLock: "..cfg.settings.color_chat..caps)
 			local count = 0
 			if cfg.settings.active_chat then
 				local mouseX, mouseY = getCursorPos()
@@ -4154,8 +4166,8 @@ function input_helper()
 					local getInput = "/"..string.rlower(string.gsub(getInput,"%p", ""))
 					for name_razdel, razdel in pairs(basic_command) do
 						for name, command in pairs(razdel) do
-							if (string.sub(getInput, 1,1) == "/" and name:match(getInput) and not tonumber(string.sub(command, -1))) or getInput:match(name) or (string.rlower(string.gsub(command, "_", "(%d+)")):match( string.rlower(string.gsub(sampGetChatInputText(), "%p", ""))  ) and not tonumber(string.sub(command, -1))) then
-								if name:match(getInput.. " ") or getInput:match(name.." ") or name == getInput then
+							if (getInput:match(name) or name:match(getInput) or (string.gsub(command, "_", "(%d+)"):match( getInput ) )) and not tonumber(string.sub(command, -1)) then
+								if getInput:match(name.." ") then
 									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
 								elseif (sampIsCursorActive() and mouseX < in2+705  and mouseY > in3 + 55 + (count*6) and mouseY<(in3 + 90 + (count*6))) then
 									if wasKeyPressed(VK_LBUTTON) then
@@ -4165,12 +4177,19 @@ function input_helper()
 												sampSetChatInputEnabled(true)
 											end
 										end)
-									end  
+									end
 								else renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, 0x88000000) end
 								if names_command[name_razdel] then
 									renderFontDrawText(font_chat, "{A9A9A9}-f", 720, in3 + 60 + (count*6) , -1)
 								end
-								renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "ID"), in2 + 10, in3 + 60 + (count*6) , -1)
+								local id = string.gsub(getInput, name, '')
+								if tonumber(id) and sampIsPlayerConnected(id) then
+									local clr = '{'..string.format("%x", sampGetPlayerColor(id)) ..'}'
+									if #clr~=10 or clr == "{ffffffff}" then clr = cfg.settings.color_chat end
+									renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", clr..sampGetPlayerNickname(id) .. '{FFFFFF}'), in2 + 10, in3 + 60 + (count*6) , -1)
+								else
+									renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "ID"), in2 + 10, in3 + 60 + (count*6) , -1)
+								end
 								count = count + 5
 								if count > 11 then break end -- не более 3-ех подсказок
 							end 
@@ -4418,7 +4437,7 @@ function vision_form()
 				cfg.settings.forma_na_mute = not cfg.settings.forma_na_mute
 			else 
 				cfg.settings.forma_na_mute = false
-				array.checkbox.check_form_mute = imgui.ImBool(cfg.settings.forma_na_mute)
+				array.checkbox.check_form_mute.v = false
 				sampAddChatMessage(tag .. 'У вас включен автомут, во избежания фарма данные опции совместно запрещены.', -1)
 			end
 			save()
