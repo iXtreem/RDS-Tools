@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9   			 							-- Версия скрипта
+local version = 9.1   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -2939,6 +2939,7 @@ function imgui.OnDrawFrame()
 		imgui.SetNextWindowPos(imgui.ImVec2(sw-250, 0), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8"Помощь после выхода из рекона", array.windows.answer_player_report.v, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
+		if wasKeyPressed(VK_ESCAPE) or not copies_player_recon then copies_player_recon = nil  array.windows.answer_player_report.v = false end
 		imgui.CenterText(u8'Вы закончили слежку по репорту')
 		imgui.CenterText(u8'Доложить информацию?')
 		if imgui.Button(u8'Нарушений не наблюдаю (1)', imgui.ImVec2(250, 25)) or (wasKeyPressed(VK_1) and not (sampIsChatInputActive() or sampIsDialogActive())) then
@@ -2990,7 +2991,6 @@ function imgui.OnDrawFrame()
 		imgui.CenterText(u8'Нажми нужную клавишу, либо курсором')
 		imgui.CenterText(u8'Активация курсора: ПКМ или F')
 		imgui.CenterText(u8'Меню активно 5 секунд.')
-		if wasKeyPressed(VK_ESCAPE) then copies_player_recon = nil  array.windows.answer_player_report.v = false end
 		imgui.End()
 	end
 	if array.windows.render_admins.v then -- рендер админов
