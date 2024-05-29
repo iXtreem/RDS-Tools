@@ -1,4 +1,4 @@
-
+local inicfg = require("inicfg")
 local vk = require('VK_API')
 local token = --[[Токен группы VK]]"vk1.a.CeLIzK9OTcpIzmnlvUPNaBk-f8PVBBjBIKYMgOvci7RAq-hi9up1REVQC_T77bW71PpOdeijhTk3k4F1_-9XckYBiAMGiJzlLV3xCR0JI5_sWGi96om1qPLPFRyGFeWVILb1d7Jw8GLIHk_WhfwAydb9070C_vx2fNt0RygHMob7AGRhfHgQanNho6ox7tN-LZuSU7E93WH9scneUzbM1w"
 local ID = "508415544"	-- ID VK кому отправлять
@@ -10,12 +10,21 @@ local scripts = { -- скрипты которые проверяем
     'AT_FastSpawn',
 	'AdminToolsPlus',
 }
+local version_AT = inicfg.load({settings={version=0}}, 'moonloader\\config\\AT\\AT_main.ini').settings.version
+local actual_version = inicfg.load({script={version=0}}, 'moonloader\\config\\AT\\AdminTools.ini').script.version
+local txt = "На данный момент у вас установлена актуальная версия " .. version_AT .. ". Просим прощения за предоставленные неудобства"
+if tonumber(version_AT) < tonumber( actual_version) then
+    txt = "На данный момент у вас установлена устаревшая версия скрипта " .. version_AT .. ". Настоятельно рекомендуем обновиться до актуальной версии "..actual_version
+end
+if version_AT == 0 or actual_version == 0 then
+    txt = "Версии скрипта сравнить не удалось, полученные данные: " ..version_AT.. ' - '..actual_version
+end
 function onSystemMessage(msg, type, script)
 	for i = 1, #scripts do
         if msg:find(scripts[i]..'%.lua?:%d+:') then
             lua_thread.create(function()
                 while sampIsDialogActive() do wait(200) end
-                sampShowDialog(252, '{FFFFFF}Кажется, что-то пошло не так ...', 'В скрипте {7B68EE}' .. scripts[i] .. ' {ffffff}произошла ошибка, вследствии чего все скрипты будут перезагружены.\nКод ошибки:\n\n'..msg..'\n\nНажмите Enter, чтобы отправить отчет об ошибке, или Escape для иного выбора', 'reload', 'send report', 0)
+                sampShowDialog(252, '{FFFFFF}Кажется, что-то пошло не так ...', 'В скрипте {7B68EE}' .. scripts[i] .. ' {ffffff}произошла ошибка, вследствии чего все скрипты будут перезагружены.\n' .. txt.. '\n\nКод ошибки:\n'..msg..'\n\nНажмите Enter, чтобы отправить отчет об ошибке, или Escape для иного выбора', 'reload', 'send report', 0)
                 while sampIsDialogActive(252) do wait(500) end
                 local _, button, _, _ = sampHasDialogRespond(252)
                 if button == 0 then
@@ -36,7 +45,7 @@ function onSystemMessage(msg, type, script)
 
                       
                         vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
-                        vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua'.. '\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
+                        vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua ['..version_AT .. ']\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
                         sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
                     end
                     if button ~= 3 then
@@ -52,7 +61,7 @@ function onSystemMessage(msg, type, script)
 
                     local add_text = 'Отсутствуют.'
                     vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
-                    vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua'.. '\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
+                    vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua ['..version_AT .. ']\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
                     sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
                     wait(2000)
                     reloadScripts()
