@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9.1   			 							-- Версия скрипта
+local version = 9.2   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -16,6 +16,7 @@ end
 
 local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутствует
 	settings = {
+		version = version,
 		style = 0,
 		autoonline = false,
 		inputhelper = true,
@@ -392,10 +393,10 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 	server = {},
 	custom = {},
 }
-
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
 	while not isSampAvailable() do wait(3000) end
+	cfg.settings.version = version
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -1023,9 +1024,11 @@ function imgui.OnDrawFrame()
 				if imadd.ToggleButton("##autoonline", array.checkbox.check_autoonline) then
 					cfg.settings.autoonline = not cfg.settings.autoonline
 					save()
-					if not cfg.settings.autoonline then
-						func:terminate()
-					else func:run() end
+					if func then
+						if not cfg.settings.autoonline then
+							func:terminate()
+						else func:run() end
+					else sampAddChatMessage(tag .. 'Что-то пошло не так, поток не обнаружен... Попробуйте перезагрузить скрипт.', -1) end
 				end
 				imgui.SameLine()
 				imgui.Text(u8'Авто-Выдача за онлайн')
@@ -1039,7 +1042,9 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.Text(u8'Перевод команд')
 				if imadd.ToggleButton("##WallHack", array.checkbox.check_WallHack) then
-					if cfg.settings.wallhack then off_wallhack() func1:terminate() else on_wallhack() func1:run() end
+					if func1 then
+						if cfg.settings.wallhack then off_wallhack() func1:terminate() else on_wallhack() func1:run() end
+					else sampAddChatMessage(tag .. 'Что-то пошло не так, поток не обнаружен... Попробуйте перезагрузить скрипт.', -1) end
 					cfg.settings.wallhack = not cfg.settings.wallhack
 					save()
 				end
@@ -2939,51 +2944,27 @@ function imgui.OnDrawFrame()
 		imgui.SetNextWindowPos(imgui.ImVec2(sw-250, 0), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.Begin(u8"Помощь после выхода из рекона", array.windows.answer_player_report.v, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
-		if wasKeyPressed(VK_ESCAPE) or not copies_player_recon then copies_player_recon = nil  array.windows.answer_player_report.v = false end
+		if wasKeyPressed(VK_ESCAPE) then array.windows.answer_player_report.v = false copies_player_recon = nil end
 		imgui.CenterText(u8'Вы закончили слежку по репорту')
 		imgui.CenterText(u8'Доложить информацию?')
-		if imgui.Button(u8'Нарушений не наблюдаю (1)', imgui.ImVec2(250, 25)) or (wasKeyPressed(VK_1) and not (sampIsChatInputActive() or sampIsDialogActive())) then
-			sampProcessChatInput('/n ' .. copies_player_recon)
-			copies_player_recon = nil
-			array.windows.answer_player_report.v = false
+
+		local func = function(name, key, command)
+			if imgui.Button(u8(name), imgui.ImVec2(250, 25)) or (wasKeyPressed(key) and not (sampIsChatInputActive() or sampIsDialogActive())) then
+				sampProcessChatInput(command .. ' ' .. copies_player_recon)
+				copies_player_recon = nil
+				array.windows.answer_player_report.v = false
+			end
+			if copies_player_recon then imgui.Tooltip(command .. ' ' .. copies_player_recon) end
 		end
-		imgui.Tooltip('/n ' .. copies_player_recon)
-		if imgui.Button(u8'Данный игрок чист (2)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_2) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampProcessChatInput('/cl ' .. copies_player_recon)
-			copies_player_recon = nil
-			array.windows.answer_player_report.v = false
-		end
-		imgui.Tooltip('/cl ' .. copies_player_recon)
-		if imgui.Button(u8'Игрок наказан. (3)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_3) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampProcessChatInput('/nak ' .. copies_player_recon)
-			copies_player_recon = nil
-			array.windows.answer_player_report.v = false
-		end
-		imgui.Tooltip('/nak ' .. copies_player_recon)
-		if imgui.Button(u8'Помогли вам. (4)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_4) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampProcessChatInput('/pmv ' .. copies_player_recon)
-			copies_player_recon = nil
-			array.windows.answer_player_report.v = false
-		end
-		imgui.Tooltip('/pmv ' .. copies_player_recon)
-		if imgui.Button(u8'Игрок AFK (5)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_5) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampProcessChatInput('/afk ' .. copies_player_recon)
-			copies_player_recon = nil
-			array.windows.answer_player_report.v = false
-		end
-		imgui.Tooltip('/afk ' .. copies_player_recon)
-		if imgui.Button(u8'Игрок не в сети (6)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_6) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampProcessChatInput('/nv ' .. copies_player_recon)
-			copies_player_recon = nil
-			array.windows.answer_player_report.v = false
-		end
-		imgui.Tooltip('/nv ' .. copies_player_recon)
-		if imgui.Button(u8'Это донат-преимущества (7)', imgui.ImVec2(250,25)) or (wasKeyPressed(VK_7) and not (sampIsChatInputActive() or sampIsDialogActive()))  then
-			sampProcessChatInput('/dpr ' .. copies_player_recon)
-			copies_player_recon = nil
-			array.windows.answer_player_report.v = false
-		end
-		imgui.Tooltip('/dpr ' .. copies_player_recon)
+
+		func('Нарушений не наблюдаю (1)', VK_1, '/n')
+		func('Данный игрок чист (2)', VK_2, '/cl')
+		func('Игрок наказан. (3)', VK_3, '/nak')
+		func('Помогли вам. (4)', VK_4, '/pmv')
+		func('Игрок AFK (5)', VK_5, '/afk')
+		func('Игрок не в сети (6)', VK_6, '/nv')
+		func('Это донат-преимущества (7)', VK_7, '/dpr')
+
 		if (wasKeyPressed(VK_RBUTTON) or wasKeyPressed(VK_F)) and not (sampIsChatInputActive() or sampIsDialogActive()) then
 			if sampIsCursorActive() then showCursor(false,false)
 			else showCursor(true,false) end
