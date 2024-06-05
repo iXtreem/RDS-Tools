@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9.2   			 							-- Версия скрипта
+local version = 9.3   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -69,7 +69,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		autoaccept_form = false,
 		bloknotik = '',
 		chat_log = true,
-		control_afk = false,
+		control_afk = 60,
 		vision_form = true,
 		color_chat = '{0088ff}',
 		active_chat = true,
@@ -397,6 +397,7 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 function main()
 	while not isSampAvailable() do wait(3000) end
 	cfg.settings.version = version
+
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -550,27 +551,24 @@ function main()
 		funcadm:run() 
 	end
 
+
+
 	if cfg.settings.render_players then
 		lua_thread.create(function()
 			sampev.onPlayerJoin = function(id, color, npc, nick)
-				if not AFK and npc == false then
-					lua_thread.create(function()
-						wait(100)
-						if sampIsPlayerConnected(id) then
-							local text = '{DCDCDC}'..sampGetPlayerNickname(id)..'['..id..'] ({228B22}Подключился{DCDCDC})'
-							if #array.render_players == cfg.settings.render_players_count then
-								for i = 0, #array.render_players do
-									if i ~= #array.render_players then array.render_players[i] = array.render_players[i + 1]
-									else array.render_players[#array.render_players] = text end
-								end
-							else array.render_players[#array.render_players + 1] = text end
+				if npc == false then
+					local text = '{DCDCDC}'..nick..'['..id..'] ({228B22}Подключился{DCDCDC})'
+					if #array.render_players == cfg.settings.render_players_count then
+						for i = 0, #array.render_players do
+							if i ~= #array.render_players then array.render_players[i] = array.render_players[i + 1]
+							else array.render_players[#array.render_players] = text end
 						end
-					end)
+					else array.render_players[#array.render_players + 1] = text end
 				end
 			end
 			sampev.onPlayerQuit = function(id, reason)
-				if not AFK and sampIsPlayerConnected(id) then
-					local text = '{DCDCDC}'..sampGetPlayerNickname(id)..' ({FF0000}Отключился{DCDCDC})'
+				if sampIsPlayerConnected(id) then
+					local text = '{DCDCDC}'..sampGetPlayerNickname(id)..'['..id..'] ({FF0000}Отключился{DCDCDC})'
 					if #array.render_players == cfg.settings.render_players_count then
 						for i = 0, #array.render_players do
 							if i ~= #array.render_players then array.render_players[i] = array.render_players[i + 1]
@@ -601,11 +599,10 @@ function main()
 	while true do
 
 		if not AFK then
-			-- рендер чатов 
-			local mouseX, mouseY = getCursorPos() 
+
 			for i = 1, #array.adminchat do
 				local coordinateX, coordinateY = cfg.settings.position_adminchat_x, cfg.settings.position_adminchat_y + (i*15)
-				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+400)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
+				if (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 					renderFontDrawText(font_adminchat, array.adminchat[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_adminchat, array.adminchat_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
@@ -613,12 +610,13 @@ function main()
 			end
 			for i = 1, #array.ears do
 				local coordinateX, coordinateY = cfg.settings.position_ears_x, cfg.settings.position_ears_y + (i*15)
-				if (sampIsCursorActive() and (mouseX > coordinateX and not (mouseX > coordinateX+200)) and (math.abs(mouseY - coordinateY) < 20)) or (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
+				if (isKeyDown(strToIdKeys(cfg.settings.key_automute)) and not (sampIsChatInputActive() or sampIsDialogActive())) then
 					renderFontDrawText(font_earschat, array.ears[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				else
 					renderFontDrawText(font_earschat, array.ears_minimal[i], coordinateX, coordinateY, 0xCCFFFFFF)
 				end
 			end
+
 		end
 		renderFontDrawText(font_watermark, tag..'{808080}version['..version..']', 10, sh-20, 0xCCFFFFFF)
 		wait(1) -- задержка
@@ -980,10 +978,8 @@ sampRegisterChatCommand('ears', function()
 		array.ears = {}
 		array.ears_minimal = {}
 		array.checkbox.check_render_ears.v = false
-		print('Сканирование ЛС успешно активировано.', -1)
 	else
 		array.checkbox.check_render_ears.v = true
-		print('Сканирование ЛС успешно активировано.', -1)
 	end
 end)
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
@@ -2520,11 +2516,17 @@ function imgui.OnDrawFrame()
 			end
 			imgui.Tooltip('Enter')
 			imgui.Separator()
-			if #(array.buffer.text_ans.v) > 4 then
+			local count = #(array.buffer.text_ans.v)
+			if count > 4 then
 				if imgui.Checkbox(u8"При нажатии на Enter отправить сохраненный ответ", array.checkbox.button_enter_in_report) then
 					cfg.settings.enter_report = not cfg.settings.enter_report
 					save()
 				end
+				imgui.SameLine()
+				imgui.SetCursorPosX(460)
+				if count > 79 then
+					imgui.TextColoredRGB("{ff0000}"..#array.buffer.text_ans.v..'{ffffff}/80')
+				else imgui.TextColoredRGB("{ffffff}"..#array.buffer.text_ans.v..'/80') end
 				for k,v in pairs(cfg.customotvet) do
 					if string.rlower(string.gsub(v, '%p', '')):find(string.rlower(string.gsub(u8:decode(array.buffer.text_ans.v), '%p', ''))) or string.rlower(string.gsub(v, '%p', '')):find(translateText(string.rlower(string.gsub(u8:decode(array.buffer.text_ans.v), '%p', '')))) then
 						if imgui.Button(u8(v), imgui.ImVec2(imgui.GetWindowWidth()-18, 24)) or (wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
@@ -3624,6 +3626,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		sampSendDialogResponse(dialogId, 1, 0)
 		lua_thread.create(function()
 			array.admins = textSplit(text, '\n')
+			rang, myid, id = nil, nil, nil
 			local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
 			array.admins[#array.admins] = nil -- последний пункт диалога пустой
 			for i = 1, #array.admins do
@@ -3640,9 +3643,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					rang = 'Отсутствует'
 				end
 				if cfg.settings.autoprefix then
-					local color1, name,color2 = string.match(rang, '{%w%w%w%w%w%w}(.+){%w%w%w%w%w%w}')
-					if name then
-						rang = '{'..color1..'}' .. name
+					if rang ~= 'Отсутствует' then 
+						rang, _ = rang:match("(.+){%w%w%w%w%w%w}")
 					end
 					local lvl, id = tonumber(lvl), tonumber(id)
 					if id ~= myid and autoprefix_access and lvl then
@@ -3651,24 +3653,16 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixma .. '}Мл.Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Мл.Администратор ' .. cfg.settings.prefixma)
 							wait(10000)
-							sampSendChat('/admins')
-							sampAddChatMessage('Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Мл.Администратор.',-1)
 						elseif (lvl > 11 and lvl < 15) and rang ~= '{'..cfg.settings.prefixa..'}Администратор' then
-							wait(5000)
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' ..cfg.settings.prefixa..'}Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Администратор ' .. cfg.settings.prefixa)
-							wait(3000)
-							sampSendChat('/admins')
-							sampAddChatMessage('Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Администратор.',-1)
+							wait(10000)
 						elseif (lvl > 16 and lvl < 18) and rang ~= '{'..cfg.settings.prefixsa..'}Ст.Администратор' then
-							wait(5000)
 							sampAddChatMessage(tag .. 'У администратора ' .. sampGetPlayerNickname(id) .. ' обнаружен неверный префикс.', -1)
 							sampAddChatMessage(tag .. 'Произвожу замену: ' .. rang .. ' -> {' .. cfg.settings.prefixsa..'}Ст.Администратор', -1)
 							sampSendChat('/prefix ' .. id .. ' Ст.Администратор ' .. cfg.settings.prefixsa)
-							wait(3000)
-							sampSendChat('/admins')
-							sampAddChatMessage('Администратор '..sampGetPlayerNickname(id)..'['..id ..']\nБыл установлен новый префикс.\n' .. rang .. '-> Ст.Администратор.',-1)
+							wait(10000)
 						end
 					elseif lvl == 18 and rang ~= 'Ст.Администратор' and not autoprefix_access then
 						autoprefix_access = true
@@ -3819,7 +3813,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			end
 		end
 		if peremrep then
-			if #(peremrep) > 80 then
+			if #(peremrep) > 79 then
 				sampAddChatMessage(tag .. '{FFFFFF}Ваш ответ оказался слишком длинный {ff0000}' .. #peremrep..'{FFFFFF}/80 символов, попробуйте сократить текст.',-1)
 				peremrep = nil
 				lua_thread.create(function()
@@ -3827,13 +3821,14 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 					sampCloseCurrentDialogWithButton(0)
 				end)
 			else
-				if cfg.settings.add_answer_report and (#peremrep + #(cfg.settings.mytextreport)) < 80 then peremrep = (peremrep ..('{'..color()..'} '..cfg.settings.mytextreport)) end
-				if cfg.settings.addBeginText and (#peremrep + #(array.buffer.custom_addtext_report.v)) < 80 then peremrep = addBeginText().. peremrep end
-				if cfg.settings.color_report and (#peremrep + 8) < 80 then
+				if cfg.settings.add_answer_report and ((#peremrep + #(cfg.settings.mytextreport)) < 80) then peremrep = (peremrep ..('{'..color()..'} '..cfg.settings.mytextreport)) end
+				local BeginText = addBeginText()
+				if cfg.settings.addBeginText and ((#peremrep + #BeginText) < 80) then peremrep = BeginText.. peremrep end
+				if cfg.settings.color_report and ((#peremrep + 8) < 80) then
 					if cfg.settings.color_report == '*' then peremrep = ('{'..color()..'}' .. peremrep)
 					else peremrep = (cfg.settings.color_report .. peremrep) end
 				end
-				if #peremrep < 4 then peremrep = peremrep .. '       ' end			
+				if #peremrep < 4 then peremrep = peremrep .. '    ' end			
 				if cfg.settings.custom_answer_save and array.answer.moiotvet then cfg.customotvet[ #cfg.customotvet + 1 ] = u8:decode(array.buffer.text_ans.v) save() end	
 				sampSendDialogResponse(dialogId, 1, 0)
 				sampCloseCurrentDialogWithButton(0)
@@ -4510,6 +4505,7 @@ function addBeginText()
 		return ( text[math.random(1,#text)] .. " " )
 	end
 end
+
 --------=================== Подпись ID в килл-чате =============------------------------
 ffi.cdef[[
 	short GetKeyState(int nVirtKey);
