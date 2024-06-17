@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9.3   			 							-- Версия скрипта
+local version = 9.4   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -191,6 +191,7 @@ local array = {
 		render_players_size 	   = imgui.ImInt(cfg.settings.render_players_size),
 		render_players_count 	   = imgui.ImInt(cfg.settings.render_players_count),
 		sound_report 			   = imgui.ImInt(cfg.settings.sound_report),
+		color_report			   = imgui.ImBool(false),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -587,7 +588,6 @@ function main()
 		end)
 	end
 
-
 	if cfg.settings.save_radar then mem.write(sampGetBase() + 643864, 37008, 2, true) end
 
 	mem.write(0x747FB6, 0x1, 1, true) -- [[ AntiAFK Script in GameOver ]]
@@ -982,15 +982,21 @@ sampRegisterChatCommand('ears', function()
 		array.checkbox.check_render_ears.v = true
 	end
 end)
+
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
 	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
 		showCursor(false,false)
-		if cfg.settings.render_admins then 	array.windows.render_admins.v = true
-		else imgui.Process = false end
+		imgui.Process = false
+	end
+	if array.windows.render_admins.v then -- рендер админов
+		imgui.ShowCursor = false
+		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.render_admins_positionX, cfg.settings.render_admins_positionY))
+		imgui.Begin('##render_admins.', array.windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
+		for i = 1, #array.admins do imgui.TextColoredRGB(array.admins[i]) end
+        imgui.End()
 	end
 	if array.windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
-		array.windows.render_admins.v = false
 		imgui.ShowCursor = true
 		if wasKeyPressed(VK_ESCAPE) then array.windows.menu_tools.v = false end
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
@@ -1169,41 +1175,6 @@ function imgui.OnDrawFrame()
 				imgui.SameLine()
 				imgui.Text(u8'Ответ на репорт')
 				imgui.SameLine()
-				imgui.SetCursorPosX(190)
-				if imgui.Button(fa.ICON_COG.."##aa", imgui.ImVec2(21,21)) then
-					 imgui.OpenPopup('option_ans')
-				end
-				if imgui.BeginPopup('option_ans') then
-					if imgui.Button(u8'Назначить цвет репорта', imgui.ImVec2(300,24)) then
-						if not html_color then
-							html_color = {}
-							local file_color = io.open('moonloader\\' .. "\\resource\\skin\\color.txt","r")
-							if file_color then for line in file_color:lines() do html_color[#html_color + 1] = u8:decode(line);end file_color:close() end
-						end
-						imgui.OpenPopup('color')
-						sampAddChatMessage(tag .. 'Подсказка, /color_report *', -1)
-						sampAddChatMessage(tag .. 'Делает цвет ответа разноцветным.', -1)
-					end
-					if imgui.BeginPopup('color') then
-						for i = 1, 256 do 
-							imgui.TextColoredRGB(u8(html_color[i]))
-							if imgui.IsItemClicked(0) then
-								local color = '{'..string.sub(string.sub(html_color[i], 1, 7), 2)..'}'
-								cfg.settings.color_report = color
-								save()
-								sampAddChatMessage(tag .. color ..'Новый цвет', -1)
-							end
-							if i%8~=0 then imgui.SameLine() end 
-						end
-						imgui.EndPopup()
-					end
-					if cfg.settings.color_report and imgui.Button(u8'Удалить цвет репорта', imgui.ImVec2(300,24)) then
-						cfg.settings.color_report = nil
-						save()
-					end
-					imgui.EndPopup()
-				end
-				imgui.SameLine()
 				imgui.SetCursorPosX(250)
 				if imadd.ToggleButton("##weaponhack", array.checkbox.check_weapon_hack) then
 					cfg.settings.weapon_hack = not cfg.settings.weapon_hack
@@ -1345,7 +1316,7 @@ function imgui.OnDrawFrame()
 				imgui.Text(u8'Кастом рекон меню')
 				imgui.SameLine()
 				imgui.SetCursorPosX(435)
-				if imgui.Button(fa.ICON_COG..'##5') then imgui.OpenPopup('settings_recon') end
+				if imgui.Button(fa.ICON_COG..'##5', imgui.ImVec2(21,23)) then imgui.OpenPopup('settings_recon') end
 				if imgui.BeginPopup('settings_recon') then
 					imgui.Text(u8'Сохранять радар в реконе') 
 					imgui.SameLine()
@@ -1449,7 +1420,7 @@ function imgui.OnDrawFrame()
 				imgui.Text(u8'Нижний текст') 
 				imgui.SameLine()
 				imgui.SetCursorPosX(190)
-				if imgui.Button(fa.ICON_COG..'##5s', imgui.ImVec2(21,21)) and cfg.settings.timetext then imgui.OpenPopup('text') end
+				if imgui.Button(fa.ICON_COG..'##5s', imgui.ImVec2(21,23)) and cfg.settings.timetext then imgui.OpenPopup('text') end
 				if imgui.BeginPopup('text') then
 					imgui.Text(u8'Текст вместо времени по умолчанию:')
 					if imgui.InputText("##text", array.buffer.customtimetext) then
@@ -2010,7 +1981,7 @@ function imgui.OnDrawFrame()
 					sampSendChat('/mess 3 --------===================| Набор на пост администратора |================-----------')
 					sampSendChat('/mess 2 Мечтал встать на пост администратора? Чистить сервер от читеров и нарушителей?')
 					sampSendChat('/mess 2 Всё это возможно и совершенно бесплатно <3')
-					sampSendChat('/mess 2 На нашем форуме https://forumrds.ru/ открыт набор, успей подать заявку, кол-во мест ограничено.')
+					sampSendChat('/mess 2 На нашем форуме https://forumrds.ru/ открыт набор, успей подать заявку.')
 					sampSendChat('/mess 3 --------===================| Набор на пост администратора |================-----------')
 				end
 				imgui.SameLine()
@@ -2516,17 +2487,11 @@ function imgui.OnDrawFrame()
 			end
 			imgui.Tooltip('Enter')
 			imgui.Separator()
-			local count = #(array.buffer.text_ans.v)
-			if count > 4 then
+			if #(array.buffer.text_ans.v) > 4 then
 				if imgui.Checkbox(u8"При нажатии на Enter отправить сохраненный ответ", array.checkbox.button_enter_in_report) then
 					cfg.settings.enter_report = not cfg.settings.enter_report
 					save()
 				end
-				imgui.SameLine()
-				imgui.SetCursorPosX(460)
-				if count > 79 then
-					imgui.TextColoredRGB("{ff0000}"..#array.buffer.text_ans.v..'{ffffff}/80')
-				else imgui.TextColoredRGB("{ffffff}"..#array.buffer.text_ans.v..'/80') end
 				for k,v in pairs(cfg.customotvet) do
 					if string.rlower(string.gsub(v, '%p', '')):find(string.rlower(string.gsub(u8:decode(array.buffer.text_ans.v), '%p', ''))) or string.rlower(string.gsub(v, '%p', '')):find(translateText(string.rlower(string.gsub(u8:decode(array.buffer.text_ans.v), '%p', '')))) then
 						if imgui.Button(u8(v), imgui.ImVec2(imgui.GetWindowWidth()-18, 24)) or (wasKeyPressed(VK_RETURN) and not sampIsChatInputActive()) then
@@ -2643,6 +2608,45 @@ function imgui.OnDrawFrame()
 			imgui.Tooltip(u8'Добавляет текст к концу вашего ответу\nНе сработает, если кол-во символов в ответе превысит максимум\nТекст на данный момент:\n' .. u8(cfg.settings.mytextreport))
 			imgui.SameLine()
 			imgui.Text(u8'Сохранить данный ответ в базу данных скрипта ' .. fa.ICON_DATABASE)
+			if imadd.ToggleButton(u8'##Другой цвет ответа', array.checkbox.color_report) then
+				if not array.checkbox.color_report.v then
+					array.checkbox.color_report.v = false
+					cfg.settings.color_report = nil 
+					save() 
+				else
+					if not html_color then
+						html_color = {}
+						local file_color = io.open('moonloader\\' .. "\\resource\\skin\\color.txt","r")
+						if file_color then for line in file_color:lines() do html_color[#html_color + 1] = u8:decode(line);end file_color:close() end
+					end
+					imgui.OpenPopup('color')
+				end
+			end
+			imgui.SameLine()
+			imgui.Text(u8'Другой цвет репорта  ' .. fa.ICON_PENCIL)
+
+			if imgui.BeginPopup('color') then
+				imgui.TextColoredRGB(("{A9A9A9}Разноцветный :"))
+				if imgui.IsItemClicked(0) then sampProcessChatInput('/color_report *') end
+				imgui.SameLine()
+				imgui.TextColoredRGB(("{A9A9A9}: Без цвета"))
+				if imgui.IsItemClicked(0) then sampAddChatMessage(tag .. 'Цвет репорта не задан.', -1) cfg.settings.color_report = nil save() end
+
+				for i = 1, 256 do 
+					imgui.TextColoredRGB(u8(html_color[i]))
+					if imgui.IsItemClicked(0) then
+						local color = '{'..string.sub(string.sub(html_color[i], 1, 7), 2)..'}'
+						cfg.settings.color_report = color
+						save()
+						sampAddChatMessage(tag .. color ..'Новый цвет', -1)
+					end
+					if i%8~=0 then imgui.SameLine() end 
+				end
+				imgui.EndPopup()
+			else
+				if cfg.settings.color_report==nil then array.checkbox.color_report.v = false
+				else array.checkbox.color_report.v = true end
+			end
 		end
 		imgui.PopFont()
 		imgui.End()
@@ -2683,7 +2687,11 @@ function imgui.OnDrawFrame()
 					imgui.Text('Passive: ' .. array.inforeport[12])
 					imgui.Text(u8'Коллизия: ' .. array.inforeport[14])
 				else
-					imgui.Text(u8'Информация о игроке недоступна.')
+					imgui.Text('')
+					if imgui.Button(u8'Включить информацию об игроке', imgui.ImVec2(250, 25)) then
+					 	sampSendChat('/remenu')
+					end
+					imgui.Text('')
 				end
 				if imgui.Button(u8'Посмотреть первую статистику', imgui.ImVec2(250, 25)) then
 					sampSendChat('/statpl ' .. sampGetPlayerNickname(control_player_recon))
@@ -2707,41 +2715,43 @@ function imgui.OnDrawFrame()
 				end
 			end
 		imgui.EndGroup()
-		imgui.BeginGroup()
-			imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.keysyncx, cfg.settings.keysyncy), imgui.Cond.Always, imgui.ImVec2(0.5, 0.5))
-			imgui.Begin('##keysync', nil, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
-			if doesCharExist(target) then
-				local plState = (isCharOnFoot(target) and "onfoot" or "vehicle")
-				imgui.SetCursorPosX(8)  						
+		if cfg.settings.keysync then
+			imgui.BeginGroup()
+				imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.keysyncx, cfg.settings.keysyncy), imgui.Cond.Always, imgui.ImVec2(0.5, 0.5))
+				imgui.Begin('##keysync', nil, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
+				if doesCharExist(target) then
+					local plState = (isCharOnFoot(target) and "onfoot" or "vehicle")
+					imgui.SetCursorPosX(8)  						
+						
+					KeyCap("TAB", (array.keys[plState]["TAB"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
+					KeyCap("Q", (array.keys[plState]["Q"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+					KeyCap("W", (array.keys[plState]["W"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+					KeyCap("E", (array.keys[plState]["E"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+					KeyCap("R", (array.keys[plState]["R"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+		
+		
+					KeyCap("RM", (array.keys[plState]["RKM"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+					KeyCap("LM", (array.keys[plState]["LKM"] ~= nil), imgui.ImVec2(33, 30))					
+		
+		
+					KeyCap("Shift", (array.keys[plState]["Shift"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
+					KeyCap("A", (array.keys[plState]["A"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+					KeyCap("S", (array.keys[plState]["S"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+					KeyCap("D", (array.keys[plState]["D"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+					KeyCap("C", (array.keys[plState]["C"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
 					
-				KeyCap("TAB", (array.keys[plState]["TAB"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
-				KeyCap("Q", (array.keys[plState]["Q"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				KeyCap("W", (array.keys[plState]["W"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				KeyCap("E", (array.keys[plState]["E"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				KeyCap("R", (array.keys[plState]["R"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-	
-	
-				KeyCap("RM", (array.keys[plState]["RKM"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				KeyCap("LM", (array.keys[plState]["LKM"] ~= nil), imgui.ImVec2(33, 30))					
-	
-	
-				KeyCap("Shift", (array.keys[plState]["Shift"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
-				KeyCap("A", (array.keys[plState]["A"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				KeyCap("S", (array.keys[plState]["S"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				KeyCap("D", (array.keys[plState]["D"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				KeyCap("C", (array.keys[plState]["C"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				
-				KeyCap("Enter", (array.keys[plState]["Enter"] ~= nil), imgui.ImVec2(77, 30))
-	
-				KeyCap("Ctrl", (array.keys[plState]["Ctrl"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
-				KeyCap("Alt", (array.keys[plState]["Alt"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
-				KeyCap("Space", (array.keys[plState]["Space"] ~= nil), imgui.ImVec2(205, 30))
-			else
-				imgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон, R - обновить в ручную.\nНачинаю процесс автоматического обновления рекона...")
-				auto_update_recon()
-			end
-			imgui.End()
-		imgui.EndGroup()
+					KeyCap("Enter", (array.keys[plState]["Enter"] ~= nil), imgui.ImVec2(77, 30))
+		
+					KeyCap("Ctrl", (array.keys[plState]["Ctrl"] ~= nil), imgui.ImVec2(45, 30)); imgui.SameLine()
+					KeyCap("Alt", (array.keys[plState]["Alt"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
+					KeyCap("Space", (array.keys[plState]["Space"] ~= nil), imgui.ImVec2(205, 30))
+				else
+					imgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон, R - обновить в ручную.\nНачинаю процесс автоматического обновления рекона...")
+					auto_update_recon()
+				end
+				imgui.End()
+			imgui.EndGroup()
+		end
 		imgui.BeginGroup()
 			imgui.SetNextWindowPos(imgui.ImVec2((sw*0.5)-300, sh-65))
 			imgui.Begin("##recon+", nil, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
@@ -2975,13 +2985,6 @@ function imgui.OnDrawFrame()
 		imgui.CenterText(u8'Активация курсора: ПКМ или F')
 		imgui.CenterText(u8'Меню активно 5 секунд.')
 		imgui.End()
-	end
-	if array.windows.render_admins.v then -- рендер админов
-		imgui.ShowCursor = false
-		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.render_admins_positionX, cfg.settings.render_admins_positionY))
-		imgui.Begin('##render_admins.', array.windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
-		for i = 1, #array.admins do imgui.TextColoredRGB(array.admins[i]) end
-        imgui.End()
 	end
 	if array.windows.pravila.v then -- ahelp
 		imgui.ShowCursor = true
@@ -3737,7 +3740,6 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 		if closeDialog(dialogID) then return false end
 	elseif dialogId == 2348 and array.windows.fast_report.v then array.windows.fast_report.v = false
 	elseif dialogId == 2349 then -- окно с самим репортом.
-		collectgarbage()
 		array.answer, array.windows.answer_player_report.v, peremrep, myid, reportid = {}, false, nil, nil, nil
 		local text = textSplit(text, '\n')
 		text[1] = string.gsub(string.gsub(text[1], '{%w%w%w%w%w%w}', ''), 'Игрок: ', '')
@@ -3929,7 +3931,7 @@ function render_admins()
 	while true do
 		while sampIsDialogActive() do wait(500) end
 		if not AFK then sampSendChat('/admins') end
-		wait(30000)
+		wait(25000)
 	end
 end
 
