@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9.4   			 							-- Версия скрипта
+local version = 9.5   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -226,6 +226,7 @@ local array = {
 	chatlog_3 		= {}, 											-- чат-лог3
 	files_chatlogs 	= {},											-- список чат-логгов
 	admins 			= {},											-- Рендер /admins
+	back_admins 	= {},											-- запоминаем старых админчиков
 	textdraw 		= {}, 											-- узнаем ид текстравов для взаимодействия с ними
 	admin_form 		= {}, 											-- Работа с админ-формами
 	nakazatreport 	= {},											-- Возможность наказать прямо из репорта
@@ -396,9 +397,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 }
 ---=========================== ОСНОВНОЙ СЦЕНАРИЙ СКРИПТА ============-----------------
 function main()
-	while not isSampAvailable() do wait(3000) end
-	cfg.settings.version = version
-
 	local scanDirectory = function(path) -- Проверяем все файлы в папке
 		array.files_chatlogs = {}
 		local lfs = require("lfs")
@@ -424,6 +422,10 @@ function main()
 		file:close()
 		print('Создан новый chatlog '.. data_today.day..'.'..data_today.month..'.'..data_today.year..'.txt')
 	end
+
+	while not isSampAvailable() do wait(3000) end
+
+	cfg.settings.version = version
 	sampRegisterChatCommand('opencl', function()
 		for k, v in ipairs(scanDirectory('moonloader\\config\\chatlog\\')) do
 			local data1,data2,data3 = string.sub(string.gsub(string.gsub(v, 'chatlog ', ''), '%.',' '), 1,-5):match('(%d+) (%d+) (%d+)')
@@ -515,7 +517,8 @@ function main()
 	local check_pass = nil
 
 	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then
-		sampProcessChatInput('/reset')
+		sampAddChatMessage(tag .. 'Внимание! Настройки АТ не обнаружены, рекомендуется ввести команду /reset', -1)
+		--sampProcessChatInput('/reset')
 	end
 
 	local rules = io.open('moonloader\\config\\AT\\rules.txt',"r")
@@ -982,6 +985,24 @@ sampRegisterChatCommand('ears', function()
 		array.checkbox.check_render_ears.v = true
 	end
 end)
+local trigger = false
+function animation_imgui(window)
+	lua_thread.create(function()
+		if window ~= trigger then
+			local styles = 0.8
+			local step = 0.006
+			while styles < 1 do
+				wait(15)
+				imgui.GetStyle().Alpha = styles
+				styles = styles + step
+			end
+			trigger = window
+			while window.v do wait(300) end
+			trigger = false
+		end
+	end)
+end
+
 
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
@@ -993,7 +1014,9 @@ function imgui.OnDrawFrame()
 		imgui.ShowCursor = false
 		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.render_admins_positionX, cfg.settings.render_admins_positionY))
 		imgui.Begin('##render_admins.', array.windows.render_admins, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
-		for i = 1, #array.admins do imgui.TextColoredRGB(array.admins[i]) end
+		for i = 1, #array.admins do 
+			imgui.TextColoredRGB(array.admins[i])
+		end
         imgui.End()
 	end
 	if array.windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
@@ -2310,7 +2333,7 @@ function imgui.OnDrawFrame()
 				imgui.CenterText(u8'Настройки умного автомута')
 				imgui.SameLine()
 				imgui.Text(fa.ICON_EYE)
-				if imgui.IsItemClicked(0) then
+				if imgui.IsItemClicked(0) and arr then
 					imgui.OpenPopup('watch')
 				end
 				if array.checkbox.add_smart_automute.v == 0 then 
@@ -3050,7 +3073,7 @@ function imgui.OnDrawFrame()
 	if array.windows.menu_chatlogger.v then -- chatlogger
 		if wasKeyPressed(VK_ESCAPE) then array.windows.menu_chatlogger.v = false end
 		imgui.ShowCursor = true
-		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+	    imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(sw*0.7, sh*0.8), imgui.Cond.FirstUseEver)
 		imgui.Begin(u8'Логирование чата', array.windows.menu_chatlogger, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
@@ -3216,8 +3239,8 @@ function imgui.OnDrawFrame()
 			imgui.Text(u8'Скопировано.')
 			imgui.EndPopup()
 		end
+		local txt = u8:decode(array.buffer.find_log.v)
 		for i = chat[1], chat[2] do
-			local txt = u8:decode(array.buffer.find_log.v)
 			if string.rlower(  string.gsub(check_chat[i], "%p","")     )    :find      (   string.rlower(    string.gsub(txt, '%p', '')  )     )      then
 
 				imgui.BeginGroup() -- для того чтобы при нажатии на текст срабатывало действие
@@ -3225,11 +3248,11 @@ function imgui.OnDrawFrame()
 				imgui.EndGroup()
 
 				if imgui.IsItemClicked(0) then
-					if getCurrentLanguageName() ~= '00000419' then 
-						imgui.OpenPopup('raskl')
-					else
+					if getCurrentLanguageName() == '00000419' then 
 						imgui.OpenPopup('scop')
 						setClipboardText(string.sub(string.gsub( string.gsub (check_chat[i], '{%w%w%w%w%w%w}', ''), '%[(%d+):(%d+):(%d+)%]', '' ), 2)) -- удаляем время, удаляем html color - copy
+					else
+						imgui.OpenPopup('raskl')
 					end
 				end
 			end
@@ -3593,6 +3616,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 				if control_player_recon ~= nil then
 					array.windows.recon_menu.v = true
 					imgui.Process = true
+					animation_imgui(array.windows.menu_tools)
 					return false
 				end
 			elseif v == 'STATS' then 
@@ -3875,27 +3899,27 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text) -- 
 			end
 		end)
 		if closeDialog(dialogID) then return false end
-	elseif dialogId == 8991 then
-		local text = textSplit(text, '{808080}')
-		for i = 2, #text do
-			if not text[i]:match("{03C03C}Имеется{FFFFFF}") then
-				if text[i]:match("Доступ на 'Все виды банов'") then
-					cfg.settings.forma_na_ban = true
-					sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /ban, активированы автоформы.', -1)
-				elseif text[i]:match("Доступ к '/tr'") then
-					cfg.settings.atr = true
-					sampAddChatMessage(tag .. 'У вас отсутствует команда /tr, активирована альтернатива, команда работает от имени АТ.', -1)
-				elseif text[i]:match("Доступ на 'Выдачу тюрьмы'") then
-					cfg.settings.forma_na_jail = true
-					sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /jail, активированы автоформы.', -1)
-				elseif text[i] then
-					cfg.settings.forma_na_mute = true
-					sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /mute, активированы автоформы.', -1)
-				end
-			end
-		end
-		save()
 	end
+	--elseif dialogId == 8991 then
+	--	local text = textSplit(text, '{808080}')
+	--	for i = 2, #text do
+	--		if not text[i]:match("{03C03C}Имеется{FFFFFF}") then
+	--			if text[i]:match("Доступ на 'Все виды банов'") then
+	--				cfg.settings.forma_na_ban = true
+	--				sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /ban, активированы автоформы.', -1)
+	--			elseif text[i]:match("Доступ к '/tr'") then
+	--				cfg.settings.atr = true
+	--				sampAddChatMessage(tag .. 'У вас отсутствует команда /tr, активирована альтернатива, команда работает от имени АТ.', -1)
+	--			elseif text[i]:match("Доступ на 'Выдачу тюрьмы'") then
+	--				cfg.settings.forma_na_jail = true
+	--				sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /jail, активированы автоформы.', -1)
+	--			elseif text[i] then
+	--				cfg.settings.forma_na_mute = true
+	--				sampAddChatMessage(tag .. 'У вас отсутствует доступ на команды /mute, активированы автоформы.', -1)
+	--			end
+	--		end
+	--	end
+	--	save()
 end
 
 function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране.
@@ -4005,6 +4029,7 @@ function binder_key()
 				imgui:GetIO().KeySuper = false  
 				imgui.Process = true
 				array.windows.menu_tools.v = not array.windows.menu_tools.v
+				animation_imgui(array.windows.menu_tools)
 				if array.windows.recon_menu.v then 	-- активация курсора если рекон меню активно
 					lua_thread.create(function()
 						setVirtualKeyDown(70, true)
