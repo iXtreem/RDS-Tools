@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9.5   			 							-- Версия скрипта
+local version = 9.6   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -598,7 +598,8 @@ function main()
 	mem.fill(0x74542B, 0x90, 8, true)
 	mem.fill(0x53EA88, 0x90, 6, true)
 
-	local font_watermark = renderCreateFont("Arial", 9, font.BOLD + font.BORDER + font.SHADOW) -- шрифт текста о АТ снизуу
+	local font_watermark = renderCreateFont("Arial", 9, font.BOLD + font.BORDER + font.SHADOW) -- шрифт текста о АТ снизу
+
 	while true do
 
 		if not AFK then
@@ -625,6 +626,7 @@ function main()
 		wait(1) -- задержка
 	end
 end
+
 --------============= Инициализируем команды, указанные выше ===========================---------------------------
 for k,v in pairs(basic_command.ans) do   sampRegisterChatCommand(string.sub(k,2), function(param) if #param ~= 0 then for k,v in pairs(textSplit(v, '\n')) do sampSendChat(string.gsub(v, '_', param)) end else sampAddChatMessage(tag .. 'Вы не указали значение.', -1) end end) end
 
@@ -888,12 +890,14 @@ sampRegisterChatCommand('wh' , function()
 		save()
 		array.checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		on_wallhack()
+		func1:run()
 		sampAddChatMessage(tag ..'Функция WallHack успешно активирована', -1)
 	else
 		cfg.settings.wallhack = false
 		save()
 		array.checkbox.check_WallHack = imgui.ImBool(cfg.settings.wallhack),
 		off_wallhack()
+		func1:terminate()
 		sampAddChatMessage(tag ..'Функция WallHack была деактивирована', -1)
 	end
 end)
@@ -985,6 +989,8 @@ sampRegisterChatCommand('ears', function()
 		array.checkbox.check_render_ears.v = true
 	end
 end)
+sampRegisterChatCommand('orf', function()
+end)
 local trigger = false
 function animation_imgui(window)
 	lua_thread.create(function()
@@ -1002,7 +1008,19 @@ function animation_imgui(window)
 		end
 	end)
 end
-
+function imgui.ButtonActivated(icon, size, ...)
+    if menu == ... then
+        imgui.PushStyleColor(imgui.Col.Button, imgui.GetStyle().Colors[imgui.Col.CheckMark])
+        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.GetStyle().Colors[imgui.Col.CheckMark])
+        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.GetStyle().Colors[imgui.Col.CheckMark])
+            imgui.Button(icon, size)
+        imgui.PopStyleColor()
+        imgui.PopStyleColor()
+        imgui.PopStyleColor()
+	else 
+		if imgui.Button(icon, size) then menu = ... end
+	end
+end
 
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
@@ -1025,21 +1043,22 @@ function imgui.OnDrawFrame()
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(500, 500), imgui.Cond.FirstUseEver)
 		imgui.Begin('xX     Admin Tools [AT]     Xx', array.windows.menu_tools, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.PushFont(fontsize)
 		imgui.SameLine()
 		imgui.SetCursorPosX(80)
 		imgui.BeginGroup()
-			if imgui.Button(fa.ICON_ADDRESS_BOOK, imgui.ImVec2(30, 30)) then 		menu = 'Главное меню' end imgui.SameLine()
-			if imgui.Button(fa.ICON_COGS, imgui.ImVec2(30, 30)) then 				menu = 'Дополнительные функции' end imgui.SameLine()
-			if imgui.Button(fa.ICON_CALENDAR_CHECK_O, imgui.ImVec2(30, 30)) then 	menu = 'Быстрые клавиши' end imgui.SameLine()
-			if imgui.Button(fa.ICON_PENCIL_SQUARE, imgui.ImVec2(30, 30)) then 		menu = 'Блокнот' end imgui.SameLine()
-			if imgui.Button(fa.ICON_RSS, imgui.ImVec2(30, 30)) then 				menu = 'Флуды' end imgui.SameLine()
-			if imgui.Button(fa.ICON_BOOKMARK, imgui.ImVec2(30, 30)) then 			menu = 'Быстрые ответы' end imgui.SameLine()
-			if imgui.Button(fa.ICON_CLOUD, imgui.ImVec2(30, 30)) then 				menu = 'Автомут' end imgui.SameLine()
-			if imgui.Button(fa.ICON_SERVER, imgui.ImVec2(30,30)) then				menu = 'smartautomute' end imgui.SameLine()
-			if imgui.Button(fa.ICON_INFO_CIRCLE, imgui.ImVec2(30, 30)) then array.windows.menu_tools.v = false sampProcessChatInput('/ahelp') end
+			imgui.ButtonActivated(fa.ICON_ADDRESS_BOOK, imgui.ImVec2(30, 30), 'Главное меню') imgui.SameLine()
+			imgui.ButtonActivated(fa.ICON_COGS, imgui.ImVec2(30, 30), 'Дополнительные функции') imgui.SameLine()
+			imgui.ButtonActivated(fa.ICON_CALENDAR_CHECK_O, imgui.ImVec2(30, 30), 'Быстрые клавиши') imgui.SameLine()
+			imgui.ButtonActivated(fa.ICON_PENCIL_SQUARE, imgui.ImVec2(30, 30), 'Блокнот')  imgui.SameLine()
+			imgui.ButtonActivated(fa.ICON_RSS, imgui.ImVec2(30, 30), 'Флуды') imgui.SameLine()
+			imgui.ButtonActivated(fa.ICON_BOOKMARK, imgui.ImVec2(30, 30), 'Быстрые ответы') imgui.SameLine()
+			imgui.ButtonActivated(fa.ICON_CLOUD, imgui.ImVec2(30, 30), 'Автомут') imgui.SameLine()
+			imgui.ButtonActivated(fa.ICON_SERVER, imgui.ImVec2(30, 30), 'smartautomute') imgui.SameLine()
+			if imgui.Button(fa.ICON_INFO_CIRCLE, imgui.ImVec2(30, 30)) then	    array.windows.menu_tools.v = false sampProcessChatInput('/ahelp') end
 		imgui.EndGroup()
 		imgui.SetCursorPosY(65)
         imgui.Separator()
@@ -3261,6 +3280,11 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 end
+
+
+
+
+
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' and not sampIsDialogActive() then
 		if ( command:match('mute (.+) (.+) (.+)') or command:match('muteakk (.+) (.+) (.+)') or command:match('muteoff (.+) (.+) (.+)')) then
