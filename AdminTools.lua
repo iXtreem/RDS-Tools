@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9.6   			 							-- Версия скрипта
+local version = 9.7   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -98,6 +98,8 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		render_players_size = 10,
 		render_players_count = 10,
 		sound_report = 80,
+		text_access_form = "АТ - Принято.", -- defolt
+		sokr = true
 	},
 	customotvet = {},
 	myflood = {},
@@ -125,7 +127,7 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 }, 'AT//AT_main.ini')
 inicfg.save(cfg, 'AT//AT_main.ini')
 style(cfg.settings.style)
-import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
+
 ------=================== ImGui окна ===================----------------------
 
 local array = {
@@ -138,6 +140,7 @@ local array = {
 		render_admins		= imgui.ImBool(false),
 		pravila 			= imgui.ImBool(false),
 		menu_chatlogger 	= imgui.ImBool(false),
+		Tutorial 			= imgui.ImBool(false),
 	},
 	------=================== Выставление своих настроек, кнопки со значение True/False ===================----------------------
 	checkbox = {
@@ -192,6 +195,7 @@ local array = {
 		render_players_count 	   = imgui.ImInt(cfg.settings.render_players_count),
 		sound_report 			   = imgui.ImInt(cfg.settings.sound_report),
 		color_report			   = imgui.ImBool(false),
+		sokr 					   = imgui.ImBool(cfg.settings.sokr),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -216,10 +220,11 @@ local array = {
 		add_smart_automute  = imgui.ImBuffer(4096),
 		new_word 		 	= imgui.ImBuffer(4096),
 		sokr_nick			= imgui.ImBuffer(cfg.settings.sokr_nick, 256),
-		custom_addtext_report = imgui.ImBuffer(cfg.settings.custom_addtext_report, 256),
+		custom_addtext_report = imgui.ImBuffer(u8(cfg.settings.custom_addtext_report), 256),
 		customtimetext 		  = imgui.ImBuffer( u8(cfg.settings.customtimetext), 1024),
 		newButtonReport 	  = imgui.ImBuffer(1024),
 		newButtonReportName   = imgui.ImBuffer(1024),
+		text_access_form 	  = imgui.ImBuffer(u8(cfg.settings.text_access_form), 1024),
 	},
 	chatlog_1 		= {}, 											-- чат-лог1
 	chatlog_2 		= {}, 											-- чат-лог2
@@ -323,7 +328,6 @@ local basic_command = { -- базовые команды, 1 аргумент = символ '_'
 		["/sa"]		 =		'/setadmin',
 		["/sn"] 	 =		'/setnick _',
 		["/stw"]     =  	'/setweap _ 38 5000',
-		["/vig"] 	 =		"/vvig _ 1 Злоупотребление VIP'ом",
 	},
 	ans = { 														-- с вариативностью есть доп/текст или нет
 		["/nv"]      =  	'/ot _ Игрок не в сети',
@@ -517,7 +521,7 @@ function main()
 	local check_pass = nil
 
 	local rules = file_exists('moonloader\\config\\AT\\rules.txt') if not rules then
-		sampAddChatMessage(tag .. 'Внимание! Настройки АТ не обнаружены, рекомендуется ввести команду /reset', -1)
+		sampAddChatMessage(tag .. 'Внимание! Настройки АТ не обнаружены, рекомендуется ввести команду {A9A9A9}/reset', -1)
 		--sampProcessChatInput('/reset')
 	end
 
@@ -536,7 +540,8 @@ function main()
 	
 	local AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', "r")
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
-	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
+	--import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
+	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
 
 	func = lua_thread.create_suspended(autoonline) -- function autoonline
 	func1 = lua_thread.create_suspended(wallhack) -- function wallhack
@@ -989,7 +994,9 @@ sampRegisterChatCommand('ears', function()
 		array.checkbox.check_render_ears.v = true
 	end
 end)
-sampRegisterChatCommand('orf', function()
+sampRegisterChatCommand('orf', function(param)
+	if #param == 0 then sampAddChatMessage(tag .. 'Значение неуказано.',-1) return end
+	sampSendChat('/muteakk ' .. param .. ' 5000 Оскорбление/Унижение родни')
 end)
 local trigger = false
 function animation_imgui(window)
@@ -997,7 +1004,7 @@ function animation_imgui(window)
 		if window ~= trigger then
 			local styles = 0.8
 			local step = 0.006
-			while styles < 1 do
+			while styles <= 1 do
 				wait(15)
 				imgui.GetStyle().Alpha = styles
 				styles = styles + step
@@ -1022,9 +1029,10 @@ function imgui.ButtonActivated(icon, size, ...)
 	end
 end
 
+
 --======================================= РЕГИСТРАЦИЯ КОМАНД ====================================--
 function imgui.OnDrawFrame()
-	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
+	if not array.windows.render_admins.v and not array.windows.menu_tools.v and not array.windows.pravila.v and not array.windows.Tutorial.v and not array.windows.fast_report.v and not array.windows.recon_menu.v and not array.windows.answer_player_report.v and not array.windows.menu_chatlogger.v then
 		showCursor(false,false)
 		imgui.Process = false
 	end
@@ -1108,18 +1116,23 @@ function imgui.OnDrawFrame()
 					imgui.OpenPopup('slejform')
 				end
 				if imgui.BeginPopup('slejform') then
+					imgui.CenterText(u8'Время на принятие решения')
 					if imgui.SliderInt('##Sliderы', array.checkbox.time_form, 6, 20) then
 						cfg.settings.time_form = array.checkbox.time_form.v
 						save()
 					end
 					if array.checkbox.check_find_form.v then
-						imgui.Text(u8'Автоматическое принятие форм ')
-						imgui.SameLine()
 						if imgui.Checkbox('##autoaccept', array.checkbox.autoaccept_form) then
 							cfg.settings.autoaccept_form = not cfg.settings.autoaccept_form
 							save()
 						end
 						imgui.Tooltip(u8'Предупреждение: ответственность несете Вы')
+						imgui.SameLine()
+						imgui.Text(u8'- Автоматическое принятие форм')
+						if imgui.NewInputText('##textaccessform', array.buffer.text_access_form, 270, u8'Текст принятия формы', 2) then
+							cfg.settings.text_access_form = u8:decode(array.buffer.text_access_form.v)
+							save()
+						end
 					end
 					imgui.EndPopup()
 				end
@@ -1291,6 +1304,12 @@ function imgui.OnDrawFrame()
 						save()
 						if #array.adminchat > cfg.settings.strok_admin_chat then for i = cfg.settings.strok_admin_chat, #array.adminchat do array.adminchat_minimal[i] = nil array.adminchat[i] = nil end end
 					end
+					if imadd.ToggleButton("##check", array.checkbox.sokr) then
+						cfg.settings.sokr = not cfg.settings.sokr
+						save()
+					end
+					imgui.SameLine()
+					imgui.Text(u8'Сокращать длинное сообщение')
 					if imgui.Button(u8'Изменить позицию',imgui.ImVec2(140,24)) then
 						lua_thread.create(function()
 							if #array.adminchat < 1 then array.adminchat[1], array.adminchat_minimal[1] = 'Тестовое сообщение для видимости новой позиции.', 'Тестовое сообщение для видимости новой позиции.' end 
@@ -1366,9 +1385,15 @@ function imgui.OnDrawFrame()
 						cfg.settings.save_radar = not cfg.settings.save_radar
 						save()
 					end
+
 					imgui.Tooltip(u8'Внесенные изменения требуют перегрузку игры')
+
 					if imgui.Button(u8'Настроить позицию') then
 						lua_thread.create(function()
+							_, copies_player_recon = sampGetPlayerIdByCharHandle(PLAYER_PED)
+							array.windows.recon_menu.v = true
+							array.windows.menu_tools.v = false
+							showCursor(true,true)
 							sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
 							sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
 							local old_pos_x, old_pos_y = cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y
@@ -1378,8 +1403,32 @@ function imgui.OnDrawFrame()
 								if wasKeyPressed(VK_ESCAPE) then cfg.settings.position_recon_menu_x = old_pos_x cfg.settings.position_recon_menu_y = old_pos_y break end
 								wait(1)
 							end
+							array.windows.recon_menu.v =false
+							showCursor(false,false)
 						end)
 					end
+
+
+					if imgui.Button(u8'Изменить позицию нижней панели') then
+						lua_thread.create(function()
+							_, copies_player_recon = sampGetPlayerIdByCharHandle(PLAYER_PED)
+							array.windows.recon_menu.v = true
+							array.windows.menu_tools.v = false
+							showCursor(true,true)
+							sampAddChatMessage(tag .. 'Сохранить новую позицию окна: Enter', -1)
+							sampAddChatMessage(tag .. 'Оставить прежнюю позицию: Esc',-1)
+							local old_pos_x, old_pos_y = cfg.settings.panelX, cfg.settings.panelY
+							while true do
+								cfg.settings.panelX, cfg.settings.panelY = getCursorPos()
+								if wasKeyPressed(VK_RETURN) then save() break end
+								if wasKeyPressed(VK_ESCAPE) then cfg.settings.panelX = old_pos_x cfg.settings.panelY = old_pos_y break end
+								wait(1)
+							end
+							array.windows.recon_menu.v =false 
+							showCursor(false,false)
+						end)
+					end
+
 					imgui.EndPopup()
 				end
 				if imadd.ToggleButton("##virtualkey", array.checkbox.check_keysync) then
@@ -1611,7 +1660,7 @@ function imgui.OnDrawFrame()
 				--imgui.CenterText(u8'Конечный продукт для Администрации RDS '..fa.ICON_SPACE_SHUTTLE)
 			elseif menu == 'Дополнительные функции' then -- мульти выбор
 				imgui.SetCursorPosX(8)
-				if imgui.NewInputText('##doptextcomыmand', array.buffer.custom_addtext_report, 485, u8'Дополнительный текст в начале ответа', 2) then
+				if imgui.NewInputText('##doptextcomыmandss', array.buffer.custom_addtext_report, 485, u8'Дополнительный текст в начале ответа', 2) then
 					cfg.settings.custom_addtext_report = u8:decode(array.buffer.custom_addtext_report.v)
 					save()	
 				end
@@ -2452,6 +2501,7 @@ function imgui.OnDrawFrame()
 		imgui.EndGroup()
 		imgui.PopFont()
  		imgui.End()
+
 	end
 	if array.windows.fast_report.v then -- быстрый ответ на репорт
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5) - 250, (sh * 0.5)-90), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
@@ -2694,8 +2744,14 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 	if array.windows.recon_menu.v then -- recon menu
-		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y))
-		imgui.Begin("##recon", array.windows.recon_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
+
+		imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y)) -- фиксировано
+
+		-- if imgui.IsWindowAppearing() then -- Если окно открыто впервые
+		-- 	imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.position_recon_menu_x, cfg.settings.position_recon_menu_y))
+		-- end
+
+		imgui.Begin("##recon", array.windows.recon_menu, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize   + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 		imgui.ShowCursor = false
 		imgui.PushFont(fontsize)
@@ -2795,7 +2851,11 @@ function imgui.OnDrawFrame()
 			imgui.EndGroup()
 		end
 		imgui.BeginGroup()
-			imgui.SetNextWindowPos(imgui.ImVec2((sw*0.5)-300, sh-65))
+			if cfg.settings.panelX == nil then
+				imgui.SetNextWindowPos(imgui.ImVec2((sw*0.5)-300, sh-65))
+			else
+				imgui.SetNextWindowPos(imgui.ImVec2(cfg.settings.panelX, cfg.settings.panelY))
+			end
 			imgui.Begin("##recon+", nil, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 			imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
 			if imgui.Button(u8'<- Предыдущий') then
@@ -3041,6 +3101,8 @@ function imgui.OnDrawFrame()
 		imgui.RadioButton(u8"Быстрые команды", array.checkbox.checked_radio_button, 2)
 		imgui.SameLine()
 		imgui.RadioButton(u8"Серверные команды", array.checkbox.checked_radio_button, 3)
+		imgui.SameLine()
+		imgui.RadioButton(u8"Частые вопросы про АТ", array.checkbox.checked_radio_button, 4)
 		if wasKeyPressed(VK_SPACE) then imgui.SetKeyboardFocusHere(-1) end
 		if array.checkbox.checked_radio_button.v == 1 then
 			imgui.NewInputText('##SearchBar6', array.buffer.find_rules, sw*0.5, u8'Поиск по правилам', 2)
@@ -3085,6 +3147,70 @@ function imgui.OnDrawFrame()
 					end
 				end
 			end
+		elseif array.checkbox.checked_radio_button.v == 4 then
+			local v = function(name, otvet)
+				local x = imgui.GetWindowWidth() / 2 - 175
+				local DL = imgui.GetWindowDrawList()
+				imgui.SetCursorPos(imgui.ImVec2(x, imgui.GetCursorPosY()))
+				local p = imgui.GetCursorScreenPos()
+				DL:AddRectFilled(p, imgui.ImVec2(p.x + 350, p.y + 23), 0xFF4169E1)
+
+				imgui.CenterText(u8(name))
+				imgui.TextWrapped(u8("Ответ: " .. otvet .. '.'))
+			end
+			v('Как работает "автовыдача за онлайн?"', "Каждую 61 секунд скрипт отправляет серверу информацию об выдаче денег за онлайн, сверяет количество игроков, говорит об этом серверу, после чего закрывает диалоговое окно в фоновом режиме")
+			v("Что такое 'Перевод команд'?", "Заменяет автоматически английские символы - на русские, как только видит в чате символ '/', то все последующие буквы меняет на английский") 
+			v('Что такое "WallHack"?', 'Увеличенная дальность прорисовки ник-неймов, является легальным инструментом для администраторов.\nРекомендация: выключать его при заходе на арену "/arena" и тому подобные места')
+			v('Что такое "Слежка за формами"?','Проверяет сообщения в админ чате "/a", если видит в ней форму на бан-мут-джайл-кик, то проверяет, находится ли данный игрок в сети, если да, то проверяет, есть ли подпись администратора "// ego nick", в случае если нет - дописывает сам. Показывает вам ник на кого пришла форма и дает время на её принятие, кнопками U и J. При желании время на подтверждение формы можно изменить, или сделать автопринятие формы [не рекомендуется].')
+			v('Что такое "Автовыдача мута"?', 'По-простому автомут, ищет в чате маты и оскорбления, в случае, если в чате найдено нарушение, подчеркивает слово, за которое наказывает, и предлагает вам выдать наказание в течение 10 секунд, нажатием кнопки ' .. cfg.settings.key_automute .. '.')
+			v('Что такое "Умный автомут"?', 'Это более продвинутая версия, которая ищет не только маты и оскорбления. Он занимается поиском флуда/оскорбления родни/оскорбления администрации/межнац.розжига/упоминанием сторонних проектов, и выдает наказание в соответствии с правилами. Также ожидает вашего подтверждения. Кроме антифлуд системы, ей это не обязательно :3')
+			v('Как добавить слово в автомут?', 'Седьмая вкладка основного окна AT, добавить можно как целое слово, так и слово "триггер", рекомендуется вводить целое слово (\\s)\nПример: если добавить слово "хер", то за слово "Херня" мута уже не будет, и наоборот, если это будет слово тригер, то замутит.')
+			imgui.Text(u8'Быстрый переход') imgui.SameLine()
+			if imgui.Button(u8'Перейти') then
+				array.windows.pravila.v = false
+				array.windows.menu_tools.v = true
+				menu = 'Автомут'
+			end
+			v('Как добавить слово в умный автомут?', 'Восьмая вкладка основного окна AT, для опытных, добавить можно как целое слово, так и слово "триггер", рекомендуется вводить целое слово (\\s)\nПример: если добавить слово "хер", то за слово "Херня" мута уже не будет, и наоборот, если это будет слово тригер, то замутит.') 
+			imgui.Text(u8'Быстрый переход') imgui.SameLine()
+			if imgui.Button(u8'Перeйти') then
+				array.windows.pravila.v = false
+				array.windows.menu_tools.v = true
+				menu = 'smartautomute'
+			end
+			v('Как добавить свою быструю команду?', 'Восьмая вкладка основного окна AT, всё безумно просто, разберем на примере, хотим допустим задать команду на бан с сообщением, пишем:\nКоманда: /chs\n/ot _ Уважаемый игрок, вы наказаны за читерство.\nwait(3)\n/iban _ 7 cheat\nСамая притивная команда создана, аргумент - это ID, обозначается нижним подчеркиванием _, а задержка wait(количество сек)')
+			imgui.Text(u8'Быстрый переход') imgui.SameLine()
+			if imgui.Button(u8'Пeрейти') then
+				array.windows.pravila.v = false
+				array.windows.menu_tools.v = true
+				menu = 'Автомут'
+			end
+			v('Как поменять оформление/стиль окон?', 'Вторая вкладка основного окна АТ')
+			imgui.Text(u8'Быстрый переход') imgui.SameLine()
+			if imgui.Button(u8'Пeрейти##') then
+				array.windows.pravila.v = false
+				array.windows.menu_tools.v = true
+				menu = 'Дополнительные функции'
+			end
+			v('Как сделать автоввод пароля в аккаунт/админку', 'Вторая вкладка основного окна АТ, автоматически вводит пароль при входе, абсолютно безопасно')
+			imgui.Text(u8'Быстрый переход') imgui.SameLine()
+			if imgui.Button(u8'Пeрейти##2') then
+				array.windows.pravila.v = false
+				array.windows.menu_tools.v = true
+				menu = 'Дополнительные функции'
+			end
+			v('Как сделать автоввод пароля в аккаунт/админку', 'Вторая вкладка основного окна АТ, автоматически вводит пароль при входе, абсолютно безопасно')
+			v('Как включить трассера?', 'Вторая вкладка основного окна АТ')
+			v('Почему не отображаются попадания по игрокам?', 'Недоработка со стороны сервера, вне арены попадания фиксируются стабильно')
+			v('Как добавить биндер на клавишу', 'Третья вкладка основного окна АТ')
+			v('Как изменить клавишу принятия автомута', 'Третья вкладка основного окна АТ')
+			imgui.Text(u8'Быстрый переход') imgui.SameLine()
+			if imgui.Button(u8'Пeрейти##3') then
+				array.windows.pravila.v = false
+				array.windows.menu_tools.v = true
+				menu = 'Быстрые клавиши'
+			end
+			v('Не нашел ответ на свой вопрос?', 'Спроси других администраторов, наверняка тебе подскажут')
 		end
 		imgui.PopFont()
 		imgui.End()
@@ -3279,11 +3405,8 @@ function imgui.OnDrawFrame()
  		imgui.PopFont()
 		imgui.End()
 	end
+
 end
-
-
-
-
 
 function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщений
 	if string.sub(command, 1, 1) =='/' and string.sub(command, 1, 2) ~='/a' and not sampIsDialogActive() then
@@ -3423,7 +3546,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		if cfg.settings.admin_chat then
 			local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.+)')
 			local messange = os.date("[%H:%M:%S] ")..'{C0C0C0}[A-'..admlvl..'] '..(string.sub(prefix, 2) .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
-			if #admtext > 60 then admtext = string.sub(admtext, 1, 60).."..." end
+			if cfg.settings.sokr and #admtext > 60  then admtext = string.sub(admtext, 1, 60).."..." end
 			local messange_min = '{C0C0C0}[A-'..admlvl..'] '..(string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..idadm..']: '.. admtext)
 			if #array.adminchat == cfg.settings.strok_admin_chat then
 				for i = 0, #array.adminchat_minimal do
@@ -4007,24 +4130,28 @@ function wait_accept_form()
 			end
 			if not (sampIsChatInputActive() or sampIsDialogActive()) then
 				if wasKeyPressed(VK_U) or cfg.settings.autoaccept_form then
-					if sampIsPlayerConnected(array.admin_form.idadmin) and array.admin_form.forma~=nil then
-						if not (array.admin_form.forma):match('kick') and not (array.admin_form.forma):match('off') and not (array.admin_form.forma):match('akk') and not (array.admin_form.forma):match('unban') then
-							local _, id, sec, prichina = (array.admin_form.forma):match('(.+) (.+) (.+) (.+)')
-							if not (tonumber(id) or tonumber(sec) or prichina) then
-								sampSendChat('/a АТ - Отказано.')
-								break
-							end
-						end
+					if  array.admin_form.forma~=nil then
+						-- if not (array.admin_form.forma):match('kick') and not (array.admin_form.forma):match('off') and not (array.admin_form.forma):match('akk') and not (array.admin_form.forma):match('unban') then
+						-- 	local _, id, sec, prichina = (array.admin_form.forma):match('(.+) (.+) (.+) (.+)')
+						-- 	if not (tonumber(id) or tonumber(sec) or prichina) then
+						-- 		sampSendChat('/a АТ - Отказано.')
+						-- 		break
+						-- 	end
+						-- end
 						if array.admin_form.probid and not sampIsPlayerConnected(array.admin_form.probid) then
 							sampAddChatMessage(tag .. 'Указанный игрок не в сети', -1)
 							break
 						end
-						if (array.admin_form.forma) then
-							if not array.admin_form.styleform then sampSendChat(array.admin_form.forma .. ' // ' .. sampGetPlayerNickname(array.admin_form.idadmin))
-							else sampSendChat(array.admin_form.forma) end
-							wait(1000)
-							sampSendChat('/a AT - Принято.')
-						else sampAddChatMessage(tag .. 'Ошибка, форма потеряна... Попробуйте ещё раз.', -1) end
+
+						if not array.admin_form.styleform then sampSendChat(array.admin_form.forma .. ' // ' .. sampGetPlayerNickname(array.admin_form.idadmin))
+						else sampSendChat(array.admin_form.forma) end
+						
+						wait(2000)
+
+						if (#array.buffer.text_access_form.v ~= 0) then -- если пользователь не сказал что ответа не будет
+							sampSendChat('/a ' .. cfg.settings.text_access_form)
+						end
+
  					else sampAddChatMessage(tag .. 'Администратор не в сети.', -1) end
 					break
 				end
@@ -4545,7 +4672,7 @@ function ScriptExport()
 	thisScript():unload()
 end
 function addBeginText()
-	if #array.buffer.custom_addtext_report.v > 1 then return u8:decode(array.buffer.custom_addtext_report.v)
+	if #array.buffer.custom_addtext_report.v > 1 then return cfg.settings.custom_addtext_report
 	else
 		local text = {
 			"Доброго времени суток!",
