@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9.7   			 							-- Версия скрипта
+local version = 9.8   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -540,7 +540,7 @@ function main()
 	
 	local AutoMute_osk = io.open('moonloader\\config\\AT\\osk.txt', "r")
 	if AutoMute_osk then for line in AutoMute_osk:lines() do line = u8:decode(line) if line and #(line) > 2 then array.osk[#array.osk + 1] = line end;end AutoMute_osk:close() end
-	--import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
+	import("\\resource\\AT_MP.lua") 					-- подгрузка плагина для мероприятий
 	import("\\resource\\AT_Trassera.lua") 	  			-- подгрузка трассеров
 
 	func = lua_thread.create_suspended(autoonline) -- function autoonline
@@ -560,7 +560,8 @@ function main()
 		funcadm:run() 
 	end
 
-
+	mem.setint8(sampGetServerSettingsPtr() + 47, 0)
+	mem.setint8(sampGetServerSettingsPtr() + 56, 1)
 
 	if cfg.settings.render_players then
 		lua_thread.create(function()
@@ -1058,14 +1059,20 @@ function imgui.OnDrawFrame()
 		imgui.SameLine()
 		imgui.SetCursorPosX(80)
 		imgui.BeginGroup()
-			imgui.ButtonActivated(fa.ICON_ADDRESS_BOOK, imgui.ImVec2(30, 30), 'Главное меню') imgui.SameLine()
-			imgui.ButtonActivated(fa.ICON_COGS, imgui.ImVec2(30, 30), 'Дополнительные функции') imgui.SameLine()
-			imgui.ButtonActivated(fa.ICON_CALENDAR_CHECK_O, imgui.ImVec2(30, 30), 'Быстрые клавиши') imgui.SameLine()
-			imgui.ButtonActivated(fa.ICON_PENCIL_SQUARE, imgui.ImVec2(30, 30), 'Блокнот')  imgui.SameLine()
-			imgui.ButtonActivated(fa.ICON_RSS, imgui.ImVec2(30, 30), 'Флуды') imgui.SameLine()
-			imgui.ButtonActivated(fa.ICON_BOOKMARK, imgui.ImVec2(30, 30), 'Быстрые ответы') imgui.SameLine()
-			imgui.ButtonActivated(fa.ICON_CLOUD, imgui.ImVec2(30, 30), 'Автомут') imgui.SameLine()
-			imgui.ButtonActivated(fa.ICON_SERVER, imgui.ImVec2(30, 30), 'smartautomute') imgui.SameLine()
+
+			local button = function(icon, menushka)
+				imgui.ButtonActivated(icon, imgui.ImVec2(30, 30), menushka) imgui.SameLine()
+			end
+
+			button(fa.ICON_ADDRESS_BOOK, 'Главное меню')
+			button(fa.ICON_COGS, 'Дополнительные функции')
+			button(fa.ICON_CALENDAR_CHECK_O, 'Быстрые клавиши')
+			button(fa.ICON_PENCIL_SQUARE, 'Блокнот')
+			button(fa.ICON_RSS, 'Флуды')
+			button(fa.ICON_BOOKMARK, 'Быстрые ответы')
+			button(fa.ICON_CLOUD, 'Автомут')
+			button(fa.ICON_SERVER, 'smartautomute')
+			
 			if imgui.Button(fa.ICON_INFO_CIRCLE, imgui.ImVec2(30, 30)) then	    array.windows.menu_tools.v = false sampProcessChatInput('/ahelp') end
 		imgui.EndGroup()
 		imgui.SetCursorPosY(65)
@@ -4314,13 +4321,21 @@ function input_helper()
 
 			local text = ("Ваш ник: "..cfg.settings.color_chat..name.."["..pID.."]{ffffff}, Ваш пинг: "..cfg.settings.color_chat..ping.."{ffffff}, Раскладка: "..cfg.settings.color_chat..raskl.."{ffffff}, CapsLock: "..cfg.settings.color_chat..caps)
 			local count = 0
+			local StringStart = function(text1, text2)
+				local txt = (string.sub(text2, 1,  #text1))
+				if text1 == txt or text1:match(txt .. " ") then
+					return true
+				end
+				return false
+			end
+
 			if cfg.settings.active_chat then
 				local mouseX, mouseY = getCursorPos()
 				if #getInput > 1 then
 					local getInput = "/"..string.rlower(string.gsub(getInput,"%p", ""))
 					for name_razdel, razdel in pairs(basic_command) do
 						for name, command in pairs(razdel) do
-							if (getInput:match(name) or name:match(getInput) or (string.gsub(command, "_", "(%d+)"):match( getInput ) )) and not tonumber(string.sub(command, -1)) then
+							if (StringStart(getInput, name) --[[or (string.gsub(command, "_", "(%d+)"):match( getInput ) )--]]) and not tonumber(string.sub(command, -1)) then
 								if getInput:match(name.." ") then
 									renderDrawBox(in2 + 5, in3 + 55 + (count*6), 700, 30, convertToHexColor("#"..cfg.settings.color_chat:sub(2):sub(1,-2)))
 								elseif (sampIsCursorActive() and mouseX < in2+705  and mouseY > in3 + 55 + (count*6) and mouseY<(in3 + 90 + (count*6))) then
@@ -4345,7 +4360,7 @@ function input_helper()
 									renderFontDrawText(font_chat,  name .. " > " .. string.gsub(command, "_", "ID"), in2 + 10, in3 + 60 + (count*6) , -1)
 								end
 								count = count + 5
-								if count > 11 then break end -- не более 3-ех подсказок
+								if count > 25 then break end -- не более 3-ех подсказок
 							end 
 						end
 						if count > 11 then break end -- не более 3-ех подсказок
@@ -4404,19 +4419,10 @@ function wallhack()
 end
 
 function on_wallhack() -- Включение WallHack (свойства)
-	local pStSet = sampGetServerSettingsPtr();
-	local NTdist = mem.getfloat(pStSet + 39)
-	local NTwalls = mem.getint8(pStSet + 47)
-	local NTshow = mem.getint8(pStSet + 56)
-	mem.setfloat(pStSet + 39, 900.0) -- дальность прорисовки 900 метров
-	mem.setint8(pStSet + 47, 0)
-	mem.setint8(pStSet + 56, 1)
+	mem.setfloat(sampGetServerSettingsPtr() + 39, 900.0) -- дальность прорисовки 900 метров
 end
 function off_wallhack() -- Выключение WallHack (свойства)
-	local pStSet = sampGetServerSettingsPtr();
-	mem.setfloat(pStSet + 39, 30)
-	mem.setint8(pStSet + 47, 0)
-	mem.setint8(pStSet + 56, 1)
+	mem.setfloat(sampGetServerSettingsPtr() + 39, 30)
 end
 
 function download_update()
