@@ -180,6 +180,12 @@ function sampev.onServerMessage(color,text)
         cfg.info[6] = cfg.info[6] + 1
     end
 end
+
+local animated_states = false
+sampRegisterChatCommand('test',function()
+    info_array[4] = u8"Блаблабла"
+end)
+
 function imgui.OnDrawFrame()
     if not windows.static_window_state.v and not windows.secondary_window_state.v and not windows.stata_window_state.v and not windows.menu_window_state.v then
         if cfg.AT_MP.adminstate then windows.stata_window_state.v = true
@@ -325,9 +331,10 @@ function imgui.OnDrawFrame()
         imgui.SetNextWindowPos(imgui.ImVec2(cfg.AT_MP.staticposX, cfg.AT_MP.staticposY))
         imgui.Begin("##AdminStata", windows.stata_window_state, imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar)
         imgui.ShowCursor = false
-        for _,v in pairs(info_array) do
+        for cnt,v in pairs(info_array) do
             imgui.Text(v)
         end
+        
         imgui.End()
     end
     if windows.menu_window_state.v then
@@ -821,7 +828,14 @@ function time()
     end
 end
 function update_info()
+    if info_array == {} then
+        lua_thread.create(function()
+            while not info_array do wait(100) end
+            save_array = info_array
+        end)
+    end
     info_array = {}
+    save_array = {}
     while true do
         wait(10000)
         for i = 0, #cfg.info do
@@ -892,20 +906,20 @@ sampRegisterChatCommand('state', function()
     windows.static_window_state.v = not windows.static_window_state.v
     imgui.Process = windows.static_window_state.v
 end)
--- sampRegisterChatCommand('mp', function()
---     if not sampIsDialogActive() then
---         for i = 1, 512 do  -- [[[ FIX BUG INPUT TEXT IMGUI  ]]]
--- 			imgui:GetIO().KeysDown[i] = false
--- 		end
--- 		for i = 1, 5 do
--- 			imgui:GetIO().MouseDown[i] = false
--- 		end
--- 		imgui:GetIO().KeyCtrl = false
--- 		imgui:GetIO().KeyShift = false
--- 		imgui:GetIO().KeyAlt = false
--- 		imgui:GetIO().KeySuper = false  
---         sampSendChat('/mp')
---         windows.secondary_window_state.v = true
---         imgui.Process = windows.secondary_window_state.v
---     end
--- end)
+sampRegisterChatCommand('mp', function()
+    if not sampIsDialogActive() then
+        for i = 1, 512 do  -- [[[ FIX BUG INPUT TEXT IMGUI  ]]]
+			imgui:GetIO().KeysDown[i] = false
+		end
+		for i = 1, 5 do
+			imgui:GetIO().MouseDown[i] = false
+		end
+		imgui:GetIO().KeyCtrl = false
+		imgui:GetIO().KeyShift = false
+		imgui:GetIO().KeyAlt = false
+		imgui:GetIO().KeySuper = false  
+        sampSendChat('/mp')
+        windows.secondary_window_state.v = true
+        imgui.Process = windows.secondary_window_state.v
+    end
+end)
