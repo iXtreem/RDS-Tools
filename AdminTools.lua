@@ -5,7 +5,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 9.8   			 							-- Версия скрипта
+local version = 9.9   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -99,7 +99,8 @@ local cfg = inicfg.load({  									-- Загружаем базовый конфиг, если он отсутст
 		render_players_count = 10,
 		sound_report = 80,
 		text_access_form = "АТ - Принято.", -- defolt
-		sokr = true
+		sokr = true,
+		flood_detector = true,
 	},
 	customotvet = {},
 	myflood = {},
@@ -196,6 +197,7 @@ local array = {
 		sound_report 			   = imgui.ImInt(cfg.settings.sound_report),
 		color_report			   = imgui.ImBool(false),
 		sokr 					   = imgui.ImBool(cfg.settings.sokr),
+		flood_detector 			   = imgui.ImBool(cfg.settings.flood_detector),
 	},
 	------=================== Ввод данных в ImGui окне ===================----------------------
 	buffer = {
@@ -999,6 +1001,18 @@ sampRegisterChatCommand('orf', function(param)
 	if #param == 0 then sampAddChatMessage(tag .. 'Значение неуказано.',-1) return end
 	sampSendChat('/muteakk ' .. param .. ' 5000 Оскорбление/Унижение родни')
 end)
+
+sampRegisterChatCommand('prefix', function(param)
+	prefix_id = param:match('%d[%d.,]*')
+	if id == nil then sampAddChatMessage('/prefix ' .. param,-1) return end
+	if not html_color then
+		html_color = {}
+		local file_color = io.open('moonloader\\' .. "\\resource\\skin\\color.txt","r")
+		if file_color then for line in file_color:lines() do html_color[#html_color + 1] = u8:decode(line);end file_color:close() end
+	end
+	imgui.Process = true
+	array.windows.menu_tools.v = true
+end)
 local trigger = false
 function animation_imgui(window)
 	lua_thread.create(function()
@@ -1047,6 +1061,36 @@ function imgui.OnDrawFrame()
         imgui.End()
 	end
 	if array.windows.menu_tools.v then -- КНОПКИ ИНТЕРФЕЙСА F3
+		if prefix_id~=nil then 	
+			imgui.OpenPopup('prefix_color')
+			prefix_id = nil
+		end
+		if imgui.BeginPopup('prefix_color') then
+			imgui.SetCursorPosX( imgui.GetWindowWidth() / 2 - imgui.CalcTextSize("{A9A9A9}Рандомайзер").x / 2 ) 	
+			imgui.BeginGroup() 
+				imgui.TextColoredRGB(("{A9A9A9}Рандомайзер"))
+			imgui.EndGroup()
+			if imgui.IsItemClicked(0) then sampAddChatMessage(tag .. 'Цвет репорта не задан.', -1) cfg.settings.color_report = nil save() end
+
+			if not html_color then
+				html_color = {}
+				local file_color = io.open('moonloader\\' .. "\\resource\\skin\\color.txt","r")
+				if file_color then for line in file_color:lines() do html_color[#html_color + 1] = u8:decode(line);end file_color:close() end
+			end
+
+			for i = 1, 256 do 
+				imgui.TextColoredRGB(u8(html_color[i]))
+				if imgui.IsItemClicked(0) then
+					local color = '{'..string.sub(string.sub(html_color[i], 1, 7), 2)..'}'
+					sampSendChat('/prefix ' .. prefix_id)
+				end
+				if i%8~=0 then imgui.SameLine() end 
+			end
+			imgui.EndPopup()
+		end
+
+
+
 		imgui.ShowCursor = true
 		if wasKeyPressed(VK_ESCAPE) then array.windows.menu_tools.v = false end
 		imgui.SetNextWindowPos(imgui.ImVec2((sw * 0.5), (sh * 0.5)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
@@ -1164,6 +1208,10 @@ function imgui.OnDrawFrame()
 					imgui.SameLine()
 					imgui.Text(u8'Вкл/Выкл')
 					if cfg.settings.automute then
+						if imgui.Checkbox(u8'Автомут за флуд', array.checkbox.flood_detector) then
+							cfg.settings.flood_detector = not cfg.settings.flood_detector
+							save()
+						end
 						if imgui.RadioButton(u8"Обычный режим", array.checkbox.option_automute, 0) then cfg.settings.option_automute=0 save() end
 						if imgui.RadioButton(u8'AutoMute Premium', array.checkbox.option_automute, 1) then
 							local cfg_mp = inicfg.load({}, 'AT//AT_MP.ini')
@@ -2791,6 +2839,7 @@ function imgui.OnDrawFrame()
 					imgui.Text('Turbo: ' .. array.inforeport[13]) 
 					imgui.Text('Passive: ' .. array.inforeport[12])
 					imgui.Text(u8'Коллизия: ' .. array.inforeport[14])
+					imgui.TextColoredRGB('Дрифт-мод: ' .. array.inforeport[15])
 				else
 					imgui.Text('')
 					if imgui.Button(u8'Включить информацию об игроке', imgui.ImVec2(250, 25)) then
@@ -3552,9 +3601,9 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		end
 		if cfg.settings.admin_chat then
 			local admlvl, prefix, nickadm, idadm, admtext  = text:match('%[A%-(%d+)%] (%(.+)%) (.+)%[(%d+)%]: (.+)')
-			local messange = os.date("[%H:%M:%S] ")..'{C0C0C0}[A-'..admlvl..'] '..(string.sub(prefix, 2) .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
+			local messange = os.date("[%H:%M:%S] ")..'{87CEFA}[A-'..admlvl..'] '..(string.sub(prefix, 2) .. ' ' ..  nickadm .. '(' .. idadm .. '): '.. admtext)
 			if cfg.settings.sokr and #admtext > 60  then admtext = string.sub(admtext, 1, 60).."..." end
-			local messange_min = '{C0C0C0}[A-'..admlvl..'] '..(string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..idadm..']: '.. admtext)
+			local messange_min = '{87CEFA}[A-'..admlvl..'] '..(string.match(string.sub(prefix,2), '{%w%w%w%w%w%w}').. nickadm..'['..idadm..']: '.. admtext)
 			if #array.adminchat == cfg.settings.strok_admin_chat then
 				for i = 0, #array.adminchat_minimal do
 					if i ~= #array.adminchat_minimal then array.adminchat_minimal[i] = array.adminchat_minimal[i+1]
@@ -3577,7 +3626,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 			if text:match('Жалоба (.+) %| {AFAFAF}(.+)%[(%d+)%]: {ffffff}.+') then 
 				report = true
 				oskid = text:match('%[(%d+)%]')
-				text = string.gsub(text,'Жалоба (.+) %| ', '')
+				text = string.gsub(text,'{FF6347}Жалоба (.+) %| ', '')
 			else 
 				if text:match('%((%d+)%)') then oskid = text:match('%((%d+)%)') text = string.gsub(text, ".+%((%d+)%):",'')
 				else oskid = text:match('%[(%d+)%]') text = string.gsub(text, ".+%[(%d+)%]:", '') end
@@ -3648,29 +3697,31 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 					return false
 				end
 			end
-			if array.flood.message[oskid] then
-				if ( array.flood.message[oskid] ~= text ) or  ( (os.clock() - array.flood.time[oskid]) > 30 ) then 
+			if cfg.settings.flood_detector then
+				if array.flood.message[oskid] then
+					if ( array.flood.message[oskid] ~= text ) or  ( (os.clock() - array.flood.time[oskid]) > 30 ) then 
+						array.flood.message[oskid] = text
+						array.flood.time[oskid] = os.clock()
+						array.flood.count[oskid] = 1
+						array.flood.nick[oskid] = sampGetPlayerNickname(oskid)
+					else
+						if array.flood.count[oskid] == 3 and cfg.settings.smart_automute then -- если 4 сообщения то мут, счетчик от 0
+							array.flood.message[oskid] = nil
+							lua_thread.create(function()
+								while sampIsDialogActive() do wait(0) end
+								sampAddChatMessage(tag .. 'Обнаружен флуд в чате! Нарушитель ' .. sampGetPlayerNickname(oskid)..'['..oskid..']', -1)
+								sampAddChatMessage(tag .. 'Отправил 4 сообщения за ' .. math.ceil(os.clock() - array.flood.time[oskid]) .. '/30 сек.', 0xA9A9A9)
+								sampAddChatMessage('{CD853F}Flood {ffffff}- '..sampGetPlayerNickname(oskid)..'['..oskid..']: '..text, -1)
+								sampSendChat('/mute ' .. oskid .. ' 120 Флуд/Cпам')
+							end)
+						else array.flood.count[oskid] = array.flood.count[oskid] + 1 end
+					end
+				else
 					array.flood.message[oskid] = text
 					array.flood.time[oskid] = os.clock()
 					array.flood.count[oskid] = 1
 					array.flood.nick[oskid] = sampGetPlayerNickname(oskid)
-				else
-					if array.flood.count[oskid] == 3 and cfg.settings.smart_automute then -- если 4 сообщения то мут, счетчик от 0
-						array.flood.message[oskid] = nil
-						lua_thread.create(function()
-							while sampIsDialogActive() do wait(0) end
-							sampAddChatMessage(tag .. 'Обнаружен флуд в чате! Нарушитель ' .. sampGetPlayerNickname(oskid)..'['..oskid..']', -1)
-							sampAddChatMessage(tag .. 'Отправил 4 сообщения за ' .. math.ceil(os.clock() - array.flood.time[oskid]) .. '/30 сек.', 0xA9A9A9)
-							sampAddChatMessage('{CD853F}Flood {ffffff}- '..sampGetPlayerNickname(oskid)..'['..oskid..']: '..text, -1)
-							sampSendChat('/mute ' .. oskid .. ' 120 Флуд/Cпам')
-						end)
-					else array.flood.count[oskid] = array.flood.count[oskid] + 1 end
 				end
-			else
-				array.flood.message[oskid] = text
-				array.flood.time[oskid] = os.clock()
-				array.flood.count[oskid] = 1
-				array.flood.nick[oskid] = sampGetPlayerNickname(oskid)
 			end
 			for k,v in pairs(cfg.auto_ban) do
 				if text:match(v) then
@@ -3693,6 +3744,7 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 		end
 	end
 end
+
 function automute(array, oskid, text, nakaz, report)
 	local colorc = '{00BFFF}'
 	if report then 
@@ -3708,7 +3760,10 @@ function automute(array, oskid, text, nakaz, report)
 		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
 		sampAddChatMessage(colorc..'['..rcommand..']{D3D3D3} '..sampGetPlayerNickname(oskid) .. '['..oskid..']: '.. text .. colorc..' ['..rcommand..']', -1)
 		sampAddChatMessage(colorc..'===================={'..color()..'} AutoMute AT '..colorc..'====================', -1)
-		if not sampIsDialogActive() then sampSendChat(command..oskid..' '..nakaz) end
+		lua_thread.create(function()
+			while sampIsDialogActive() do wait(1) end
+			sampSendChat(command..oskid..' '..nakaz)
+		end)
 	else
 		lua_thread.create(function()
 			local nakaz_name = string.gsub(nakaz, textSplit(nakaz, ' ')[1]..' ', '')
@@ -3751,6 +3806,7 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 						sampTextdrawSetStyle(array.textdraw.inforeport, -1) -- превращаем в невидимый стиль
 						while not array.windows.recon_menu.v do wait(100) end
 						while array.windows.recon_menu.v do
+							
 							array.inforeport = textSplit(sampTextdrawGetString(array.textdraw.inforeport), "~n~") -- информация о игроке, считывание с текстрдрава
 							if array.inforeport[3] ==   '-1'   then array.inforeport[3] = false end  --========= ХП АВТО
 							--=========== Название ВИП =======--------
@@ -3759,8 +3815,10 @@ function sampev.onShowTextDraw(id, data) -- Считываем серверные текстдравы
 							elseif array.inforeport[11] == '3' then array.inforeport[11] = '{87CEEB}Diamond'
 							elseif array.inforeport[11] == '4' then array.inforeport[11] = '{FF00FF}Platinum'
 							elseif array.inforeport[11] == '5' then array.inforeport[11] = '{DAA520}Personal' end
+							if array.inforeport[15] == "DISABLED" then array.inforeport[15] =  "0"  else array.inforeport[15] = "{FFFF00}Активирован." end
+
 							--=========== Название ВИП =======--------
-							wait(1000)
+							wait(1500)
 						end
 					end)
 				else return false end
