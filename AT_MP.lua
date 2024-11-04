@@ -182,9 +182,6 @@ function sampev.onServerMessage(color,text)
 end
 
 local animated_states = false
-sampRegisterChatCommand('test',function()
-    info_array[4] = u8"Блаблабла"
-end)
 
 function imgui.OnDrawFrame()
     if not windows.static_window_state.v and not windows.secondary_window_state.v and not windows.stata_window_state.v and not windows.menu_window_state.v then
@@ -489,7 +486,7 @@ function imgui.OnDrawFrame()
                             wait(200)
                             setVirtualKeyDown(118, false)
                         end
-                        sampAddChatMessage(tag .. 'Не честно подглядывать, а ну вырубил интерфейс', -1)
+                        sampAddChatMessage(tag .. 'Не честно подглядывать, выруби интерфейс', -1)
                     end)
                 end
             end
@@ -718,7 +715,10 @@ function imgui.OnDrawFrame()
         if menu ~= 'open mp' then
             if menu ~= 'Приветствие' then
                 imgui.PushFont(fontsize)
-                if imgui.Button(u8'Завершить мероприятие досрочно', imgui.ImVec2(300,24)) and sampIsCursorActive() then thisScript():reload() showCursor(false,false) end
+                if imgui.Button(u8'Завершить мероприятие досрочно', imgui.ImVec2(300,24)) then 
+                    showCursor(false,false) 
+                    thisScript():reload()
+                end
                 imgui.PopFont()
             end
             imgui.Checkbox(u8'передвижение окна', checkbox.check_11)
@@ -729,6 +729,7 @@ function imgui.OnDrawFrame()
             end
             imgui.Tooltip(u8'Автоматически выдает джайл, если видит оружие в руках игрока.\nМожет посадить администратора, потому проводить совместно не рекомендуется.')
             imgui.CenterText(u8'Активация курсора - клавиша F')
+            imgui.CenterText(u8'Выдать приз игроку - через меню взаимодействия')
             imgui.CenterText(u8'Меню взаимодействия с игроком - ПКМ + 1')
         end
         if wasKeyPressed(VK_F) and not (sampIsDialogActive() or sampIsChatInputActive()) then

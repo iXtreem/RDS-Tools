@@ -493,10 +493,10 @@ local frameDrawList = mimgui.OnFrame(
             end
 
             -- Удаляем трейсер, если альфа ниже/равна 0
-            if bullets[i].alpha <= 0 then
-                table.remove(bullets, i)
-                if #bullets == 0 then break end
-            end
+            --if bullets[i].alpha <= 0 then
+            --    table.remove(bullets, i)
+            --    if #bullets == 0 then break end
+            --end
         end
     end
 )
@@ -534,9 +534,34 @@ local function getColorTargetType(target, con_imgui)
     else return con_imgui.col_vec4.unknown end
 end
 
-function sampev.onSendBulletSync(data) -- my
-    if config_imgui.my_bullets.draw[0] and (data.center.x ~= 0 and data.center.y ~= 0 and data.center.z ~= 0) then
-        local ig = config_imgui.my_bullets
+-- function sampev.onSendBulletSync(data) -- my
+--     if config_imgui.my_bullets.draw[0] and (data.center.x ~= 0 and data.center.y ~= 0 and data.center.z ~= 0) then
+--         local ig = config_imgui.my_bullets
+--         local color = getColorTargetType(data.targetType, ig)
+--         bullets[#bullets+1] = {
+--             clock = os.clock(),
+--             timer = ig.timer[0],
+--             col4 = color,
+--             alpha = color[3],
+--             origin = { x = data.origin.x, y = data.origin.y, z = data.origin.z },
+--             target = { x = data.target.x, y = data.target.y, z = data.target.z },
+--             transition = ig.transition[0],
+--             thickness = ig.thickness[0],
+--             circle_radius = ig.circle_radius[0],
+--             step_alpha = ig.step_alpha[0],
+--             degree_polygon = ig.degree_polygon[0],
+--             draw_polygon = ig.draw_polygon[0],
+--         }
+--     end
+-- end
+
+
+function sampev.onBulletSync(playerID, data) -- player
+    --sampAddChatMessage("origin: "..data.origin.x.. " ID: " .. playerID,-1)
+    --sampAddChatMessage("origin: "..data.target.x.. " ID: " .. playerID, -1)
+
+    if config_imgui.other_bullets.draw[0] and (data.center.x ~= 0 and data.center.y ~= 0 and data.center.z ~= 0) and getDistancePosition(data.origin, config_imgui.settings.radius_render_in_stream.distance[0]) then
+        local ig = config_imgui.other_bullets
         local color = getColorTargetType(data.targetType, ig)
         bullets[#bullets+1] = {
             clock = os.clock(),
@@ -544,7 +569,7 @@ function sampev.onSendBulletSync(data) -- my
             col4 = color,
             alpha = color[3],
             origin = { x = data.origin.x, y = data.origin.y, z = data.origin.z },
-            target = { x = data.target.x, y = data.target.y, z = data.target.z },
+             target = { x = data.target.x, y = data.target.y, z = data.target.z },
             transition = ig.transition[0],
             thickness = ig.thickness[0],
             circle_radius = ig.circle_radius[0],
@@ -555,24 +580,4 @@ function sampev.onSendBulletSync(data) -- my
     end
 end
 
-function sampev.onBulletSync(_, data) -- player
-    if config_imgui.other_bullets.draw[0] and (data.center.x ~= 0 and data.center.y ~= 0 and data.center.z ~= 0) and getDistancePosition(data.origin, config_imgui.settings.radius_render_in_stream.distance[0]) then
-        local ig = config_imgui.other_bullets
-        local color = getColorTargetType(data.targetType, ig)
-        bullets[#bullets+1] = {
-            clock = os.clock(),
-            timer = ig.timer[0],
-            col4 = color,
-            alpha = color[3],
-            origin = { x = data.origin.x, y = data.origin.y, z = data.origin.z },
-            target = { x = data.target.x, y = data.target.y, z = data.target.z },
-            transition = ig.transition[0],
-            thickness = ig.thickness[0],
-            circle_radius = ig.circle_radius[0],
-            step_alpha = ig.step_alpha[0],
-            degree_polygon = ig.degree_polygon[0],
-            draw_polygon = ig.draw_polygon[0],
-        }
-    end
-end
 sampRegisterChatCommand('trassera', function() windowSettings[0] = not windowSettings[0] end) 
