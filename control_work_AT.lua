@@ -1,4 +1,3 @@
-script_properties("forced-reloading-only")
 local inicfg = require("inicfg")
 local vk = require('VK_API')
 local token = --[[Токен группы VK]]"vk1.a.CeLIzK9OTcpIzmnlvUPNaBk-f8PVBBjBIKYMgOvci7RAq-hi9up1REVQC_T77bW71PpOdeijhTk3k4F1_-9XckYBiAMGiJzlLV3xCR0JI5_sWGi96om1qPLPFRyGFeWVILb1d7Jw8GLIHk_WhfwAydb9070C_vx2fNt0RygHMob7AGRhfHgQanNho6ox7tN-LZuSU7E93WH9scneUzbM1w"
@@ -11,7 +10,6 @@ local scripts = { -- скрипты которые проверяем
     'AT_FastSpawn',
 	'AdminToolsPlus',
 }
-local checked_set = false
 local version_AT = inicfg.load({settings={version=0}}, 'moonloader\\config\\AT\\AT_main.ini').settings.version
 local actual_version = inicfg.load({script={version=0}}, 'moonloader\\config\\AT\\AdminTools.ini').script.version
 local txt = "На данный момент у вас установлена актуальная версия " .. version_AT .. ". Просим прощения за предоставленные неудобства"
@@ -45,12 +43,10 @@ function onSystemMessage(msg, type, script)
                         local nick = sampGetPlayerNickname(id)
                         local data = (os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year .. ' '..os.date("*t").hour..':'..os.date("*t").min ..':'..os.date("*t").sec)
 
-                        if checked_set == false then
-                            vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
-                            vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua ['..version_AT .. ']\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
-                            sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
-                            checked_set = true
-                        else sampAddChatMessage("Сегодня вы уже отправляли отчет.",-1) end
+                      
+                        vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
+                        vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua ['..version_AT .. ']\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
+                        sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
                     end
                     if button ~= 3 then
                         wait(2000)
@@ -62,14 +58,10 @@ function onSystemMessage(msg, type, script)
                     local _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
                     local nick = sampGetPlayerNickname(id)
                     local data = (os.date("*t").day..'.'.. os.date("*t").month..'.'..os.date("*t").year .. ' '..os.date("*t").hour..':'..os.date("*t").min ..':'..os.date("*t").sec)
-
                     local add_text = 'Отсутствуют.'
-                    if checked_set == false then
-                        vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
-                        vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua ['..version_AT .. ']\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
-                        sampAddChatMessage('Отчет отправлен. Скрипты перезагружены.', -1)
-                        checked_set = true
-                    else sampAddChatMessage("Сегодня вы уже отправляли отчет.",-1) end
+                    --vk.botAuthorization(ID_Group, token, '5.199' --[[Версия API]])
+                    --vk.sendMessage('Произошла ошибка скрипта. Пожалуйста, ознакомьтесь с предоставленной информацией\n\nАдминистратор: ' .. sampGetPlayerNickname(id) .. '\n\nСкрипт, который дал сбой: ' ..scripts[i]..'.lua ['..version_AT .. ']\n\nДата: ' ..data.. '\n\nЛог SAMPFUNCS:\n' .. textFormatter(msg)..'\n\nПримечание к ошибке: '..add_text, ID)
+                    sampAddChatMessage('Скрипты перезагружены без отправки отчётов о работоспособности.', -1)
                     wait(2000)
                     reloadScripts()
                 end
