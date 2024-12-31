@@ -6,7 +6,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 10   			 							-- Версия скрипта
+local version = 10.1   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -2478,7 +2478,7 @@ function imgui.OnDrawFrame()
 					os.execute(('explorer.exe "%s"'):format("https://youtu.be/gCtzMFcTtis"))
 				end
 				imgui.NewInputText('##titlecommand5', array.buffer.new_command_title, 480, u8'Название команды (пример: /ok, /dz, /ch)', 2)
-				imgui.InputTextMultiline("##newcommand", array.buffer.new_command, imgui.ImVec2(480, 210))
+				imgui.InputTextMultiline("##newcommand", array.buffer.new_command, imgui.ImVec2(480, 200))
 				if imgui.Button(u8'Добавить аргументы', imgui.ImVec2(480, 24)) then
 					imgui.OpenPopup('settings_command')
 				end
@@ -2495,7 +2495,7 @@ function imgui.OnDrawFrame()
 					end
 					imgui.EndPopup()
 				end
-				if imgui.Button(u8'Сохрaнить', imgui.ImVec2(250, 24)) then
+				if imgui.Button(u8'Сохрaнить', imgui.ImVec2(250, 25)) then
 					if #(u8:decode(array.buffer.new_command_title.v)) ~= 0 and #(u8:decode(array.buffer.new_command.v)) > 2 then
 						array.buffer.new_command_title.v = string.gsub(array.buffer.new_command_title.v, '%/', '')
 						cfg.my_command[array.buffer.new_command_title.v] = string.gsub(u8:decode(array.buffer.new_command.v),'\n','\\n')
@@ -2527,7 +2527,7 @@ function imgui.OnDrawFrame()
 					else sampAddChatMessage(tag .. 'Что вы собрались сохранять?', -1) end
 				end
 				imgui.SameLine()
-				if imgui.Button(u8'Удалить', imgui.ImVec2(222, 24)) then
+				if imgui.Button(u8'Удалить', imgui.ImVec2(225, 25)) then
 					if #(array.buffer.new_command_title.v) == 0 then sampAddChatMessage(tag ..'Вы не указали название команды, что вы собрались удалять?', -1)
 					else
 						array.buffer.new_command_title.v = string.gsub(u8:decode(array.buffer.new_command_title.v), '/', '')
@@ -2669,10 +2669,12 @@ function imgui.OnDrawFrame()
 		imgui.Tooltip(u8'Добавить кнопку')
 		imgui.TextColoredRGB('Репорт: '.. textreport)
 		if reportid and sampIsPlayerConnected(reportid) then
-			local newtext = cfg.settings.color_chat..sampGetPlayerNickname(reportid) .. "["..reportid .. cfg.settings.color_chat.."]{ffffff}"
-			if (not textreport:match(sampGetPlayerNickname(reportid))) then
-			   textreport = string.gsub( textreport, reportid, newtext)
-			end
+			imgui.SameLine()
+			imgui.TextColoredRGB("{A9A9A9}// " .. sampGetPlayerNickname(reportid) .. "[" .. reportid .. "]")
+			-- local newtext = cfg.settings.color_chat..sampGetPlayerNickname(reportid) .. "["..reportid .. cfg.settings.color_chat.."]{ffffff}"
+			-- if (not textreport:match(sampGetPlayerNickname(reportid))) then
+			--    textreport = string.gsub( textreport, reportid, newtext)
+			-- end
 		end
 		if imgui.BeginPopup('new') then
 			imgui.NewInputText('##', array.buffer.newButtonReportName, 200, u8'Название кнопки', 2)
@@ -2926,11 +2928,9 @@ function imgui.OnDrawFrame()
 						imgui.Text(u8'Коллизия: ' .. array.inforeport[14])
 						imgui.TextColoredRGB('Дрифт-мод: ' .. array.inforeport[15])
 					else
-						imgui.Text('')
 						if imgui.Button(u8'Включить информацию об игроке', imgui.ImVec2(250, 25)) then
 							sampSendChat('/remenu')
 						end
-						imgui.Text('')
 					end
 					if imgui.Button(u8'Посмотреть /statpl статистику', imgui.ImVec2(250, 25)) then
 						sampSendChat('/statpl ' .. sampGetPlayerNickname(control_player_recon))
@@ -3392,162 +3392,58 @@ function imgui.OnDrawFrame()
 		imgui.SetNextWindowSize(imgui.ImVec2(sw*0.7, sh*0.8), imgui.Cond.FirstUseEver)
 		imgui.Begin(u8'Логирование чата', array.windows.menu_chatlogger, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
-		if imgui.IsWindowAppearing() then chat = {1, 500, 1} end -- 1 параметр начало массива, 2 параметр - конец массива, 3 - страница.
+		if imgui.IsWindowAppearing() then chat = {1, 500} end -- 1 параметр начало массива, 2 параметр - конец массива, 3 - страница.
 		imgui.PushFont(fontsize)
 		imgui.CenterText(u8'Выберите файл для просмотра')
 		imgui.Text(u8'Примечание: Нажатие по тексту - копирует его в буфер обмена\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
 		imgui.PushItemWidth(sw*0.7 - 30)
-		if imgui.Combo('##chatlog', array.checkbox.option_find_log, array.files_chatlogs, array.checkbox.option_find_log) then chat = {1, 500, 1} end
+		if imgui.Combo('##chatlog', array.checkbox.option_find_log, array.files_chatlogs, array.checkbox.option_find_log) then chat = {1, 500} end
 		imgui.NewInputText('##searchlog', array.buffer.find_log, (sw*0.7)-30, u8'Сортировка текста', 2)
 		imgui.PopItemWidth()
-		if array.checkbox.option_find_log.v == 0 then 	--= ОСТОРОЖНО, ПРИ ИЗМЕНЕНИЯХ, ЗАВИСИМОСТЬ ОТ ЦИФР'
+		if array.checkbox.option_find_log.v == 0 then
 			arraylog = array.chatlog_1
 			chat[2] = #arraylog
-			if (chat[1] > 1) then 
-				if imgui.Button(u8'<--') then
-					chat[1] = 1
-					chat[3] = 1
-				end
-				imgui.SameLine()
-				if imgui.Button(u8'Предыдущая страница') then
-					local count = chat[1] - 500
-
-					if (count > chat[2]) then
-						chat[1] = chat[2]
-					elseif (count%500 == 0) then
-						chat[1] = count 
-					else
-						local cnt = 0
-						while (cnt+500 < chat[1]) do
-							cnt = cnt + 500
-						end
-						chat[1] = cnt
-					end
-					
-					chat[3] = (chat[2] / 500)
-					chat[3] = chat[3] - chat[3] % 1
-				end
-				if (chat[1] ~= #arraylog) then
-					imgui.SameLine()
-				end
-			end
-			if (chat[1] ~= #arraylog) then
-				if imgui.Button(u8'Следующая страница') then
-					local count = chat[1] + 500
-
-					if (count > chat[2]) then
-						chat[1] = chat[2]
-					else 
-						chat[1] = count 
-					end
-					chat[3] = chat[3] + 1
-				end
-				imgui.SameLine()
-				if imgui.Button(u8'-->') then
-					chat[1] = chat[2]
-					chat[3] = (chat[2] / 500)
-					chat[3] = chat[3] - chat[3] % 1
-				end
-			end
-		end
-		if array.checkbox.option_find_log.v == 1 then
+		elseif array.checkbox.option_find_log.v == 1 then
 			arraylog = array.chatlog_2
 			chat[2] = #arraylog
-			if (chat[1] > 1) then 
-				if imgui.Button(u8'<--') then
-					chat[1] = 1
-					chat[3] = 1
-				end
-				imgui.SameLine()
-				if imgui.Button(u8'Предыдущая страница') then
-					local count = chat[1] - 500
-
-					if (count > chat[2]) then
-						chat[1] = chat[2]
-					elseif (count%500 == 0) then
-						chat[1] = count 
-					else
-						local cnt = 0
-						while (cnt+500 < chat[1]) do
-							cnt = cnt + 500
-						end
-						chat[1] = cnt
-					end
-					
-					chat[3] = (chat[2] / 500)
-					chat[3] = chat[3] - chat[3] % 1
-				end
-				if (chat[1] ~= #arraylog) then
-					imgui.SameLine()
-				end
-			end
-			if (chat[1] ~= #arraylog) then
-				if imgui.Button(u8'Следующая страница') then
-					local count = chat[1] + 500
-
-					if (count > chat[2]) then
-						chat[1] = chat[2]
-					else 
-						chat[1] = count 
-					end
-					chat[3] = chat[3] + 1
-				end
-				imgui.SameLine()
-				if imgui.Button(u8'-->') then
-					chat[1] = chat[2]
-					chat[3] = (chat[2] / 500)
-					chat[3] = chat[3] - chat[3] % 1
-				end
-			end
-		end
-		if array.checkbox.option_find_log.v == 2 then
+		elseif array.checkbox.option_find_log.v == 2 then
 			arraylog = array.chatlog_3
 			chat[2] = #arraylog
-			if (chat[1] > 1) then 
-				if imgui.Button(u8'<--') then
-					chat[1] = 1
-					chat[3] = 1
-				end
-				imgui.SameLine()
-				if imgui.Button(u8'Предыдущая страница') then
-					local count = chat[1] - 500
-
-					if (count > chat[2]) then
-						chat[1] = chat[2]
-					elseif (count%500 == 0) then
-						chat[1] = count 
-					else
-						local cnt = 0
-						while (cnt+500 < chat[1]) do
-							cnt = cnt + 500
-						end
-						chat[1] = cnt
-					end
-					
-					chat[3] = (chat[2] / 500)
-					chat[3] = chat[3] - chat[3] % 1
-				end
-				if (chat[1] ~= #arraylog) then
-					imgui.SameLine()
-				end
+		end
+		local function updatePage()
+			if chat[1] < 1 then chat[1] = 1 end
+			if chat[1] > chat[2] then chat[1] = chat[2] end
+		end
+		
+		if chat[1] > 1 then
+			if imgui.Button(u8'<--') then
+				chat[1] = 1
+				updatePage()
 			end
-			if (chat[1] ~= #arraylog) then
-				if imgui.Button(u8'Следующая страница') then
-					local count = chat[1] + 500
-
-					if (count > chat[2]) then
-						chat[1] = chat[2]
-					else 
-						chat[1] = count 
-					end
-					chat[3] = chat[3] + 1
+			imgui.SameLine()
+			
+			if imgui.Button(u8'Предыдущая страница') then
+				chat[1] = chat[1] - 500
+				if chat[1] <= 500 then
+					chat[1] = 1
 				end
-				imgui.SameLine()
-				if imgui.Button(u8'-->') then
-					chat[1] = chat[2]
-					chat[3] = (chat[2] / 500)
-					chat[3] = chat[3] - chat[3] % 1
-				end
+				updatePage()
+			end
+		end
+		
+		if chat[1] < chat[2] then
+			imgui.SameLine()
+			if imgui.Button(u8'Следующая страница') then
+				if chat[2]-chat[1] >= 500 then
+					chat[1] = chat[1] + 500
+				else chat[1] = chat[2] end
+				updatePage()
+			end
+			imgui.SameLine()
+			
+			if imgui.Button(u8'-->') then
+				chat[1] = chat[2]
+				updatePage()
 			end
 		end
 		if imgui.BeginPopup('raskl') then
@@ -3777,7 +3673,11 @@ function sampev.onServerMessage(color,text) -- Получение сообщений из чата
 								wait(3000)
 								sampSendChat('/cc')
 								wait(2000)
-								sampAddChatMessage(tag..'Чат очищен. Нарушитель - ' .. sampGetPlayerNickname(oskid)..'('..oskid..'), слово - ' .. cfg.spisokproject[i], -1)
+								if (sampIsPlayerConnected(oskid)) then
+									sampAddChatMessage(tag..'Чат очищен. Нарушитель - ' .. sampGetPlayerNickname(oskid)..'('..oskid..'), слово - ' .. cfg.spisokproject[i], -1)
+								else
+									sampAddChatMessage(tag..'Чат очищен. Нарушитель был под ID(' .. oskid .. "). Слово - " .. cfg.spisokproject[i], -1)
+								end
 							else sampAddChatMessage(tag .. 'Рекомендуется произвести очистку чата /cc', -1) end
 						end)
 						return false
@@ -4391,7 +4291,7 @@ function back_punishment(count)
 			else
 				local back_count = math.floor( os.clock()-cnt )
 				if back_count == count then break end
-				if not AFK then renderFontDrawText(font_adminchat, 'До выдачи следующего наказания: ~' .. back_count .. '/'..maxBack_count..' сек.', cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy, 0xCCFFFFFF) end
+				if not AFK then renderFontDrawText(font_adminchat, 'До выдачи следующего наказания: ' .. back_count .. '/'..maxBack_count..' сек.', cfg.settings.time_nakazanie_posx, cfg.settings.time_nakazanie_posy, 0xCCFFFFFF) end
 			end
 		end
 	end)
