@@ -3418,6 +3418,9 @@ function imgui.OnDrawFrame()
 				chat[1] = chat[2] - 500
 				chat[2] = #arraylog
 			end
+			if chat[2] - chat[1] > 500 then
+				chat[2] = chat[2] - 500
+			end
 		end
 		imgui.CenterText(u8"Для показа открыты страницы: с " .. chat[1] .. u8' по '..chat[2])
 		if chat[1] > 1 then
@@ -3433,6 +3436,7 @@ function imgui.OnDrawFrame()
 					chat[1] = 1
 				end
 				updatePage()
+				
 			end
 			if chat[2] < #arraylog then
 				imgui.SameLine()
