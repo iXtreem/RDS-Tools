@@ -6,7 +6,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 10.1   			 							-- Версия скрипта
+local version = 10.2   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -2985,7 +2985,7 @@ function imgui.OnDrawFrame()
 					KeyCap("Alt", (array.keys[plState]["Alt"] ~= nil), imgui.ImVec2(35, 30)); imgui.SameLine()
 					KeyCap("Space", (array.keys[plState]["Space"] ~= nil), imgui.ImVec2(205, 30))
 				else
-					imgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон, R - обновить в ручную.\nНачинаю процесс автоматического обновления рекона...")
+					imgui.Text(u8"Игрок потерян из поля видимости\nЕсли игрок так и не появился в поле видимости:\nQ - покинуть рекон\nПродолжаю поиски...")
 					auto_update_recon()
 				end
 				imgui.End()
@@ -3392,29 +3392,34 @@ function imgui.OnDrawFrame()
 		imgui.SetNextWindowSize(imgui.ImVec2(sw*0.7, sh*0.8), imgui.Cond.FirstUseEver)
 		imgui.Begin(u8'Логирование чата', array.windows.menu_chatlogger, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.ShowBorders)
 		imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
-		if imgui.IsWindowAppearing() then chat = {1, 500} end -- 1 параметр начало массива, 2 параметр - конец массива, 3 - страница.
 		imgui.PushFont(fontsize)
 		imgui.CenterText(u8'Выберите файл для просмотра')
 		imgui.Text(u8'Примечание: Нажатие по тексту - копирует его в буфер обмена\nСкриншот данного окна можно использовать ввиде доказазательств.\nВ целях уменьшения нагрузки на ваш компьютер, данное окно обновляется каждый перезаход в игру.')
 		imgui.PushItemWidth(sw*0.7 - 30)
 		if imgui.Combo('##chatlog', array.checkbox.option_find_log, array.files_chatlogs, array.checkbox.option_find_log) then chat = {1, 500} end
+		if imgui.IsWindowAppearing() then chat = {1, 500} end
 		imgui.NewInputText('##searchlog', array.buffer.find_log, (sw*0.7)-30, u8'Сортировка текста', 2)
 		imgui.PopItemWidth()
 		if array.checkbox.option_find_log.v == 0 then
 			arraylog = array.chatlog_1
-			chat[2] = #arraylog
 		elseif array.checkbox.option_find_log.v == 1 then
 			arraylog = array.chatlog_2
-			chat[2] = #arraylog
 		elseif array.checkbox.option_find_log.v == 2 then
 			arraylog = array.chatlog_3
-			chat[2] = #arraylog
 		end
+
+
 		local function updatePage()
-			if chat[1] < 1 then chat[1] = 1 end
-			if chat[1] > chat[2] then chat[1] = chat[2] end
+			if chat[1] <= 1 then 
+				chat[1] = 1
+				chat[2] = 500 
+			end
+			if chat[1] >= #arraylog then
+				chat[1] = chat[2] - 500
+				chat[2] = #arraylog
+			end
 		end
-		
+		imgui.CenterText(u8"Для показа открыты страницы: с " .. chat[1] .. u8' по '..chat[2])
 		if chat[1] > 1 then
 			if imgui.Button(u8'<--') then
 				chat[1] = 1
@@ -3429,20 +3434,31 @@ function imgui.OnDrawFrame()
 				end
 				updatePage()
 			end
+			if chat[2] < #arraylog then
+				imgui.SameLine()
+			end
 		end
 		
-		if chat[1] < chat[2] then
-			imgui.SameLine()
+		if chat[2] < #arraylog then
 			if imgui.Button(u8'Следующая страница') then
-				if chat[2]-chat[1] >= 500 then
+				local result = #arraylog - chat[1]
+				if result > 500 then
 					chat[1] = chat[1] + 500
-				else chat[1] = chat[2] end
+					chat[2] = chat[1] + 500
+					if chat[2] > #arraylog then
+						chat[2] = #arraylog
+					end
+				else 
+					chat[1] = #arraylog - 500
+					chat[2] = #arraylog
+				end
 				updatePage()
 			end
 			imgui.SameLine()
 			
 			if imgui.Button(u8'-->') then
-				chat[1] = chat[2]
+				chat[1] = #arraylog - 500
+				chat[2] = #arraylog
 				updatePage()
 			end
 		end
@@ -4139,7 +4155,7 @@ end
 
 function sampev.onDisplayGameText(style, time, text) -- скрывает текст на экране.
 	if text == ('~w~RECON ~r~OFF') or text == ('~w~RECON ~r~OFF~n~~r~PLAYER DISCONNECT') then
-		if (text == ('~w~RECON ~r~OFF~n~~r~PLAYER DISCONNECT')) then sampAddChatMessage(tag .. "Игрок покинул сервер.", -1) end
+		if (text == ('~w~RECON ~r~OFF~n~~r~PLAYER DISCONNECT')) then sampAddChatMessage(tag .. "Игрок, за которым вы наблюдали, был отключён от сервера.", -1) end
 		array.windows.recon_menu.v = false
 		return false
 	elseif text == ('~y~REPORT++') then
@@ -4575,7 +4591,7 @@ function auto_update_recon()
 			while not doesCharExist(target) and array.windows.recon_menu.v do
 				wait(1500)
 				sampSendClickTextdraw(array.textdraw.refresh)
-				printStyledString('~n~~b~~h~auto - update...', 200, 4)
+				-- printStyledString('~n~~b~~h~auto - update...', 200, 4)
 				keysync(control_player_recon)
 			end
 			start_update_recon = false
