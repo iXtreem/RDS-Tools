@@ -6,7 +6,7 @@ require 'my_lib'											-- Комбо функций необходимых для скрипта
 script_name 'AdminTools [AT]'  								-- Название скрипта 
 script_author 'Neon4ik' 									-- Псевдоним разработчика в игре N.E.O.N
 script_properties("work-in-pause") 							-- Возможность обрабатывать информацию, находясь в AFK
-local version = 11   			 							-- Версия скрипта
+local version = 11.1   			 							-- Версия скрипта
 
 
 local DELETE_TEXTDRAW_RECON = {} -- вписать сюда через запятую какие текстравы удалять в РЕКОНЕ
@@ -665,6 +665,7 @@ end
 
 
 function smooth_text(FONT, text, x, y, CLOCK)
+	if CLOCK == nil then return end 
 	local fade
 	if (array.smoothText[tostring(FONT) .. text]) then
 		fade = 255
@@ -3641,17 +3642,17 @@ function sampev.onSendCommand(command) -- Регистрация отправленных пакет-сообщен
 				return false
 			end
 		end
-		if (command:match('/jail (%d+) (%d+) .+')) then
-			local id, _, _ = command:match('/jail (%d+) (%d+) .+')
-			local back = backnick(id)
-			if back then
-				local command = string.gsub(command, id, back)
-				local command = string.gsub(command, "/jail", "/jailakk")
-				SendChat(command)
-				sampAddChatMessage(tag .. 'В связи с тем, что игрок ' .. back .. ' покинул сервер, наказание было выдано в оффлайне.', -1)
-				return false
-			end
-		end
+		-- if (command:match('/jail (%d+) (%d+) .+')) then
+		-- 	local id, _, _ = command:match('/jail (%d+) (%d+) .+')
+		-- 	local back = backnick(id)
+		-- 	if back then
+		-- 		local command = string.gsub(command, id, back)
+		-- 		local command = string.gsub(command, "/jail", "/jailakk")
+		-- 		SendChat(command)
+		-- 		sampAddChatMessage(tag .. 'В связи с тем, что игрок ' .. back .. ' покинул сервер, наказание было выдано в оффлайне.', -1)
+		-- 		return false
+		-- 	end
+		-- end
 		if command:match("/makeadmin (%d+) (%d+)") then
 			local id, _ = command:match("/makeadmin (%d+) (%d+)")
 			if sampIsPlayerConnected(id) then
